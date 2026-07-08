@@ -1,26 +1,145 @@
 @import "tailwindcss";
 
+/* ── FC Online Lab — "스타디움 나이트"
+   야간 경기장: 딥 네이비 피치 + 전광판 라임 + 트로피 골드. 다크 단일 테마. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a1119;
+  --surface: #101a26;
+  --surface-2: #162332;
+  --line: #22334a;
+  --ink: #e9eef6;
+  --muted: #8fa0b5;
+  --accent: #c8f542;
+  --accent-ink: #0a1119;
+  --gold: #f2c14e;
+  --win: #4ade80;
+  --draw: #94a3b8;
+  --lose: #fb7185;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-gold: var(--gold);
+  --color-win: var(--win);
+  --color-draw: var(--draw);
+  --color-lose: var(--lose);
+  --font-sans: var(--font-plex), "Apple SD Gothic Neo", sans-serif;
+  --font-display: var(--font-chakra), var(--font-plex), sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* 전광판 숫자 */
+.scoreboard {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* 야간 경기장 배경: 조명 글로우 + 잔디 스트라이프 */
+.stadium-bg {
+  background:
+    radial-gradient(52rem 26rem at 50% -8rem, rgba(200, 245, 66, 0.12), transparent 62%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 72px,
+      rgba(233, 238, 246, 0.016) 72px,
+      rgba(233, 238, 246, 0.016) 144px
+    ),
+    var(--bg);
+}
+
+/* 카드 공통 */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+}
+
+/* 승/무/패 결과 배지 */
+.badge-result {
+  font-family: var(--font-display);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  flex: none;
+}
+.badge-win {
+  background: rgba(74, 222, 128, 0.14);
+  color: var(--win);
+}
+.badge-draw {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--draw);
+}
+.badge-lose {
+  background: rgba(251, 113, 133, 0.14);
+  color: var(--lose);
+}
+
+/* 입력 공통 */
+.input-search {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-search::placeholder {
+  color: var(--muted);
+}
+.input-search:focus {
+  border-color: var(--accent);
+}
+
+/* 페이지 로드 리빌 */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.rise-1 { animation-delay: 0.05s; }
+.rise-2 { animation-delay: 0.12s; }
+.rise-3 { animation-delay: 0.19s; }
+.rise-4 { animation-delay: 0.26s; }
+
+@keyframes shimmer {
+  from { opacity: 0.45; }
+  to { opacity: 0.9; }
+}
+.skeleton {
+  background: var(--surface-2);
+  border-radius: 0.5rem;
+  animation: shimmer 0.9s ease-in-out infinite alternate;
 }
