@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { getMaxDivisions, getOuid, getUserBasic, getUserMatches, getMatchDetail } from "@/lib/nexon/api";
+import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
+import { getMatchDetailCached } from "@/lib/nexon/cached";
 import { NexonApiError, isMaintenance, isNotConfigured, isUserNotFound } from "@/lib/nexon/client";
 import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
@@ -16,7 +17,7 @@ export async function generateMetadata({
   const decoded = decodeURIComponent(nickname);
   return {
     title: `${decoded} 전적`,
-    description: `${decoded}의 FC온라인 최근 경기 기록과 통계`,
+    description: `${decoded}의 FC온라인 최근 경기 기록, 승률, 슛맵 매치 리포트`,
   };
 }
 
@@ -51,31 +52,34 @@ export default async function UserPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-16 pt-8">
-      {/* 프로필 */}
-      <section className="rise flex flex-wrap items-end gap-x-4 gap-y-2">
-        <h1 className="text-3xl font-bold sm:text-4xl">{basic.nickname}</h1>
-        <p className="scoreboard mb-1 text-sm font-semibold text-muted">
-          LV.<span className="text-accent">{basic.level}</span>
-        </p>
+      {/* 히어로 — 전광판 */}
+      <section className="panel rise relative overflow-hidden px-5 py-5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full"
+          style={{ background: "radial-gradient(closest-side, rgba(200,245,66,0.14), transparent)" }}
+        />
+        <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
+          <h1 className="text-3xl font-bold sm:text-4xl">{basic.nickname}</h1>
+          <p className="scoreboard mb-1 text-sm font-semibold text-muted">
+            LV.<span className="text-accent">{basic.level}</span>
+          </p>
+        </div>
+        {divisionCards.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+            {divisionCards.map((d) => (
+              <p key={d.matchTypeName} className="text-[12px] text-muted">
+                {d.matchTypeName}{" "}
+                <span className="font-bold text-gold">{d.divisionName}</span>
+                <span className="ml-1 text-[10px]">({d.date})</span>
+              </p>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* 역대 최고 등급 */}
-      {divisionCards.length > 0 && (
-        <section className="rise rise-1 mt-5 grid gap-2 sm:grid-cols-3">
-          {divisionCards.map((d) => (
-            <div key={d.matchTypeName} className="panel px-4 py-3">
-              <p className="text-[11px] font-medium text-muted">
-                {d.matchTypeName} 최고 등급
-              </p>
-              <p className="mt-1 font-bold text-gold">{d.divisionName}</p>
-              <p className="mt-0.5 text-[11px] text-muted">{d.date} 달성</p>
-            </div>
-          ))}
-        </section>
-      )}
-
       {/* 매치 종류 탭 */}
-      <nav className="rise rise-2 mt-8 flex gap-1.5">
+      <nav className="rise rise-1 mt-6 flex gap-1.5">
         {MATCH_TABS.map((t) => (
           <Link
             key={t.type}
@@ -98,7 +102,7 @@ export default async function UserPage({
   );
 }
 
-const MATCH_COUNT = 10;
+const MATCH_COUNT = 30;
 
 async function MatchSection({
   ouid,
@@ -111,17 +115,16 @@ async function MatchSection({
   try {
     matchIds = await getUserMatches(ouid, matchType, MATCH_COUNT);
   } catch (err) {
-    // 데이터 준비 중(00009) 등은 빈 목록으로 처리
     if (!(err instanceof NexonApiError)) throw err;
   }
 
   const summaries: MatchSummary[] = [];
   for (const id of matchIds) {
     try {
-      const s = summarizeMatch(await getMatchDetail(id), ouid);
+      const s = summarizeMatch(await getMatchDetailCached(id), ouid);
       if (s) summaries.push(s);
     } catch {
-      // 닉네임 변경 반영 대기 등으로 개별 매치 조회가 실패할 수 있음 → 건너뜀
+      // 닉네임 변경 반영 대기 등 개별 실패는 건너뜀
     }
   }
 
@@ -134,26 +137,59 @@ async function MatchSection({
   }
 
   const rec = aggregate(summaries);
+  const recent10 = summaries.slice(0, 10);
 
   return (
     <>
-      {/* 요약 전광판 */}
-      <section className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
-        <StatTile label={`최근 ${rec.played}경기`} value={`${rec.win}승 ${rec.draw}무 ${rec.lose}패`} small />
-        <StatTile label="승률" value={`${rec.winRate}%`} accent />
+      {/* 폼 전광판 */}
+      <section className="panel mt-4 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+          <div>
+            <p className="text-[10px] font-medium text-muted">최근 {rec.played}경기 승률</p>
+            <p className="scoreboard text-4xl font-bold text-accent">{rec.winRate}%</p>
+            <p className="scoreboard mt-0.5 text-xs font-semibold text-muted">
+              {rec.win}승 {rec.draw}무 {rec.lose}패
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-medium text-muted">최근 10경기 폼</p>
+            <div className="mt-1.5 flex gap-1">
+              {recent10.map((m) => (
+                <span
+                  key={m.matchId}
+                  title={`${m.result} ${m.me.goals}:${m.opponent?.goals ?? "-"}`}
+                  className={`scoreboard flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold ${
+                    m.result === "승"
+                      ? "bg-win/15 text-win"
+                      : m.result === "패"
+                        ? "bg-lose/15 text-lose"
+                        : "bg-draw/15 text-draw"
+                  }`}
+                >
+                  {m.result}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="min-w-32">
+            <p className="text-[10px] font-medium text-muted">경기 평점 흐름</p>
+            <RatingSparkline values={[...summaries].reverse().map((m) => m.me.rating)} />
+          </div>
+        </div>
+      </section>
+
+      {/* 스탯 타일 */}
+      <section className="mt-2 grid grid-cols-3 gap-2">
         <StatTile label="득점 / 실점" value={`${rec.goalsFor} / ${rec.goalsAgainst}`} />
+        <StatTile label="경기당 득점" value={(rec.goalsFor / rec.played).toFixed(1)} />
         <StatTile label="평균 점유율" value={`${rec.avgPossession}%`} />
-        <StatTile
-          label="경기당 득점"
-          value={(rec.goalsFor / rec.played).toFixed(1)}
-        />
       </section>
 
       {/* 경기 리스트 */}
       <ul className="mt-4 space-y-1.5">
         {summaries.map((m) => (
           <li key={m.matchId}>
-            <MatchRow m={m} />
+            <MatchRow m={m} ouid={ouid} />
           </li>
         ))}
       </ul>
@@ -161,37 +197,54 @@ async function MatchSection({
   );
 }
 
-function StatTile({
-  label,
-  value,
-  accent = false,
-  small = false,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  small?: boolean;
-}) {
+function RatingSparkline({ values }: { values: number[] }) {
+  const pts = values.filter((v) => v > 0);
+  if (pts.length < 2) return <p className="mt-2 text-xs text-muted">데이터 부족</p>;
+
+  const w = 128;
+  const h = 36;
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const span = max - min || 1;
+  const points = pts
+    .map(
+      (v, i) =>
+        `${(i / (pts.length - 1)) * w},${h - 4 - ((v - min) / span) * (h - 8)}`
+    )
+    .join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="mt-1 h-9 w-32" aria-hidden>
+      <polyline
+        points={points}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="panel px-3 py-2.5">
       <p className="text-[10px] font-medium text-muted">{label}</p>
-      <p
-        className={`scoreboard mt-0.5 font-bold ${small ? "text-sm" : "text-lg"} ${
-          accent ? "text-accent" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
+      <p className="scoreboard mt-0.5 text-lg font-bold">{value}</p>
     </div>
   );
 }
 
-function MatchRow({ m }: { m: MatchSummary }) {
+function MatchRow({ m, ouid }: { m: MatchSummary; ouid: string }) {
   const badge =
     m.result === "승" ? "badge-win" : m.result === "패" ? "badge-lose" : "badge-draw";
 
   return (
-    <div className="panel flex items-center gap-3 px-3.5 py-3">
+    <Link
+      href={`/match/${encodeURIComponent(m.matchId)}?me=${encodeURIComponent(ouid)}`}
+      className="panel group flex items-center gap-3 px-3.5 py-3 transition-colors hover:border-accent/40"
+    >
       <span className={`badge-result ${badge}`}>{m.result}</span>
 
       <div className="scoreboard flex items-center gap-2 text-lg font-bold">
@@ -201,16 +254,9 @@ function MatchRow({ m }: { m: MatchSummary }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        {m.opponent ? (
-          <Link
-            href={`/user/${encodeURIComponent(m.opponent.nickname)}`}
-            className="block truncate text-sm font-medium transition-colors hover:text-accent"
-          >
-            vs {m.opponent.nickname}
-          </Link>
-        ) : (
-          <span className="text-sm text-muted">상대 정보 없음</span>
-        )}
+        <p className="truncate text-sm font-medium">
+          {m.opponent ? `vs ${m.opponent.nickname}` : "상대 정보 없음"}
+        </p>
         <p className="mt-0.5 text-[11px] text-muted">
           {formatMatchDate(m.matchDate)}
           {m.forfeit && <span className="ml-1.5 text-lose">몰수</span>}
@@ -218,26 +264,33 @@ function MatchRow({ m }: { m: MatchSummary }) {
       </div>
 
       <div className="hidden text-right sm:block">
-        <p className="text-[10px] text-muted">점유율</p>
-        <p className="scoreboard text-sm font-semibold">{m.me.possession}%</p>
+        <p className="text-[10px] text-muted">평점</p>
+        <p className="scoreboard text-sm font-semibold">
+          {m.me.rating > 0 ? m.me.rating.toFixed(1) : "-"}
+        </p>
       </div>
-    </div>
+
+      <span className="scoreboard text-xs font-bold text-muted transition-colors group-hover:text-accent">
+        리포트 →
+      </span>
+    </Link>
   );
 }
 
 function MatchSkeleton() {
   return (
     <div className="mt-4 space-y-1.5" aria-label="경기 기록 불러오는 중">
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className={`skeleton h-16 ${i > 2 ? "hidden sm:block" : ""}`} />
+      <div className="skeleton h-24" />
+      <div className="grid grid-cols-3 gap-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="skeleton h-16" />
         ))}
       </div>
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="skeleton h-[62px]" />
       ))}
       <p className="pt-2 text-center text-xs text-muted">
-        넥슨 서버에서 경기 기록을 불러오는 중…
+        넥슨 서버에서 최근 {MATCH_COUNT}경기를 불러오는 중… 첫 조회는 시간이 걸릴 수 있어요.
       </p>
     </div>
   );
