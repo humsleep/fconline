@@ -1,6 +1,7 @@
 import { getUserMatches } from "@/lib/nexon/api";
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { NexonApiError } from "@/lib/nexon/client";
+import ShotMap, { detectGoalCode, type ShotMapShot } from "@/app/components/ShotMap";
 import {
   aggregatePlaystyle,
   analyzePlaystyle,
@@ -31,6 +32,28 @@ export default async function PlaystyleSection({
   }
   const details = await getMatchDetailsBatch(matchIds);
   const result = analyzePlaystyle(aggregatePlaystyle(details, ouid));
+
+  // 누적 슛 히트맵 — 최근 경기 내 내 슛 위치 (아키타입 시각 근거)
+  const shots: ShotMapShot[] = [];
+  for (const d of details) {
+    const mine = d.matchInfo?.find((e) => e.ouid === ouid);
+    if (!mine) continue;
+    const goalCode = detectGoalCode([
+      {
+        shots: mine.shootDetail ?? [],
+        goals: mine.shoot?.goalTotalDisplay ?? mine.shoot?.goalTotal ?? 0,
+      },
+    ]);
+    for (const s of mine.shootDetail ?? []) {
+      shots.push({
+        x: s.x,
+        y: s.y,
+        isGoal: goalCode !== null && s.result === goalCode,
+        hitPost: s.hitPost,
+        label: "",
+      });
+    }
+  }
 
   if (result.confidence === "hold") {
     return (
@@ -129,6 +152,21 @@ export default async function PlaystyleSection({
               )}
             </ul>
           </div>
+        </section>
+      )}
+
+      {/* 누적 슛 히트맵 */}
+      {shots.length > 0 && (
+        <section className="mt-3">
+          <p className="scoreboard text-[12px] font-semibold tracking-[0.2em] text-muted">
+            내 슛 히트맵 ({shots.length}개)
+          </p>
+          <div className="mt-2">
+            <ShotMap shots={shots} tone="lime" />
+          </div>
+          <p className="mt-2 text-[12px] text-muted">
+            ● 채움=골 · ○ 외곽선=노골 · 박스 안 집중이면 포처형, 외곽 분산이면 난사형
+          </p>
         </section>
       )}
 

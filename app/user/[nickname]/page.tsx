@@ -94,7 +94,7 @@ export default async function UserPage({
         <div className="mt-4">
           <ShareCardButton
             url={`/api/card/user/${encodeURIComponent(basic.nickname)}`}
-            filename={`fclab-${basic.nickname}.png`}
+            filename={`fcscope-${basic.nickname}.png`}
             label="전적 카드 저장 · 공유"
           />
         </div>

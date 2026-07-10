@@ -49,7 +49,7 @@ export async function GET(
         { label: "득실", value: `${rec.goalsFor}:${rec.goalsAgainst}` },
         { label: "점유율", value: `${rec.avgPossession}%` },
       ],
-      footerUrl: "fclab",
+      footerUrl: "fcscope",
     });
   } catch {
     return new Response("not found", { status: 404 });

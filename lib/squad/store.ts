@@ -9,6 +9,7 @@ export interface SquadSlot {
   slotId: string;
   spid: number;
   name: string;
+  season?: string; // 시즌(클래스). spid에서 파생 가능이라 저장은 선택
   x?: number; // 커스텀 포메이션 좌표(0~100). 없으면 포메이션 기본 좌표 사용
   y?: number;
 }
@@ -93,7 +94,8 @@ export async function resolvePreset(presetId: string): Promise<{
   for (const p of preset.players) {
     if (!validSlotIds.has(p.slot)) continue;
     const hit = await resolvePlayer(p.name);
-    if (hit) slots.push({ slotId: p.slot, spid: hit.spid, name: hit.name });
+    if (hit)
+      slots.push({ slotId: p.slot, spid: hit.spid, name: hit.name, season: hit.season });
   }
 
   return {

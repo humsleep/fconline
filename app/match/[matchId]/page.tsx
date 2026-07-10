@@ -221,7 +221,7 @@ export default async function MatchPage({
         </Link>
         <ShareCardButton
           url={`/api/card/match/${encodeURIComponent(matchId)}?me=${encodeURIComponent(mine.ouid)}`}
-          filename={`fclab-match-${matchId}.png`}
+          filename={`fcscope-match-${matchId}.png`}
         />
       </div>
     </div>

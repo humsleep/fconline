@@ -7,7 +7,7 @@ import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summar
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "FC Lab 전적 카드";
+export const alt = "FC Scope 전적 카드";
 
 /** 카드에 실제로 쓰이는 글자만 서브셋으로 구글 폰트에서 로드 (satori는 woff2 미지원) */
 async function loadKoreanFont(text: string): Promise<ArrayBuffer | null> {
@@ -67,7 +67,7 @@ export default async function OgImage({
     // 데이터 실패 시 닉네임만으로 폴백 카드
   }
 
-  const textUsed = `${nickname}${division}FC LAB 전적 카드 최근 경기 승률 무패 LV.0123456789%승 무 패`;
+  const textUsed = `${nickname}${division}FC SCOPE 전적 카드 최근 경기 승률 무패 LV.0123456789%승 무 패`;
   const font = await loadKoreanFont(textUsed);
 
   const resultColor = (r: string) =>
@@ -92,7 +92,7 @@ export default async function OgImage({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 32, fontWeight: 700, color: "#c8f542" }}>FC</span>
-          <span style={{ fontSize: 32, fontWeight: 700 }}>LAB</span>
+          <span style={{ fontSize: 32, fontWeight: 700 }}>SCOPE</span>
           <span style={{ fontSize: 22, color: "#8fa0b5", marginLeft: 8 }}>전적 카드</span>
         </div>
 

@@ -6,6 +6,7 @@ import { getFormation, type Slot } from "@/lib/squad/formations";
 export interface FilledSlot {
   spid: number;
   name: string;
+  season?: string; // 시즌(클래스) 이름
 }
 
 export interface Coord {
@@ -110,12 +111,17 @@ export default function SquadPitch({
               </span>
             )}
             <span
-              className={`scoreboard max-w-[64px] truncate rounded px-1 text-[11px] font-bold ${
+              className={`scoreboard max-w-[68px] truncate rounded px-1 text-[11px] font-bold ${
                 p ? "bg-bg/70 text-ink" : "text-muted"
               }`}
             >
               {p ? p.name : slot.pos}
             </span>
+            {p?.season && (
+              <span className="scoreboard -mt-0.5 max-w-[68px] truncate rounded bg-gold/20 px-1 text-[10px] font-bold text-gold">
+                {p.season}
+              </span>
+            )}
           </span>
         );
 

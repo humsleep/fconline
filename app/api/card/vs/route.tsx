@@ -43,7 +43,7 @@ export async function GET(req: Request) {
         { label: "포지션", value: getPositionLabel(cmp.pos) },
         { label: cmp.b.name, value: cmp.b.rating.toFixed(1), color: cmp.winner === "B" ? "lime" : "muted" },
       ],
-      footerUrl: "fclab",
+      footerUrl: "fcscope",
     });
   } catch {
     return new Response("error", { status: 500 });

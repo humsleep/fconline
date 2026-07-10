@@ -45,7 +45,7 @@ export async function GET(
           color: v.color,
         },
       ],
-      footerUrl: "fclab",
+      footerUrl: "fcscope",
     });
   } catch {
     return new Response("error", { status: 500 });
