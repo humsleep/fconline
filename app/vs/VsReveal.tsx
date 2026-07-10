@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { VsComparison, VoteCounts } from "@/lib/vs";
+import ShareCardButton from "@/app/components/ShareCardButton";
 
 const VOTER_KEY = "fclab_voter";
 function getVoterId(): string {
@@ -166,6 +167,15 @@ export default function VsReveal({
             {b.name}
           </span>
         </div>
+      </div>
+
+      {/* 카드 공유 */}
+      <div className="mt-6 flex justify-center">
+        <ShareCardButton
+          url={`/api/card/vs?a=${a.spId}&b=${b.spId}&pos=${cmp.pos}`}
+          filename={`fclab-vs-${a.spId}-${b.spId}.png`}
+          label="VS 카드 저장 · 공유"
+        />
       </div>
     </div>
   );

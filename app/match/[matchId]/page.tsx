@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import ShotMap, { detectGoalCode, type ShotMapShot } from "@/app/components/ShotMap";
 import VerdictStamp from "@/app/components/VerdictStamp";
+import ShareCardButton from "@/app/components/ShareCardButton";
 import { verdictFromMatch } from "@/lib/verdict";
 import { formatMatchDate } from "@/lib/format";
 import { NexonApiError, isNotConfigured } from "@/lib/nexon/client";
@@ -211,13 +212,17 @@ export default async function MatchPage({
         </div>
       </section>
 
-      <div className="mt-8">
+      <div className="mt-8 flex items-center justify-between gap-3">
         <Link
           href={`/user/${encodeURIComponent(mine.nickname)}`}
           className="text-sm text-muted transition-colors hover:text-accent"
         >
           ← {mine.nickname} 전적으로
         </Link>
+        <ShareCardButton
+          url={`/api/card/match/${encodeURIComponent(matchId)}?me=${encodeURIComponent(mine.ouid)}`}
+          filename={`fclab-match-${matchId}.png`}
+        />
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta"
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
 import { formatAchievementDate, formatMatchDate } from "@/lib/format";
 import SquadSection from "./SquadSection";
+import ShareCardButton from "@/app/components/ShareCardButton";
 
 export async function generateMetadata({
   params,
@@ -88,6 +89,13 @@ export default async function UserPage({
             ))}
           </div>
         )}
+        <div className="mt-4">
+          <ShareCardButton
+            url={`/api/card/user/${encodeURIComponent(basic.nickname)}`}
+            filename={`fclab-${basic.nickname}.png`}
+            label="전적 카드 저장 · 공유"
+          />
+        </div>
       </section>
 
       {/* 매치 종류 탭 */}
