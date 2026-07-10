@@ -4,6 +4,7 @@ import Link from "next/link";
 import SearchForm from "./components/SearchForm";
 import MobileTabBar from "./components/MobileTabBar";
 import ThemeToggle from "./components/ThemeToggle";
+import AuthButton from "./components/AuthButton";
 import "./globals.css";
 
 const chakra = Chakra_Petch({
@@ -68,10 +69,17 @@ export default function RootLayout({
                 BETA
               </span>
             </Link>
-            <div className="ml-auto hidden w-64 md:block">
+            <Link
+              href="/community"
+              className="ml-auto hidden text-sm font-semibold text-muted transition-colors hover:text-ink md:block"
+            >
+              커뮤니티
+            </Link>
+            <div className="hidden w-56 md:block">
               <SearchForm size="sm" />
             </div>
-            <div className="ml-auto md:ml-0">
+            <div className="ml-auto flex items-center gap-2 md:ml-0">
+              <AuthButton />
               <ThemeToggle />
             </div>
           </div>

@@ -24,6 +24,18 @@ const TABS = [
     ),
   },
   {
+    href: "/community",
+    label: "커뮤니티",
+    match: (p: string) => p.startsWith("/community"),
+    icon: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+        <path d="M16 6.5a3 3 0 0 1 0 5.5M17.5 19a5.5 5.5 0 0 0-2.8-4.8" />
+      </>
+    ),
+  },
+  {
     href: "/vs",
     label: "VS",
     match: (p: string) => p.startsWith("/vs"),
