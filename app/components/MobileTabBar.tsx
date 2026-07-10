@@ -53,7 +53,7 @@ export default function MobileTabBar() {
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-14 flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors ${
+                className={`flex h-14 flex-col items-center justify-center gap-1 text-[12px] font-semibold transition-colors ${
                   active ? "text-accent" : "text-muted"
                 }`}
               >

@@ -29,7 +29,7 @@ export default function TugOfWar({
         ahead ? "앞섬" : "뒤처짐"
       }`}
     >
-      <div className="flex items-baseline justify-between text-[11px]">
+      <div className="flex items-baseline justify-between text-[13px]">
         <span className="text-muted">{label}</span>
         <span className="scoreboard font-semibold">
           {/* 색 + 형태(▲/▼) 이중 인코딩 */}

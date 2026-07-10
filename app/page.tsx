@@ -51,7 +51,7 @@ async function VsTeaser() {
         href="/vs"
         className="panel group flex items-center gap-3 p-4 transition-colors hover:border-gold/50 sm:gap-5 sm:p-5"
       >
-        <p className="scoreboard flex-none text-[10px] font-bold leading-tight tracking-[0.2em] text-gold">
+        <p className="scoreboard flex-none text-[12px] font-bold leading-tight tracking-[0.2em] text-gold">
           오늘의
           <br />
           VS
@@ -135,7 +135,7 @@ export default function Home() {
           {FEATURES.map((f, i) => {
             const inner = (
               <>
-                <p className="scoreboard text-[10px] font-bold tracking-[0.2em] text-gold">
+                <p className="scoreboard text-[12px] font-bold tracking-[0.2em] text-gold">
                   {f.tag}
                 </p>
                 <h3 className="mt-2 text-base font-bold">{f.title}</h3>
@@ -143,7 +143,7 @@ export default function Home() {
                   {f.desc}
                 </p>
                 <p
-                  className={`mt-3 text-[11px] font-semibold ${
+                  className={`mt-3 text-[13px] font-semibold ${
                     f.href ? "text-accent" : "text-muted"
                   }`}
                 >

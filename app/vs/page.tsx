@@ -92,7 +92,7 @@ export default async function VsPage({
       {/* 예측 투표 → 정답 공개 */}
       <VsReveal cmp={cmp} initialCounts={counts} />
 
-      <p className="mt-8 text-center text-[11px] text-muted">
+      <p className="mt-8 text-center text-[13px] text-muted">
         랭커 {getPositionLabel(cmp.pos)} 실사용 평균 기준 · 매일 새로운 대결
       </p>
     </div>

@@ -120,7 +120,7 @@ export default async function MatchPage({
             <div className="bg-accent" style={{ width: `${myPoss}%` }} />
             <div className="bg-lose/70" style={{ width: `${100 - myPoss}%` }} />
           </div>
-          <div className="scoreboard mt-1 flex justify-between text-[11px] font-semibold text-muted">
+          <div className="scoreboard mt-1 flex justify-between text-[13px] font-semibold text-muted">
             <span className="text-accent">{myPoss}%</span>
             <span>점유율</span>
             <span className="text-lose">{100 - myPoss}%</span>
@@ -151,7 +151,7 @@ export default async function MatchPage({
             </div>
           )}
         </div>
-        <p className="mt-2 text-[11px] text-muted">
+        <p className="mt-2 text-[13px] text-muted">
           ● 채움=골 · ○ 외곽선=노골 · <span className="text-gold">○ 금색=골대</span>
         </p>
       </section>
@@ -168,7 +168,7 @@ export default async function MatchPage({
             className="h-16 w-16 flex-none rounded-xl bg-surface-2 object-cover"
           />
           <div className="min-w-0 flex-1">
-            <p className="scoreboard text-[10px] font-bold tracking-[0.2em] text-gold">
+            <p className="scoreboard text-[12px] font-bold tracking-[0.2em] text-gold">
               PLAYER OF THE MATCH
             </p>
             <p className="mt-0.5 truncate font-bold">
@@ -290,7 +290,7 @@ function RatingList({
             unoptimized
             className="h-8 w-8 flex-none rounded-lg bg-surface-2 object-cover"
           />
-          <span className="scoreboard w-9 flex-none text-[11px] font-semibold text-muted">
+          <span className="scoreboard w-9 flex-none text-[13px] font-semibold text-muted">
             {getPositionLabel(p.spPosition)}
           </span>
           <span className="min-w-0 flex-1 truncate text-[13px]">
@@ -299,7 +299,7 @@ function RatingList({
               <span className="ml-1 text-accent">⚽{p.status.goal}</span>
             )}
             {(p.status?.assist ?? 0) > 0 && (
-              <span className="ml-1 text-[11px] text-muted">A{p.status.assist}</span>
+              <span className="ml-1 text-[13px] text-muted">A{p.status.assist}</span>
             )}
           </span>
           <span

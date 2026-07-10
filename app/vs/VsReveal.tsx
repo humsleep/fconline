@@ -110,12 +110,12 @@ export default function VsReveal({
           </span>
           <span className="text-xs text-muted">우세</span>
           {hit && (
-            <span className="scoreboard ml-2 rounded bg-gold/15 px-2 py-0.5 text-[11px] font-bold text-gold">
+            <span className="scoreboard ml-2 rounded bg-gold/15 px-2 py-0.5 text-[13px] font-bold text-gold">
               🎯 안목 적중
             </span>
           )}
           {myPick && !hit && (
-            <span className="ml-2 text-[11px] text-muted">아쉽!</span>
+            <span className="ml-2 text-[13px] text-muted">아쉽!</span>
           )}
         </div>
       ) : (
@@ -140,11 +140,11 @@ export default function VsReveal({
 
       {/* 투표 결과 */}
       <div className="mt-5">
-        <p className="scoreboard text-[11px] font-semibold text-muted">
+        <p className="scoreboard text-[13px] font-semibold text-muted">
           유저 예측 ({counts.total.toLocaleString()}표)
         </p>
         {/* A=라임, B=중립 슬레이트 — 우열이 아니라 '선택 비율' 표시 */}
-        <div className="mt-1.5 flex h-7 overflow-hidden rounded-lg bg-surface-2 text-[11px] font-bold">
+        <div className="mt-1.5 flex h-7 overflow-hidden rounded-lg bg-surface-2 text-[13px] font-bold">
           <div
             className="flex items-center justify-start overflow-hidden bg-accent/80 px-2 text-accent-ink"
             style={{ width: `${aPct}%` }}
@@ -157,7 +157,7 @@ export default function VsReveal({
             {bPct >= 12 && `${bPct}%`}
           </div>
         </div>
-        <div className="mt-1 flex justify-between text-[11px] text-muted">
+        <div className="mt-1 flex justify-between text-[13px] text-muted">
           <span className={myPick === "A" ? "text-accent" : ""}>
             {a.name}
             {myPick === "A" && " (내 선택)"}
@@ -199,7 +199,7 @@ function VsBar({
   const aShare = Math.round((a / total) * 100);
   return (
     <div>
-      <div className="flex items-baseline justify-between text-[11px]">
+      <div className="flex items-baseline justify-between text-[13px]">
         <span className={`scoreboard font-bold ${aWin ? "text-accent" : "text-muted"}`}>
           {aWin && "▲ "}
           {fmt(a)}
