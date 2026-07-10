@@ -1,12 +1,11 @@
 import Image from "next/image";
 import { getUserMatches } from "@/lib/nexon/api";
-import { getMatchDetailCached } from "@/lib/nexon/cached";
+import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { NexonApiError } from "@/lib/nexon/client";
 import { getPositionLabel } from "@/lib/nexon/meta";
 import { aggregatePlayers, type PlayerAggregate } from "@/lib/nexon/player-stats";
 import { getPlayerNames } from "@/lib/nexon/players";
 import { getRankerStatsCached, rankerKey, type RankerMap } from "@/lib/nexon/ranker";
-import type { MatchDetail } from "@/lib/nexon/types";
 
 const MATCH_COUNT = 30;
 const MAX_CARDS = 18;
@@ -26,15 +25,7 @@ export default async function SquadSection({
     if (!(err instanceof NexonApiError)) throw err;
   }
 
-  const details: MatchDetail[] = [];
-  for (const id of matchIds) {
-    try {
-      details.push(await getMatchDetailCached(id));
-    } catch {
-      // 개별 매치 실패는 건너뜀
-    }
-  }
-
+  const details = await getMatchDetailsBatch(matchIds);
   const all = aggregatePlayers(details, ouid);
   const players = all.filter((p) => p.games >= MIN_GAMES).slice(0, MAX_CARDS);
 

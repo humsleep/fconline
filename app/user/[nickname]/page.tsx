@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
-import { getMatchDetailCached } from "@/lib/nexon/cached";
+import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { NexonApiError, isMaintenance, isNotConfigured, isUserNotFound } from "@/lib/nexon/client";
 import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
@@ -159,14 +159,11 @@ async function MatchSection({
     if (!(err instanceof NexonApiError)) throw err;
   }
 
+  const details = await getMatchDetailsBatch(matchIds);
   const summaries: MatchSummary[] = [];
-  for (const id of matchIds) {
-    try {
-      const s = summarizeMatch(await getMatchDetailCached(id), ouid);
-      if (s) summaries.push(s);
-    } catch {
-      // 닉네임 변경 반영 대기 등 개별 실패는 건너뜀
-    }
+  for (const d of details) {
+    const s = summarizeMatch(d, ouid);
+    if (s) summaries.push(s);
   }
 
   if (summaries.length === 0) {
