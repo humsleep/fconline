@@ -8,6 +8,7 @@ import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta"
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
 import { formatAchievementDate, formatMatchDate } from "@/lib/format";
 import SquadSection from "./SquadSection";
+import PlaystyleSection from "./PlaystyleSection";
 import ShareCardButton from "@/app/components/ShareCardButton";
 
 export async function generateMetadata({
@@ -37,7 +38,8 @@ export default async function UserPage({
   const nickname = decodeURIComponent(raw);
   const matchType =
     MATCH_TABS.find((t) => t.type === Number(type))?.type ?? MATCH_TABS[0].type;
-  const activeView = view === "squad" ? "squad" : "matches";
+  const activeView =
+    view === "squad" ? "squad" : view === "style" ? "style" : "matches";
 
   let ouid: string;
   try {
@@ -104,7 +106,7 @@ export default async function UserPage({
           <Link
             key={t.type}
             href={`/user/${encodeURIComponent(basic.nickname)}?type=${t.type}${
-              activeView === "squad" ? "&view=squad" : ""
+              activeView === "matches" ? "" : `&view=${activeView}`
             }`}
             className={`scoreboard rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
               t.type === matchType
@@ -123,10 +125,11 @@ export default async function UserPage({
           [
             { view: "matches", label: "경기 기록" },
             { view: "squad", label: "선수 성적표" },
+            { view: "style", label: "플레이스타일" },
           ] as const
         ).map((v) => {
           const href = `/user/${encodeURIComponent(basic.nickname)}?type=${matchType}${
-            v.view === "squad" ? "&view=squad" : ""
+            v.view === "matches" ? "" : `&view=${v.view}`
           }`;
           const on = activeView === v.view;
           return (
@@ -148,6 +151,10 @@ export default async function UserPage({
       {activeView === "squad" ? (
         <Suspense key={`sq-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
           <SquadSection ouid={ouid} matchType={matchType} />
+        </Suspense>
+      ) : activeView === "style" ? (
+        <Suspense key={`st-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
+          <PlaystyleSection ouid={ouid} matchType={matchType} />
         </Suspense>
       ) : (
         <Suspense key={`${ouid}-${matchType}`} fallback={<MatchSkeleton />}>
