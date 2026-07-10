@@ -1,24 +1,38 @@
 import 'server-only';
 
+export interface SeasonVariant {
+  spid: number;
+  season: string; // 시즌(클래스) 짧은 이름, 예: "TOTY", "아이콘"
+}
+
 export interface PlayerHit {
   spid: number; // 대표(최신 시즌) 카드 식별자
   pid: number; // 실선수 고유번호 (spid 뒤 6자리)
   name: string;
+  season: string; // 대표 카드 시즌
+  seasons: SeasonVariant[]; // 보유 시즌 전체(최신순)
 }
 
 interface PlayerIndex {
   nameById: Map<number, string>;
-  // 실선수(pid)별 대표 카드 — 검색·스쿼드 빌더용
+  seasonById: Map<number, string>; // spid → 시즌명
   reps: PlayerHit[];
 }
 
-// spid.json은 수 MB — Next 데이터 캐시(2MB 제한)에 안 들어가므로
-// no-store로 받아 모듈(람다 인스턴스) 레벨에 메모이즈.
 let index: PlayerIndex | null = null;
 let loading: Promise<PlayerIndex> | null = null;
 
+const MAX_SEASONS = 16; // 결과당 노출 시즌 상한
+
+export function seasonIdOf(spid: number): number {
+  return Math.floor(spid / 1_000_000);
+}
 function pidOf(spid: number): number {
   return spid % 1_000_000;
+}
+// "TOTY (2022~2023 시즌)" → "TOTY" 처럼 괄호 설명 제거
+function shortSeason(className: string): string {
+  return className.split(/[(（]/)[0].trim() || className;
 }
 
 async function loadIndex(): Promise<PlayerIndex> {
@@ -27,7 +41,33 @@ async function loadIndex(): Promise<PlayerIndex> {
 
   loading = (async () => {
     const nameById = new Map<number, string>();
-    const bestByPid = new Map<number, PlayerHit>();
+    const seasonById = new Map<number, string>();
+    const seasonNameById = new Map<number, string>(); // seasonId → 시즌명
+
+    // 시즌 메타 먼저
+    try {
+      const sres = await fetch(
+        'https://open.api.nexon.com/static/fconline/meta/seasonid.json',
+        { next: { revalidate: 86400 } }
+      );
+      if (sres.ok) {
+        const seasons = (await sres.json()) as {
+          seasonId: number;
+          className: string;
+        }[];
+        for (const s of seasons) {
+          seasonNameById.set(s.seasonId, shortSeason(s.className));
+        }
+      }
+    } catch {
+      // 시즌 메타 실패 → 시즌ID 숫자로 폴백
+    }
+
+    const seasonName = (spid: number) =>
+      seasonNameById.get(seasonIdOf(spid)) ?? `S${seasonIdOf(spid)}`;
+
+    // 실선수(pid)별 보유 시즌 spid 목록
+    const spidsByPid = new Map<number, number[]>();
     try {
       const res = await fetch(
         'https://open.api.nexon.com/static/fconline/meta/spid.json',
@@ -37,21 +77,34 @@ async function loadIndex(): Promise<PlayerIndex> {
         const list = (await res.json()) as { id: number; name: string }[];
         for (const p of list) {
           nameById.set(p.id, p.name);
+          seasonById.set(p.id, seasonName(p.id));
           const pid = pidOf(p.id);
-          const cur = bestByPid.get(pid);
-          // 같은 실선수의 여러 시즌 중 최신(최대 spid)을 대표로
-          if (!cur || p.id > cur.spid) {
-            bestByPid.set(pid, { spid: p.id, pid, name: p.name });
-          }
+          const arr = spidsByPid.get(pid);
+          if (arr) arr.push(p.id);
+          else spidsByPid.set(pid, [p.id]);
         }
       }
     } catch {
-      // 로드 실패 시 빈 인덱스 — 이름 대신 spId 표기로 강등
+      // spid 로드 실패
     }
-    const built: PlayerIndex = {
-      nameById,
-      reps: [...bestByPid.values()],
-    };
+
+    const reps: PlayerHit[] = [];
+    for (const [pid, spids] of spidsByPid) {
+      spids.sort((a, b) => b - a); // 최신 시즌 먼저
+      const repSpid = spids[0];
+      reps.push({
+        spid: repSpid,
+        pid,
+        name: nameById.get(repSpid) ?? `선수 ${repSpid}`,
+        season: seasonById.get(repSpid) ?? '',
+        seasons: spids.slice(0, MAX_SEASONS).map((s) => ({
+          spid: s,
+          season: seasonById.get(s) ?? '',
+        })),
+      });
+    }
+
+    const built: PlayerIndex = { nameById, seasonById, reps };
     index = built;
     loading = null;
     return built;
@@ -74,7 +127,19 @@ export async function getPlayerNames(
   return out;
 }
 
-/** 이름으로 실선수 검색 (실선수 1명당 대표 카드 1개). 접두 일치 우선. */
+/** spid → 시즌(클래스) 이름 */
+export async function getSeasonNames(
+  spIds: number[]
+): Promise<Map<number, string>> {
+  const idx = await loadIndex();
+  const out = new Map<number, string>();
+  for (const id of spIds) {
+    out.set(id, idx.seasonById.get(id) ?? `S${seasonIdOf(id)}`);
+  }
+  return out;
+}
+
+/** 이름으로 실선수 검색 (실선수 1명당 대표 카드 1개 + 보유 시즌). */
 export async function searchPlayers(
   q: string,
   limit = 20
@@ -85,7 +150,6 @@ export async function searchPlayers(
 
   const matches = idx.reps.filter((p) => p.name.includes(query));
   matches.sort((a, b) => {
-    // 접두 일치 → 이름 길이 → 최신 시즌
     const ap = a.name.startsWith(query) ? 0 : 1;
     const bp = b.name.startsWith(query) ? 0 : 1;
     if (ap !== bp) return ap - bp;

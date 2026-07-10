@@ -173,7 +173,7 @@ export default function VsReveal({
       <div className="mt-6 flex justify-center">
         <ShareCardButton
           url={`/api/card/vs?a=${a.spId}&b=${b.spId}&pos=${cmp.pos}`}
-          filename={`fclab-vs-${a.spId}-${b.spId}.png`}
+          filename={`fcscope-vs-${a.spId}-${b.spId}.png`}
           label="VS 카드 저장 · 공유"
         />
       </div>

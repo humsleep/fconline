@@ -27,7 +27,7 @@ export default function ThemeToggle() {
     const next: Theme = currentTheme() === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     try {
-      localStorage.setItem("fclab-theme", next);
+      localStorage.setItem("fcscope-theme", next);
     } catch {
       // ignore
     }

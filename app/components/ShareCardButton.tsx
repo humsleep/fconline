@@ -8,7 +8,7 @@ import { useState } from "react";
  */
 export default function ShareCardButton({
   url,
-  filename = "fclab-card.png",
+  filename = "fcscope-card.png",
   label = "카드 저장 · 공유",
 }: {
   url: string;
@@ -30,7 +30,7 @@ export default function ShareCardButton({
         canShare?: (d?: { files?: File[] }) => boolean;
       };
       if (nav.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: "FC Lab" });
+        await navigator.share({ files: [file], title: "FC Scope" });
       } else {
         const href = URL.createObjectURL(blob);
         const a = document.createElement("a");

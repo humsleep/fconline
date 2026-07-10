@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "FC Lab — FC온라인 데이터 랩",
-    short_name: "FC Lab",
+    name: "FC Scope — FC온라인 데이터 랩",
+    short_name: "FC Scope",
     description: "FC온라인 전적·슛맵·랭커 비교·라이브 세션 분석",
     start_url: "/",
     display: "standalone",

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-// FC LAB 심볼 — 구형 플라스크(연구실)의 둥근 몸통 = 축구공.
+// FC SCOPE 심볼 — 구형 플라스크(연구실)의 둥근 몸통 = 축구공.
 // 넥슨 없이 코드로 생성, maskable 대응(풀블리드 배경 + 중앙 안전영역).
 export function iconResponse(size: number): ImageResponse {
   const s = 100; // viewBox

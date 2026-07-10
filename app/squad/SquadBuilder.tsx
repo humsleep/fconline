@@ -6,10 +6,16 @@ import { FORMATIONS, getFormation, type Slot } from "@/lib/squad/formations";
 import { presetsByLeague } from "@/lib/squad/presets";
 import SquadPitch, { type Coord, type FilledSlot } from "./SquadPitch";
 
+interface SeasonVariant {
+  spid: number;
+  season: string;
+}
 interface PlayerHit {
   spid: number;
   pid: number;
   name: string;
+  season: string;
+  seasons: SeasonVariant[];
 }
 
 const LEAGUES = presetsByLeague();
@@ -27,6 +33,7 @@ export default function SquadBuilder() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlayerHit[]>([]);
   const [searching, setSearching] = useState(false);
+  const [expanded, setExpanded] = useState<number | null>(null); // 시즌 펼친 pid
 
   const [saving, setSaving] = useState(false);
   const [presetLoading, setPresetLoading] = useState(false);
@@ -83,12 +90,14 @@ export default function SquadBuilder() {
     setFormationId(nextId);
   }
 
-  function assign(hit: PlayerHit) {
+  // 특정 시즌 카드로 배치 (spid + 시즌명)
+  function assign(name: string, spid: number, season: string) {
     if (!activeSlot) return;
-    setFilled((f) => ({ ...f, [activeSlot.id]: { spid: hit.spid, name: hit.name } }));
+    setFilled((f) => ({ ...f, [activeSlot.id]: { spid, name, season } }));
     setActiveSlot(null);
     setQuery("");
     setResults([]);
+    setExpanded(null);
   }
 
   function clearSlot(slotId: string) {
@@ -111,8 +120,13 @@ export default function SquadBuilder() {
       setName(data.name);
       setTeamTag(data.teamTag);
       const next: Record<string, FilledSlot> = {};
-      for (const s of data.slots as { slotId: string; spid: number; name: string }[]) {
-        next[s.slotId] = { spid: s.spid, name: s.name };
+      for (const s of data.slots as {
+        slotId: string;
+        spid: number;
+        name: string;
+        season?: string;
+      }[]) {
+        next[s.slotId] = { spid: s.spid, name: s.name, season: s.season };
       }
       setFilled(next);
       setCoords({});
@@ -312,11 +326,8 @@ export default function SquadBuilder() {
               ) : (
                 <ul className="space-y-1">
                   {results.map((r) => (
-                    <li key={r.spid}>
-                      <button
-                        onClick={() => assign(r)}
-                        className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-2"
-                      >
+                    <li key={r.pid}>
+                      <div className="flex w-full items-center gap-3 rounded-lg px-2 py-2">
                         <img
                           src={`/api/player-image/${r.spid}`}
                           alt=""
@@ -325,8 +336,44 @@ export default function SquadBuilder() {
                           loading="lazy"
                           className="h-9 w-9 flex-none rounded-lg bg-surface-2 object-cover"
                         />
-                        <span className="text-sm font-medium">{r.name}</span>
-                      </button>
+                        <button
+                          onClick={() => assign(r.name, r.spid, r.season)}
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        >
+                          <span className="truncate text-sm font-medium">{r.name}</span>
+                          {r.season && (
+                            <span className="scoreboard flex-none rounded bg-gold/15 px-1.5 py-0.5 text-[11px] font-bold text-gold">
+                              {r.season}
+                            </span>
+                          )}
+                        </button>
+                        {r.seasons.length > 1 && (
+                          <button
+                            onClick={() =>
+                              setExpanded((e) => (e === r.pid ? null : r.pid))
+                            }
+                            className="flex-none rounded px-2 py-1 text-[12px] font-semibold text-muted transition-colors hover:text-accent"
+                            aria-label="시즌 선택"
+                          >
+                            시즌 {r.seasons.length}
+                            {expanded === r.pid ? " ▲" : " ▼"}
+                          </button>
+                        )}
+                      </div>
+                      {/* 시즌 선택 (같은 선수의 다른 시즌 카드) */}
+                      {expanded === r.pid && (
+                        <div className="flex flex-wrap gap-1.5 px-2 pb-2 pt-1">
+                          {r.seasons.map((s) => (
+                            <button
+                              key={s.spid}
+                              onClick={() => assign(r.name, s.spid, s.season)}
+                              className="scoreboard rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink"
+                            >
+                              {s.season || `S${Math.floor(s.spid / 1000000)}`}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>

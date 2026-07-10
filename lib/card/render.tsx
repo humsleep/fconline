@@ -35,7 +35,7 @@ export async function renderCard(data: CardData): Promise<ImageResponse> {
   const stampHex = data.stamp ? HEX[data.stamp.color] : HEX.lime;
 
   const fontText =
-    "FCLAB FC온라인 데이터 랩 " +
+    "FC SCOPE FC온라인 데이터 랩 " +
     data.kicker +
     data.title +
     (data.subtitle ?? "") +
@@ -69,7 +69,7 @@ export async function renderCard(data: CardData): Promise<ImageResponse> {
             <span style={{ fontSize: 44, fontWeight: 700, color: "#c8f542" }}>
               FC
             </span>
-            <span style={{ fontSize: 44, fontWeight: 700 }}>LAB</span>
+            <span style={{ fontSize: 44, fontWeight: 700 }}>SCOPE</span>
           </div>
           <span
             style={{

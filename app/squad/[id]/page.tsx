@@ -3,6 +3,7 @@ import Link from "next/link";
 import ShareCardButton from "@/app/components/ShareCardButton";
 import { getFormation } from "@/lib/squad/formations";
 import { getSquad } from "@/lib/squad/store";
+import { getSeasonNames } from "@/lib/nexon/players";
 import SquadPitch, { type Coord, type FilledSlot } from "../SquadPitch";
 
 export async function generateMetadata({
@@ -45,10 +46,15 @@ export default async function SquadViewPage({
     );
   }
 
+  const seasons = await getSeasonNames(squad.slots.map((s) => s.spid));
   const filled: Record<string, FilledSlot> = {};
   const coords: Record<string, Coord> = {};
   for (const s of squad.slots) {
-    filled[s.slotId] = { spid: s.spid, name: s.name };
+    filled[s.slotId] = {
+      spid: s.spid,
+      name: s.name,
+      season: s.season ?? seasons.get(s.spid),
+    };
     if (typeof s.x === "number" && typeof s.y === "number") {
       coords[s.slotId] = { x: s.x, y: s.y };
     }
@@ -68,7 +74,7 @@ export default async function SquadViewPage({
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <ShareCardButton
           url={`/api/card/squad/${squad.id}`}
-          filename={`fclab-squad-${squad.id}.png`}
+          filename={`fcscope-squad-${squad.id}.png`}
           label="스쿼드 카드 저장 · 공유"
         />
         <Link

@@ -23,7 +23,7 @@ export async function GET(
       subtitle: squad.name,
       stamp: { text: `${squad.slots.length}명 구성`, icon: "", color: "lime" },
       badges: picks.map((n) => ({ label: "", value: n })),
-      footerUrl: "fclab",
+      footerUrl: "fcscope",
     });
   } catch {
     return new Response("error", { status: 500 });
