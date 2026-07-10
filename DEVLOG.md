@@ -1,5 +1,16 @@
 # DEVLOG
 
+## 2026-07-10 — 커뮤니티 1탄: 인증 스택 + 클럽 모집 (Phase 5a)
+
+- **인증 기반**(fconline 최초): `@supabase/ssr` 클라이언트(client/server/middleware) + 루트 `middleware.ts`(세션 갱신), Google OAuth `/login` + `/auth/callback`(PKCE), `lib/security/safe-redirect.ts`(오픈 리다이렉트·제어문자·login/auth 루프 차단, 13 어서션)
+- **`0004_profiles.sql`**: profiles(닉네임 ci-유니크 + FC Online 구단주명 연동 ouid + updated_at 트리거) + RLS(공개 읽기·본인만 쓰기) + `verified_ouid` 부분 유니크. `/api/profile`(닉네임 upsert)·`/api/profile/verify`(구단주명→ouid 해석) + `/profile/setup` + 헤더 `AuthButton`
+- **`0005_club_posts.sql`** + 클럽 모집: `/community` 허브, `/community/clubs`(지역 필터·페이지네이션), `/new`(작성), `/[id]`(상세·마감/삭제·**작성자 전적 카드 자동 첨부**). RLS: 공개 읽기 / 작성=로그인+닉네임 / 수정·삭제=작성자. 헤더·모바일 탭 커뮤니티 진입
+- **에이전트 2종 감사(보안·RLS + Next 코드) 반영**: ouid DB 유니크+23505 처리(중복 연동/경쟁 차단), 프로필 조회 예외 방어, 페이지 clamp, 리다이렉트 하드닝, 드롭다운 Esc/레이스 가드. 서비스롤 미사용·IDOR/XSS 없음 확인
+- PR #3 squash merge, 빌드·타입체크 통과
+- ⚠️ **배포 전 설정**: SQL 0004·0005 실행 + Supabase Google OAuth 활성화(+ `/auth/callback` 리다이렉트 URL) + ANON_KEY 확인
+- ⚠️ **한계**: 구단주명 "연동"은 존재 확인일 뿐 소유 증명 아님(사칭 방지 토큰 챌린지는 후속). 유저 대회·교류전(5b/5c)은 준비 중
+- 다음: 실데이터 검증 / 커뮤니티 확장
+
 ## 2026-07-10 — 스쿼드 클리닉 (로드맵 Phase 2, 룰베이스 진단)
 
 - `lib/squad-clinic.ts` `diagnoseSquad()` — "선수 성적표"(나열)를 **처방적 진단**으로 종합. 종합 점수(0~100) + 밴드(top/strong/balanced/building/rebuild), 라인별(공격/미드/수비/GK) 평점·랭커 대비 gap, 약한 고리, 강점, 이슈 리스트(weak-link / over-reliance / thin-line / low-ranker-coverage). **AI 미사용**, 이미 집계된 players + 랭커 맵 재사용 → **추가 넥슨 호출 0**
