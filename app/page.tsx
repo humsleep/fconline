@@ -35,6 +35,13 @@ const FEATURES = [
     hint: "바로가기 →",
     href: "/vs",
   },
+  {
+    tag: "스쿼드 빌더",
+    title: "리그·팀 스쿼드 만들고 공유",
+    desc: "포메이션에 선수를 배치해 나만의 스쿼드를. 프리미어리그 아스날처럼 팀을 고르면 자동으로 채워집니다.",
+    hint: "바로가기 →",
+    href: "/squad",
+  },
 ] as const;
 
 async function VsTeaser() {
