@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FORMATIONS, getFormation, type Slot } from "@/lib/squad/formations";
 import { presetsByLeague } from "@/lib/squad/presets";
-import SquadPitch, { type FilledSlot } from "./SquadPitch";
+import SquadPitch, { type Coord, type FilledSlot } from "./SquadPitch";
 
 interface PlayerHit {
   spid: number;
@@ -18,6 +18,8 @@ export default function SquadBuilder() {
   const router = useRouter();
   const [formationId, setFormationId] = useState("433");
   const [filled, setFilled] = useState<Record<string, FilledSlot>>({});
+  const [coords, setCoords] = useState<Record<string, Coord>>({});
+  const [custom, setCustom] = useState(false);
   const [name, setName] = useState("내 스쿼드");
   const [teamTag, setTeamTag] = useState<string | null>(null);
 
@@ -69,16 +71,15 @@ export default function SquadBuilder() {
     validSlotIds.has(id)
   ).length;
 
-  // 포메이션 교체 — 새 포메이션에 없는 슬롯의 선수는 정리(무음 손실 방지)
+  // 포메이션 교체 — 새 포메이션에 없는 슬롯의 선수/좌표 정리(무음 손실 방지)
   function changeFormation(nextId: string) {
     const nextValid = new Set(getFormation(nextId).slots.map((s) => s.id));
     setFilled((f) => {
       const n: Record<string, FilledSlot> = {};
-      for (const [id, v] of Object.entries(f)) {
-        if (nextValid.has(id)) n[id] = v;
-      }
+      for (const [id, v] of Object.entries(f)) if (nextValid.has(id)) n[id] = v;
       return n;
     });
+    setCoords({}); // 포메이션 바꾸면 커스텀 좌표 초기화(기본 배치로)
     setFormationId(nextId);
   }
 
@@ -114,6 +115,7 @@ export default function SquadBuilder() {
         next[s.slotId] = { spid: s.spid, name: s.name };
       }
       setFilled(next);
+      setCoords({});
       if ((data.slots?.length ?? 0) === 0) {
         setError("이 팀 선수를 아직 자동 매칭하지 못했어요. 직접 채워보세요.");
       }
@@ -129,11 +131,14 @@ export default function SquadBuilder() {
     setSaving(true);
     setError("");
     try {
-      const slots = Object.entries(filled).map(([slotId, v]) => ({
-        slotId,
-        spid: v.spid,
-        name: v.name,
-      }));
+      const slots = Object.entries(filled)
+        .filter(([slotId]) => validSlotIds.has(slotId))
+        .map(([slotId, v]) => ({
+          slotId,
+          spid: v.spid,
+          name: v.name,
+          ...(coords[slotId] ? { x: coords[slotId].x, y: coords[slotId].y } : {}),
+        }));
       const res = await fetch("/api/squad", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -182,8 +187,8 @@ export default function SquadBuilder() {
         {presetLoading && <span className="text-[13px] text-muted">불러오는 중…</span>}
       </div>
 
-      {/* 포메이션 */}
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      {/* 포메이션 + 커스텀 */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {FORMATIONS.map((f) => (
           <button
             key={f.id}
@@ -197,18 +202,38 @@ export default function SquadBuilder() {
             {f.name}
           </button>
         ))}
+        <button
+          onClick={() => setCustom((c) => !c)}
+          className={`scoreboard ml-auto rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+            custom ? "bg-gold/20 text-gold" : "bg-surface-2 text-muted hover:text-ink"
+          }`}
+        >
+          {custom ? "✓ 자유 배치" : "자유 배치"}
+        </button>
       </div>
+      {custom && (
+        <p className="mt-2 text-[13px] text-muted">
+          선수를 <b className="text-ink">드래그</b>해 원하는 위치로 옮기세요. 탭하면
+          선수 교체.
+        </p>
+      )}
 
       {/* 피치 */}
       <div className="mt-4">
         <SquadPitch
           formationId={formationId}
           filled={filled}
+          coords={coords}
           onSlotClick={(slot) => {
             setActiveSlot(slot);
             setQuery("");
             setResults([]);
           }}
+          onMove={
+            custom
+              ? (slotId, x, y) => setCoords((c) => ({ ...c, [slotId]: { x, y } }))
+              : undefined
+          }
         />
       </div>
 

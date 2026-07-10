@@ -3,7 +3,7 @@ import Link from "next/link";
 import ShareCardButton from "@/app/components/ShareCardButton";
 import { getFormation } from "@/lib/squad/formations";
 import { getSquad } from "@/lib/squad/store";
-import SquadPitch, { type FilledSlot } from "../SquadPitch";
+import SquadPitch, { type Coord, type FilledSlot } from "../SquadPitch";
 
 export async function generateMetadata({
   params,
@@ -46,7 +46,13 @@ export default async function SquadViewPage({
   }
 
   const filled: Record<string, FilledSlot> = {};
-  for (const s of squad.slots) filled[s.slotId] = { spid: s.spid, name: s.name };
+  const coords: Record<string, Coord> = {};
+  for (const s of squad.slots) {
+    filled[s.slotId] = { spid: s.spid, name: s.name };
+    if (typeof s.x === "number" && typeof s.y === "number") {
+      coords[s.slotId] = { x: s.x, y: s.y };
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-8 md:pb-16">
@@ -56,7 +62,7 @@ export default async function SquadViewPage({
       <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{squad.name}</h1>
 
       <div className="mt-4">
-        <SquadPitch formationId={squad.formation} filled={filled} />
+        <SquadPitch formationId={squad.formation} filled={filled} coords={coords} />
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">

@@ -9,6 +9,8 @@ export interface SquadSlot {
   slotId: string;
   spid: number;
   name: string;
+  x?: number; // 커스텀 포메이션 좌표(0~100). 없으면 포메이션 기본 좌표 사용
+  y?: number;
 }
 
 export interface Squad {

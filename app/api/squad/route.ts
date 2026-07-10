@@ -46,7 +46,15 @@ export async function POST(req: Request) {
       typeof nm === "string"
     ) {
       seen.add(slotId);
-      slots.push({ slotId, spid, name: nm.slice(0, 40) });
+      const slot: SquadSlot = { slotId, spid, name: nm.slice(0, 40) };
+      // 커스텀 좌표(선택) — 0~100 범위만
+      const x = s.x;
+      const y = s.y;
+      if (typeof x === "number" && x >= 0 && x <= 100 && typeof y === "number" && y >= 0 && y <= 100) {
+        slot.x = x;
+        slot.y = y;
+      }
+      slots.push(slot);
     }
   }
   if (slots.length === 0) {
