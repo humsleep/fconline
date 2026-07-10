@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Chakra_Petch, IBM_Plex_Sans_KR } from "next/font/google";
 import Link from "next/link";
 import SearchForm from "./components/SearchForm";
+import MobileTabBar from "./components/MobileTabBar";
 import "./globals.css";
 
 const chakra = Chakra_Petch({
@@ -23,10 +24,17 @@ export const metadata: Metadata = {
   },
   description:
     "FC온라인 전적 검색, AI 스쿼드 진단, 랭커 데이터 비교. 감이 아니라 데이터로.",
+  appleWebApp: {
+    capable: true,
+    title: "FC Lab",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
   themeColor: "#0a1119",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -55,18 +63,12 @@ export default function RootLayout({
             <div className="ml-auto hidden w-72 md:block">
               <SearchForm size="sm" />
             </div>
-            <Link
-              href="/"
-              className="ml-auto text-sm text-muted transition-colors hover:text-accent md:hidden"
-            >
-              검색
-            </Link>
           </div>
         </header>
 
         <main className="flex-1">{children}</main>
 
-        <footer className="border-t border-line/70">
+        <footer className="border-t border-line/70 pb-20 md:pb-0">
           <div className="mx-auto w-full max-w-5xl px-4 py-6 text-xs leading-relaxed text-muted">
             <p>
               FC Lab은 비공식 팬 서비스입니다. Data based on NEXON Open API.
@@ -74,6 +76,8 @@ export default function RootLayout({
             </p>
           </div>
         </footer>
+
+        <MobileTabBar />
       </body>
     </html>
   );

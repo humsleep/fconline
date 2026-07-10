@@ -6,21 +6,34 @@ import { getPositionLabel } from "@/lib/nexon/meta";
 import { getPlayerNames } from "@/lib/nexon/players";
 import { getTodaysVs } from "@/lib/vs";
 
-const UPCOMING = [
+const FEATURES = [
   {
-    tag: "PHASE 2",
-    title: "스쿼드 클리닉",
-    desc: "최근 경기에서 스쿼드를 자동으로 읽어 급여 효율·포지션 적합도·랭커 대비 스탯을 진단하고, AI가 교체 카드를 추천합니다.",
+    tag: "매치 리포트",
+    title: "슛맵으로 왜 졌는지 본다",
+    desc: "경기별 슛 좌표·선수 평점·POTM까지. 점유율 말고 진짜 원인을 짚어줍니다.",
+    hint: "구단주명 검색 → 경기 선택",
+    href: null,
   },
   {
-    tag: "PHASE 3",
-    title: "VS 판독기",
-    desc: "“누가 더 좋냐” 논쟁 끝. 랭커들의 실사용 평균 스탯으로 두 선수를 판정하고 투표로 여론을 확인합니다.",
+    tag: "선수 성적표",
+    title: "내 카드, 랭커 대비 몇 점?",
+    desc: "내 스쿼드 선수별 실사용 평점을 랭커 평균과 나란히. 능력치가 아니라 실전 데이터로.",
+    hint: "구단주명 검색 → 선수 성적표",
+    href: null,
   },
   {
-    tag: "PHASE 4",
-    title: "현실 라인업 스쿼드",
-    desc: "어제 경기 선발 11명 그대로. 실제 팀의 최신 라인업을 FC온라인 카드로 매칭한 스쿼드를 만들어드립니다.",
+    tag: "라이브 세션",
+    title: "켜두면 자동으로 분석",
+    desc: "게임하는 동안 켜두면 경기가 끝날 때마다 세션 전적·연승·평점이 실시간처럼 갱신됩니다.",
+    hint: "구단주명 검색 → 라이브 세션",
+    href: null,
+  },
+  {
+    tag: "오늘의 VS",
+    title: "누가 더 센지 판정 + 투표",
+    desc: "랭커 실사용 데이터로 두 선수를 판정하고 예측 투표. 매일 새로운 대결이 열립니다.",
+    hint: "바로가기 →",
+    href: "/vs",
   },
 ] as const;
 
@@ -113,23 +126,46 @@ export default function Home() {
         <VsTeaser />
       </Suspense>
 
-      {/* 예정 기능 */}
-      <section className="pb-20">
+      {/* 기능 */}
+      <section className="pb-24 md:pb-16">
         <h2 className="scoreboard text-xs font-semibold tracking-[0.25em] text-muted">
-          COMING NEXT
+          여기서 할 수 있는 것
         </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {UPCOMING.map((f, i) => (
-            <article key={f.title} className={`panel rise rise-${i + 1} p-5`}>
-              <p className="scoreboard text-[10px] font-bold tracking-[0.2em] text-gold">
-                {f.tag}
-              </p>
-              <h3 className="mt-2 text-base font-bold">{f.title}</h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-muted">
-                {f.desc}
-              </p>
-            </article>
-          ))}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {FEATURES.map((f, i) => {
+            const inner = (
+              <>
+                <p className="scoreboard text-[10px] font-bold tracking-[0.2em] text-gold">
+                  {f.tag}
+                </p>
+                <h3 className="mt-2 text-base font-bold">{f.title}</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                  {f.desc}
+                </p>
+                <p
+                  className={`mt-3 text-[11px] font-semibold ${
+                    f.href ? "text-accent" : "text-muted"
+                  }`}
+                >
+                  {f.hint}
+                </p>
+              </>
+            );
+            const cls = `panel rise rise-${i + 1} block p-5`;
+            return f.href ? (
+              <Link
+                key={f.title}
+                href={f.href}
+                className={`${cls} transition-colors hover:border-accent/50`}
+              >
+                {inner}
+              </Link>
+            ) : (
+              <article key={f.title} className={cls}>
+                {inner}
+              </article>
+            );
+          })}
         </div>
       </section>
     </div>

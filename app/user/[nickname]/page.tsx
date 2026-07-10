@@ -238,10 +238,14 @@ async function MatchSection({
         <StatTile label="평균 점유율" value={`${rec.avgPossession}%`} />
       </section>
 
-      {/* 경기 리스트 */}
+      {/* 경기 리스트 — 카드 개봉처럼 순차 리빌 */}
       <ul className="mt-4 space-y-1.5">
-        {summaries.map((m) => (
-          <li key={m.matchId}>
+        {summaries.map((m, i) => (
+          <li
+            key={m.matchId}
+            className="pop-in"
+            style={{ animationDelay: `${Math.min(i, 12) * 45}ms` }}
+          >
             <MatchRow m={m} ouid={ouid} />
           </li>
         ))}

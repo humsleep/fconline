@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 export default function SearchForm({
   size = "lg",
@@ -13,6 +13,15 @@ export default function SearchForm({
   const router = useRouter();
   const [value, setValue] = useState(defaultValue);
   const [pending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // 모바일 하단탭 "검색"(/?focus=1) 진입 시 자동 포커스 (히어로 입력만)
+  useEffect(() => {
+    if (size !== "lg") return;
+    if (new URLSearchParams(window.location.search).get("focus") === "1") {
+      inputRef.current?.focus();
+    }
+  }, [size]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +37,7 @@ export default function SearchForm({
   return (
     <form onSubmit={submit} role="search" className="relative w-full">
       <input
+        ref={inputRef}
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
