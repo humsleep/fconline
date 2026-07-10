@@ -134,6 +134,20 @@ body {
 .rise-3 { animation-delay: 0.19s; }
 .rise-4 { animation-delay: 0.26s; }
 
+/* VS 슬램 등장 (격겜 셀렉트 연출) */
+@keyframes slam-left {
+  0% { opacity: 0; transform: translateX(-60px) scale(1.08); }
+  60% { opacity: 1; transform: translateX(4px) scale(0.99); }
+  100% { transform: translateX(0) scale(1); }
+}
+@keyframes slam-right {
+  0% { opacity: 0; transform: translateX(60px) scale(1.08); }
+  60% { opacity: 1; transform: translateX(-4px) scale(0.99); }
+  100% { transform: translateX(0) scale(1); }
+}
+.slam-left { animation: slam-left 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.slam-right { animation: slam-right 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+
 @keyframes shimmer {
   from { opacity: 0.45; }
   to { opacity: 0.9; }

@@ -1,4 +1,10 @@
+import Image from "next/image";
+import Link from "next/link";
+import { Suspense } from "react";
 import SearchForm from "./components/SearchForm";
+import { getPositionLabel } from "@/lib/nexon/meta";
+import { getPlayerNames } from "@/lib/nexon/players";
+import { getTodaysVs } from "@/lib/vs";
 
 const UPCOMING = [
   {
@@ -17,6 +23,52 @@ const UPCOMING = [
     desc: "어제 경기 선발 11명 그대로. 실제 팀의 최신 라인업을 FC온라인 카드로 매칭한 스쿼드를 만들어드립니다.",
   },
 ] as const;
+
+async function VsTeaser() {
+  const today = await getTodaysVs().catch(() => null);
+  if (!today) return null;
+
+  const names = await getPlayerNames([today.aSpId, today.bSpId]);
+  const aName = names.get(today.aSpId) ?? `선수 ${today.aSpId}`;
+  const bName = names.get(today.bSpId) ?? `선수 ${today.bSpId}`;
+
+  return (
+    <section className="pb-10">
+      <Link
+        href="/vs"
+        className="panel group flex items-center gap-3 p-4 transition-colors hover:border-gold/50 sm:gap-5 sm:p-5"
+      >
+        <p className="scoreboard flex-none text-[10px] font-bold leading-tight tracking-[0.2em] text-gold">
+          오늘의
+          <br />
+          VS
+        </p>
+        <VsFace spId={today.aSpId} name={aName} />
+        <span className="scoreboard flex-none text-sm font-bold text-muted">VS</span>
+        <VsFace spId={today.bSpId} name={bName} />
+        <span className="scoreboard ml-auto hidden flex-none text-xs font-bold text-muted transition-colors group-hover:text-gold sm:block">
+          {getPositionLabel(today.pos)} · 누가 셀까? →
+        </span>
+      </Link>
+    </section>
+  );
+}
+
+function VsFace({ spId, name }: { spId: number; name: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <Image
+        src={`/api/player-image/${spId}`}
+        alt=""
+        width={40}
+        height={40}
+        unoptimized
+        className="h-9 w-9 flex-none rounded-lg bg-surface-2 object-cover"
+      />
+      <span className="truncate text-sm font-bold">{name}</span>
+    </span>
+  );
+}
 
 export default function Home() {
   return (
@@ -55,6 +107,11 @@ export default function Home() {
           <SearchForm size="lg" />
         </div>
       </section>
+
+      {/* 오늘의 VS 히어로 */}
+      <Suspense fallback={null}>
+        <VsTeaser />
+      </Suspense>
 
       {/* 예정 기능 */}
       <section className="pb-20">
