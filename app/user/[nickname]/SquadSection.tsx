@@ -55,9 +55,39 @@ export default async function SquadSection({
 
   const names = await getPlayerNames(players.map((p) => p.spId));
 
+  // 실전 가치 — 금액(시세) 대신, 스쿼드의 실사용 평점을 출전 수로 가중 평균
+  const totalGames = players.reduce((s, p) => s + p.games, 0);
+  const squadRating =
+    totalGames > 0
+      ? players.reduce((s, p) => s + p.avgRating * p.games, 0) / totalGames
+      : 0;
+  const squadVerdict = verdictFromRating({
+    rating: squadRating,
+    subjectType: "player",
+    seed: "squad",
+  });
+
   return (
     <>
-      <p className="mt-4 text-[11px] text-muted">
+      {/* 실전 가치 요약 (구단가치 대체) */}
+      <section className="panel mt-4 flex items-center gap-4 px-5 py-4">
+        <div className="min-w-0 flex-1">
+          <p className="scoreboard text-[10px] font-semibold tracking-[0.2em] text-muted">
+            스쿼드 실전 가치
+          </p>
+          <div className="mt-1.5">
+            <VerdictStamp verdict={squadVerdict} size="lg" showLiner />
+          </div>
+        </div>
+        <div className="flex-none text-right">
+          <p className="text-[10px] text-muted">실사용 평점</p>
+          <p className="scoreboard text-3xl font-bold text-accent">
+            {squadRating.toFixed(2)}
+          </p>
+        </div>
+      </section>
+
+      <p className="mt-3 text-[11px] text-muted">
         최근 {details.length}경기 · {MIN_GAMES}경기 이상 출전 선수 · 랭커 평균은
         같은 포지션 상위 랭커 기준
       </p>

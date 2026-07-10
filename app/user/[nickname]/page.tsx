@@ -69,6 +69,13 @@ export default async function UserPage({
           <p className="scoreboard mb-1 text-sm font-semibold text-muted">
             LV.<span className="text-accent">{basic.level}</span>
           </p>
+          <Link
+            href={`/live/${encodeURIComponent(basic.nickname)}`}
+            className="scoreboard mb-0.5 ml-auto inline-flex items-center gap-1.5 rounded-lg bg-lose/15 px-3 py-1.5 text-[13px] font-bold text-lose transition-colors hover:bg-lose/25"
+          >
+            <span className="live-dot inline-block h-2 w-2 rounded-full bg-lose" />
+            라이브 세션
+          </Link>
         </div>
         {divisionCards.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
