@@ -1,5 +1,9 @@
 # DEVLOG
 
+## 2026-07-10 — 심볼/파비콘 개편
+
+- `lib/icon.tsx` — FC LAB 심볼: 구형 플라스크(연구실) 몸통 = 축구공(오각형 + 씨임 라인). favicon/apple-icon/icon-192/512 전부 이 마크로 통일
+
 ## 2026-07-10 — PWA 웹앱화 + 모바일 UI 최적화 + 스트리밍 리빌
 
 - **PWA**: `app/manifest.ts`(standalone, theme-color, 아이콘), 생성형 아이콘(`lib/icon.tsx` → `icon.tsx`/`apple-icon.tsx`/`icon-192`/`icon-512`, 바이너리 무), appleWebApp 메타 + viewport-fit cover + safe-area
