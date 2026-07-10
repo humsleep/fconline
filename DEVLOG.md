@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-10 — 스쿼드 클리닉 (로드맵 Phase 2, 룰베이스 진단)
+
+- `lib/squad-clinic.ts` `diagnoseSquad()` — "선수 성적표"(나열)를 **처방적 진단**으로 종합. 종합 점수(0~100) + 밴드(top/strong/balanced/building/rebuild), 라인별(공격/미드/수비/GK) 평점·랭커 대비 gap, 약한 고리, 강점, 이슈 리스트(weak-link / over-reliance / thin-line / low-ranker-coverage). **AI 미사용**, 이미 집계된 players + 랭커 맵 재사용 → **추가 넥슨 호출 0**
+- `SquadClinic.tsx`(서버 컴포넌트) — 종합 점수 conic 다이얼 + 라인 바 + 강점/약점 칩 + 처방. `SquadSection` 성적표 위에 배치, 실전 가치는 `clinic.squadRating` 재사용
+- **에이전트 2종 감사(data-auditor + code-reviewer) 반영**: (H1) 약한 고리·강점 집합 상호 배타 → 동일 선수 양쪽 동시 노출 모순 제거 / (H2) 강점 보충 하한을 스쿼드 평균 이상으로 → 부진 스쿼드 오진 방지 / (M1) 랭커 대비 보정을 커버리지로 감쇠 → 소수 벤치마크 과반영 방지 / 다이얼 마스크 bg-surface 정정 / sampleGames 오라벨 → 실 경기 수 전달 / weak-link 이슈를 표시 3건과 정합 / thin-line에 MID 추가
+- 엔진 21 어서션(8 시나리오: 중복 금지·하한·감쇠 포함) 통과, `npm run build` 통과. PR #2 squash merge
+- ⚠️ 밴드·앵커·이슈 임계치는 coldstart 추정(BETA) — 실데이터로 보정 필요
+- 다음: 실데이터 검증
+
 ## 2026-07-10 — 선수 시즌 표시 + 슛 히트맵 + FC Scope 리브랜딩
 
 - **선수 시즌 표시**(핵심): `lib/nexon/players.ts`를 seasonid.json + spid.json 동시 로드로 재작성. 검색 결과가 `season`(대표 시즌명) + `seasons[]`(시즌 변형, spid 내림차순, 최대 16) 반환. 사용자가 카드별로 어느 시즌을 써야 하는지가 중요 → 스쿼드 빌더 검색에 **시즌 선택 드롭다운(펼치기)** + 피치·프리셋·저장뷰에 **골드 시즌 배지**
