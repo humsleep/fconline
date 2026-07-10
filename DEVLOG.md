@@ -1,5 +1,16 @@
 # DEVLOG
 
+## 2026-07-10 — 커뮤니티 2탄: 6유형 통합 게시판 + VS 제거
+
+- **VS 모드 제거**: "오늘의 VS"(선수 비교 투표)가 랭커 데이터 의존이 커 콜드스타트에 안 붙어 제거. 삭제 `/vs`·`/api/vs`·`/api/card/vs`·`lib/vs.ts`·홈 티저·모바일 탭. "vs 상대" 텍스트, TugOfWar(평점 vs 랭커)는 유지
+- **6유형 통합 게시판**(club_posts 일반화): `0006_community_posts.sql` — `type`(✨자랑/📝평가요청/🛠️만들어줘/🛡️클럽원모집/⚔️클럽전/🏆대회) + region/positions/contact/squad_id + jsonb meta. RLS + **DB CHECK 제약**(type·status·길이·포지션 수·squad_id 형식·meta 크기)로 API 검증을 DB에서도 강제
+- `lib/community/post-types.ts`(유형별 필드/라벨 공용), `lib/community/posts.ts`(서버 읽기), `/api/community/posts`(유형별 필드 게이팅+화이트리스트)·`/[id]`(작성자 전용 PATCH/DELETE)
+- `/community`(유형 탭+페이지네이션), `/community/new`(유형별 맞춤 폼), `/community/[id]`(유형별 상세+첨부 스쿼드+작성자 전적 카드). 구 `/community/clubs/*` 제거, 홈·계정 메뉴 `/community` 연결
+- **에이전트 감사 반영**: 유형 게이팅·RLS·XSS·경계 정상 확인 / DB CHECK 방어 심화(anon 직접 insert 우회 차단) / squad_id 영숫자 검증 + href 인코딩
+- PR #4 squash merge, 빌드·타입 통과
+- ⚠️ **배포 전**: SQL `0006_community_posts.sql` 실행
+- 다음: 스쿼드 빌더 개편(전체 포메이션 + PC 드래그앤드롭 + 모바일 + 내 스쿼드 불러오기), 외부 API(API-Football 키 필요)
+
 ## 2026-07-10 — 커뮤니티 1탄: 인증 스택 + 클럽 모집 (Phase 5a)
 
 - **인증 기반**(fconline 최초): `@supabase/ssr` 클라이언트(client/server/middleware) + 루트 `middleware.ts`(세션 갱신), Google OAuth `/login` + `/auth/callback`(PKCE), `lib/security/safe-redirect.ts`(오픈 리다이렉트·제어문자·login/auth 루프 차단, 13 어서션)
