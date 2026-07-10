@@ -1,5 +1,5 @@
 import { nexonFetch } from './client';
-import type { MatchDetail, MaxDivision, UserBasic } from './types';
+import type { MatchDetail, MaxDivision, RankerStat, UserBasic } from './types';
 
 /** 닉네임 → 계정 식별자. 닉네임 변경 직후에는 조회 실패 가능. */
 export async function getOuid(nickname: string): Promise<string> {
@@ -32,4 +32,20 @@ export function getUserMatches(
 /** 매치 상세 — 경기 결과는 불변이므로 영구 캐시 */
 export function getMatchDetail(matchid: string): Promise<MatchDetail> {
   return nexonFetch<MatchDetail>('match-detail', { matchid }, 'immutable');
+}
+
+/**
+ * 랭커 선수 스탯 — 선수×포지션 조합 배열을 한 번에 조회.
+ * players = [{ id: spId, po: spPosition }, ...] (URL 인코딩 JSON)
+ * 변동 데이터라 짧은 revalidate만; 장기 보관은 ranker_stats_snapshot 사용.
+ */
+export function getRankerStats(
+  matchtype: number,
+  players: { id: number; po: number }[]
+): Promise<RankerStat[]> {
+  return nexonFetch<RankerStat[]>(
+    'ranker-stats',
+    { matchtype, players: JSON.stringify(players) },
+    3600
+  );
 }

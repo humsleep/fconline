@@ -1,9 +1,21 @@
 # DB 스키마 초안 — Supabase Postgres + RLS
 
 > Phase별로 마이그레이션 파일(`supabase/migrations/`)로 확정한다. 이 문서는 설계 초안.
+> **⚠️ 실제 적용된 스키마의 진실 소스는 `supabase/migrations/`다.** 아래 Phase 2+ 블록은 초안이며 실제 컬럼과 다를 수 있음.
 > RLS 원칙 (BlogLab 검증 패턴): 읽기 `using(true)`, 쓰기 로그인+본인, rate limit은 RLS sub-select + API 사전 체크 이중 방어.
 
-## Phase 1 — 코어 캐시
+## 적용됨: `0001_core_cache.sql` (Sprint 1~2)
+
+실제 배포된 코어 캐시 테이블. 전부 RLS on + 정책 없음 = service_role(서버) 전용.
+
+- `ouid_cache(nickname pk, ouid, updated_at)` — 닉네임→ouid
+- `match_cache(match_id pk, match_type, match_date, ouids[], payload jsonb, created_at)` — 매치 상세 영구 캐시. `ouids` gin 인덱스로 유저별 조회
+- `ranker_stats_snapshot(id, match_type, sp_id, sp_position, snapshot_date, payload jsonb)` — 랭커 스탯 일일 스냅샷. unique `(match_type, sp_id, sp_position, snapshot_date)`.
+  - **tombstone 규약**: 랭커 데이터가 없는 조합은 `payload = { "empty": true }`로 저장해 당일 재조회를 막는다. 시계열 집계 시 `payload->>'empty'`가 있는 행은 제외.
+
+---
+
+## (초안) Phase 1 — 코어 캐시
 
 ```sql
 -- 닉네임 → ouid 캐시 (닉변 대응 위해 TTL 갱신)

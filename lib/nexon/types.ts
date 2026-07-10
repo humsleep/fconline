@@ -130,6 +130,14 @@ export interface MatchInfoEntry {
   player: MatchPlayer[];
 }
 
+/** ranker-stats 응답: 랭커들의 선수×포지션별 평균 스탯 */
+export interface RankerStat {
+  spId: number;
+  spPosition: number;
+  createDate?: string;
+  status: Partial<PlayerStatus> & { matchCount?: number };
+}
+
 export interface MatchDetail {
   matchId: string;
   matchDate: string; // UTC, 'Z' 없이 올 수 있음

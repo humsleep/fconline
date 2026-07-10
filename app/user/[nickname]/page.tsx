@@ -7,6 +7,7 @@ import { NexonApiError, isMaintenance, isNotConfigured, isUserNotFound } from "@
 import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
 import { formatAchievementDate, formatMatchDate } from "@/lib/format";
+import SquadSection from "./SquadSection";
 
 export async function generateMetadata({
   params,
@@ -26,12 +27,16 @@ export default async function UserPage({
   searchParams,
 }: {
   params: Promise<{ nickname: string }>;
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; view?: string }>;
 }) {
-  const [{ nickname: raw }, { type }] = await Promise.all([params, searchParams]);
+  const [{ nickname: raw }, { type, view }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const nickname = decodeURIComponent(raw);
   const matchType =
     MATCH_TABS.find((t) => t.type === Number(type))?.type ?? MATCH_TABS[0].type;
+  const activeView = view === "squad" ? "squad" : "matches";
 
   let ouid: string;
   try {
@@ -83,7 +88,9 @@ export default async function UserPage({
         {MATCH_TABS.map((t) => (
           <Link
             key={t.type}
-            href={`/user/${encodeURIComponent(basic.nickname)}?type=${t.type}`}
+            href={`/user/${encodeURIComponent(basic.nickname)}?type=${t.type}${
+              activeView === "squad" ? "&view=squad" : ""
+            }`}
             className={`scoreboard rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
               t.type === matchType
                 ? "bg-accent text-accent-ink"
@@ -95,9 +102,43 @@ export default async function UserPage({
         ))}
       </nav>
 
-      <Suspense key={`${ouid}-${matchType}`} fallback={<MatchSkeleton />}>
-        <MatchSection ouid={ouid} matchType={matchType} />
-      </Suspense>
+      {/* 뷰 서브탭 */}
+      <nav className="rise rise-2 mt-2 flex gap-4 border-b border-line/70">
+        {(
+          [
+            { view: "matches", label: "경기 기록" },
+            { view: "squad", label: "선수 성적표" },
+          ] as const
+        ).map((v) => {
+          const href = `/user/${encodeURIComponent(basic.nickname)}?type=${matchType}${
+            v.view === "squad" ? "&view=squad" : ""
+          }`;
+          const on = activeView === v.view;
+          return (
+            <Link
+              key={v.view}
+              href={href}
+              className={`-mb-px border-b-2 px-1 pb-2 text-sm font-semibold transition-colors ${
+                on
+                  ? "border-accent text-ink"
+                  : "border-transparent text-muted hover:text-ink"
+              }`}
+            >
+              {v.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {activeView === "squad" ? (
+        <Suspense key={`sq-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
+          <SquadSection ouid={ouid} matchType={matchType} />
+        </Suspense>
+      ) : (
+        <Suspense key={`${ouid}-${matchType}`} fallback={<MatchSkeleton />}>
+          <MatchSection ouid={ouid} matchType={matchType} />
+        </Suspense>
+      )}
     </div>
   );
 }
@@ -291,6 +332,22 @@ function MatchSkeleton() {
       ))}
       <p className="pt-2 text-center text-xs text-muted">
         넥슨 서버에서 최근 {MATCH_COUNT}경기를 불러오는 중… 첫 조회는 시간이 걸릴 수 있어요.
+      </p>
+    </div>
+  );
+}
+
+function SquadSkeleton() {
+  return (
+    <div className="mt-7 space-y-3" aria-label="선수 성적표 불러오는 중">
+      <div className="skeleton h-3 w-64" />
+      <div className="grid gap-2 sm:grid-cols-2">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="skeleton h-[72px]" />
+        ))}
+      </div>
+      <p className="pt-2 text-center text-xs text-muted">
+        선수별 기록과 랭커 평균을 계산하는 중…
       </p>
     </div>
   );
