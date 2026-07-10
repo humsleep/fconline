@@ -7,8 +7,10 @@ import { aggregatePlayers, type PlayerAggregate } from "@/lib/nexon/player-stats
 import { getPlayerNames } from "@/lib/nexon/players";
 import { getRankerStatsCached, rankerKey, type RankerMap } from "@/lib/nexon/ranker";
 import { verdictFromRating } from "@/lib/verdict";
+import { diagnoseSquad } from "@/lib/squad-clinic";
 import VerdictStamp from "@/app/components/VerdictStamp";
 import TugOfWar from "@/app/components/TugOfWar";
+import SquadClinic from "./SquadClinic";
 
 const MATCH_COUNT = 30;
 const MAX_CARDS = 18;
@@ -55,12 +57,20 @@ export default async function SquadSection({
 
   const names = await getPlayerNames(players.map((p) => p.spId));
 
+  // 클리닉 진단 — 이미 집계된 players + 랭커 맵 재사용(추가 fetch 없음)
+  const clinic = diagnoseSquad(
+    players,
+    (spId, position) => ranker.get(rankerKey(spId, position))?.status?.spRating
+  );
+
   // 실전 가치 — 금액(시세) 대신, 스쿼드의 실사용 평점을 출전 수로 가중 평균
+  // (클리닉이 동일 공식으로 계산하므로 있으면 재사용)
   const totalGames = players.reduce((s, p) => s + p.games, 0);
   const squadRating =
-    totalGames > 0
+    clinic?.squadRating ??
+    (totalGames > 0
       ? players.reduce((s, p) => s + p.avgRating * p.games, 0) / totalGames
-      : 0;
+      : 0);
   const squadVerdict = verdictFromRating({
     rating: squadRating,
     subjectType: "player",
@@ -69,6 +79,10 @@ export default async function SquadSection({
 
   return (
     <>
+      {clinic && (
+        <SquadClinic result={clinic} names={names} matches={details.length} />
+      )}
+
       {/* 실전 가치 요약 (구단가치 대체) */}
       <section className="panel mt-4 flex items-center gap-4 px-5 py-4">
         <div className="min-w-0 flex-1">
