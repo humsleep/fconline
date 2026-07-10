@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function ClubPostActions({
+export default function PostActions({
   id,
   status,
 }: {
@@ -18,7 +18,7 @@ export default function ClubPostActions({
     setBusy(true);
     const next = cur === 'open' ? 'closed' : 'open';
     try {
-      const res = await fetch(`/api/community/clubs/${id}`, {
+      const res = await fetch(`/api/community/posts/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: next }),
@@ -33,13 +33,11 @@ export default function ClubPostActions({
   };
 
   const remove = async () => {
-    if (!window.confirm('이 모집 글을 삭제할까요?')) return;
+    if (!window.confirm('이 글을 삭제할까요?')) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/community/clubs/${id}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) router.push('/community/clubs');
+      const res = await fetch(`/api/community/posts/${id}`, { method: 'DELETE' });
+      if (res.ok) router.push('/community');
       else setBusy(false);
     } catch {
       setBusy(false);
@@ -53,7 +51,7 @@ export default function ClubPostActions({
         disabled={busy}
         className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-surface-2 disabled:opacity-60"
       >
-        {cur === 'open' ? '모집 마감하기' : '다시 모집하기'}
+        {cur === 'open' ? '마감하기' : '다시 열기'}
       </button>
       <button
         onClick={remove}

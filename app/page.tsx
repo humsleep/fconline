@@ -1,10 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
-import { Suspense } from "react";
 import SearchForm from "./components/SearchForm";
-import { getPositionLabel } from "@/lib/nexon/meta";
-import { getPlayerNames } from "@/lib/nexon/players";
-import { getTodaysVs } from "@/lib/vs";
 
 const FEATURES = [
   {
@@ -22,18 +17,11 @@ const FEATURES = [
     href: null,
   },
   {
-    tag: "라이브 세션",
-    title: "켜두면 자동으로 분석",
-    desc: "게임하는 동안 켜두면 경기가 끝날 때마다 세션 전적·연승·평점이 실시간처럼 갱신됩니다.",
-    hint: "구단주명 검색 → 라이브 세션",
+    tag: "스쿼드 클리닉",
+    title: "내 스쿼드 종합 진단",
+    desc: "라인별 강약·약한 고리·과의존까지 룰베이스로 진단. 어디를 바꿔야 할지 짚어줍니다.",
+    hint: "구단주명 검색 → 스쿼드",
     href: null,
-  },
-  {
-    tag: "오늘의 VS",
-    title: "누가 더 센지 판정 + 투표",
-    desc: "랭커 실사용 데이터로 두 선수를 판정하고 예측 투표. 매일 새로운 대결이 열립니다.",
-    hint: "바로가기 →",
-    href: "/vs",
   },
   {
     tag: "스쿼드 빌더",
@@ -42,53 +30,14 @@ const FEATURES = [
     hint: "바로가기 →",
     href: "/squad",
   },
+  {
+    tag: "커뮤니티",
+    title: "자랑하고, 모으고, 겨룬다",
+    desc: "스쿼드 자랑·평가 요청, 클럽원 모집, 클럽전·대회까지. 구단주명 연동 시 전적 카드가 자동으로 붙습니다.",
+    hint: "바로가기 →",
+    href: "/community",
+  },
 ] as const;
-
-async function VsTeaser() {
-  const today = await getTodaysVs().catch(() => null);
-  if (!today) return null;
-
-  const names = await getPlayerNames([today.aSpId, today.bSpId]);
-  const aName = names.get(today.aSpId) ?? `선수 ${today.aSpId}`;
-  const bName = names.get(today.bSpId) ?? `선수 ${today.bSpId}`;
-
-  return (
-    <section className="pb-10">
-      <Link
-        href="/vs"
-        className="panel group flex items-center gap-3 p-4 transition-colors hover:border-gold/50 sm:gap-5 sm:p-5"
-      >
-        <p className="scoreboard flex-none text-[12px] font-bold leading-tight tracking-[0.2em] text-gold">
-          오늘의
-          <br />
-          VS
-        </p>
-        <VsFace spId={today.aSpId} name={aName} />
-        <span className="scoreboard flex-none text-sm font-bold text-muted">VS</span>
-        <VsFace spId={today.bSpId} name={bName} />
-        <span className="scoreboard ml-auto hidden flex-none text-xs font-bold text-muted transition-colors group-hover:text-gold sm:block">
-          {getPositionLabel(today.pos)} · 누가 셀까? →
-        </span>
-      </Link>
-    </section>
-  );
-}
-
-function VsFace({ spId, name }: { spId: number; name: string }) {
-  return (
-    <span className="flex min-w-0 items-center gap-2">
-      <Image
-        src={`/api/player-image/${spId}`}
-        alt=""
-        width={40}
-        height={40}
-        unoptimized
-        className="h-9 w-9 flex-none rounded-lg bg-surface-2 object-cover"
-      />
-      <span className="truncate text-sm font-bold">{name}</span>
-    </span>
-  );
-}
 
 export default function Home() {
   return (
@@ -127,11 +76,6 @@ export default function Home() {
           <SearchForm size="lg" />
         </div>
       </section>
-
-      {/* 오늘의 VS 히어로 */}
-      <Suspense fallback={null}>
-        <VsTeaser />
-      </Suspense>
 
       {/* 기능 */}
       <section className="pb-24 md:pb-16">

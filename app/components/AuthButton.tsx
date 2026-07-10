@@ -94,12 +94,12 @@ export default function AuthButton() {
             프로필 설정
           </Link>
           <Link
-            href="/community/clubs"
+            href="/community"
             role="menuitem"
             className="block px-4 py-2.5 text-[13px] hover:bg-surface-2"
             onClick={() => setOpen(false)}
           >
-            클럽 모집
+            커뮤니티
           </Link>
           <button
             role="menuitem"

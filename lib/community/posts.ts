@@ -1,60 +1,64 @@
 import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
+import type { PostType } from './post-types';
 
-export interface ClubPost {
+export interface CommunityPost {
   id: string;
   author_id: string;
+  type: PostType;
   title: string;
   body: string;
   region: string | null;
   positions: string[];
-  play_style: string | null;
   contact: string | null;
+  squad_id: string | null;
+  meta: Record<string, string>;
   status: string;
   created_at: string;
 }
 
 const COLUMNS =
-  'id, author_id, title, body, region, positions, play_style, contact, status, created_at';
+  'id, author_id, type, title, body, region, positions, contact, squad_id, meta, status, created_at';
 
-/** 짧은 공유 코드 (crypto.randomUUID 기반). */
 export function shortId(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 10);
 }
 
-export async function listClubPosts(opts?: {
+export async function listPosts(opts?: {
+  type?: PostType | null;
   region?: string | null;
   limit?: number;
   offset?: number;
-}): Promise<{ posts: ClubPost[]; count: number }> {
+}): Promise<{ posts: CommunityPost[]; count: number }> {
   const limit = opts?.limit ?? 20;
   const offset = opts?.offset ?? 0;
   try {
     const supabase = await createClient();
     let q = supabase
-      .from('club_posts')
+      .from('community_posts')
       .select(COLUMNS, { count: 'exact' })
-      .order('status', { ascending: false }) // 'open' > 'closed' → 모집중이 먼저
+      .order('status', { ascending: false }) // open이 먼저
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+    if (opts?.type) q = q.eq('type', opts.type);
     if (opts?.region) q = q.eq('region', opts.region);
     const { data, count } = await q;
-    return { posts: (data as ClubPost[]) ?? [], count: count ?? 0 };
+    return { posts: (data as CommunityPost[]) ?? [], count: count ?? 0 };
   } catch {
     return { posts: [], count: 0 };
   }
 }
 
-export async function getClubPost(id: string): Promise<ClubPost | null> {
+export async function getPost(id: string): Promise<CommunityPost | null> {
   try {
     const supabase = await createClient();
     const { data } = await supabase
-      .from('club_posts')
+      .from('community_posts')
       .select(COLUMNS)
       .eq('id', id)
       .maybeSingle();
-    return (data as ClubPost) ?? null;
+    return (data as CommunityPost) ?? null;
   } catch {
     return null;
   }

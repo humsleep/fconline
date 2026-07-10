@@ -121,7 +121,7 @@ export default function ProfileSetupPage() {
       <section className="panel mt-6 p-5">
         <h2 className="text-sm font-bold">커뮤니티 닉네임</h2>
         <p className="mt-1 text-[13px] text-muted">
-          {NICKNAME_MIN}~{NICKNAME_MAX}자. 클럽 모집 글에 표시됩니다.
+          {NICKNAME_MIN}~{NICKNAME_MAX}자. 커뮤니티 글에 표시됩니다.
         </p>
         <div className="mt-3 flex gap-2">
           <input
@@ -145,7 +145,7 @@ export default function ProfileSetupPage() {
       <section className="panel mt-4 p-5">
         <h2 className="text-sm font-bold">FC Online 구단주명 연동</h2>
         <p className="mt-1 text-[13px] text-muted">
-          연동하면 내 클럽 모집 글에 전적 카드가 자동으로 붙습니다.
+          연동하면 내 커뮤니티 글에 전적 카드가 자동으로 붙습니다.
           {!hasNickname && ' (닉네임 등록 후 가능)'}
         </p>
         {profile?.verified_nickname && (
@@ -182,8 +182,8 @@ export default function ProfileSetupPage() {
       )}
 
       <div className="mt-6 flex gap-3 text-[13px]">
-        <Link href="/community/clubs" className="text-accent underline underline-offset-2">
-          클럽 모집 보러가기
+        <Link href="/community" className="text-accent underline underline-offset-2">
+          커뮤니티 보러가기
         </Link>
         <Link href="/" className="text-muted underline underline-offset-2">
           홈

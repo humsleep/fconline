@@ -8,14 +8,13 @@ async function requireOwner(id: string) {
   } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null, owns: false };
   const { data } = await supabase
-    .from('club_posts')
+    .from('community_posts')
     .select('author_id')
     .eq('id', id)
     .maybeSingle();
   return { supabase, user, owns: data?.author_id === user.id };
 }
 
-/** 상태 토글(open/closed). */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -36,7 +35,7 @@ export async function PATCH(
   }
 
   const { error } = await supabase
-    .from('club_posts')
+    .from('community_posts')
     .update({ status })
     .eq('id', id);
   if (error)
@@ -55,7 +54,7 @@ export async function DELETE(
   if (!owns)
     return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
 
-  const { error } = await supabase.from('club_posts').delete().eq('id', id);
+  const { error } = await supabase.from('community_posts').delete().eq('id', id);
   if (error)
     return NextResponse.json({ error: '삭제에 실패했습니다.' }, { status: 500 });
   return NextResponse.json({ ok: true });

@@ -36,17 +36,6 @@ const TABS = [
     ),
   },
   {
-    href: "/vs",
-    label: "VS",
-    match: (p: string) => p.startsWith("/vs"),
-    icon: (
-      <>
-        <path d="M4 5l6 14M20 5l-6 14" />
-        <path d="M10.5 12h3" />
-      </>
-    ),
-  },
-  {
     href: "/?focus=1",
     label: "검색",
     match: (p: string) => p.startsWith("/user") || p.startsWith("/live"),
