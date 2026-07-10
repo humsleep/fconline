@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getClubPost } from '@/lib/community/clubs';
+import { getPost } from '@/lib/community/posts';
 import { getProfilesByIds } from '@/lib/community/profile';
 import { createClient } from '@/lib/supabase/server';
 import { formatRelativeKr } from '@/lib/format';
-import ClubPostActions from './ClubPostActions';
+import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
+import PostActions from './PostActions';
 
 export async function generateMetadata({
   params,
@@ -13,19 +14,21 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const post = await getClubPost(id);
-  return { title: post ? `${post.title} · 클럽 모집` : '클럽 모집' };
+  const post = await getPost(id);
+  if (!post) return { title: '커뮤니티' };
+  return { title: `${post.title} · ${POST_TYPES[post.type].label}` };
 }
 
-export default async function ClubPostDetail({
+export default async function PostDetail({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const post = await getClubPost(id);
+  const post = await getPost(id);
   if (!post) notFound();
 
+  const cfg = POST_TYPES[post.type];
   const profiles = await getProfilesByIds([post.author_id]);
   const author = profiles.get(post.author_id);
 
@@ -43,14 +46,17 @@ export default async function ClubPostDetail({
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <Link
-        href="/community/clubs"
+        href={`/community?type=${post.type}`}
         className="text-[13px] text-muted underline underline-offset-2"
       >
-        ← 클럽 모집 목록
+        ← {cfg.label} 목록
       </Link>
 
       <article className="panel mt-3 p-6">
         <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-ink">
+            {cfg.emoji} {cfg.label}
+          </span>
           {post.status === 'closed' && (
             <span className="rounded bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-muted">
               마감
@@ -58,7 +64,7 @@ export default async function ClubPostDetail({
           )}
           {post.region && (
             <span className="rounded bg-accent/10 px-2 py-0.5 text-[12px] font-semibold text-accent">
-              {post.region}
+              📍 {post.region}
             </span>
           )}
         </div>
@@ -67,6 +73,7 @@ export default async function ClubPostDetail({
           {formatRelativeKr(post.created_at)}
         </p>
 
+        {/* 모집 포지션 */}
         {post.positions.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
             {post.positions.map((p) => (
@@ -80,27 +87,46 @@ export default async function ClubPostDetail({
           </div>
         )}
 
+        {/* 유형별 메타 */}
+        {Object.keys(post.meta).length > 0 && (
+          <dl className="mt-4 grid gap-2 sm:grid-cols-2">
+            {Object.entries(post.meta).map(([k, v]) => (
+              <div key={k} className="rounded-lg bg-surface-2 px-3 py-2">
+                <dt className="text-[12px] text-muted">
+                  {META_FIELD_LABELS[k] ?? k}
+                </dt>
+                <dd className="text-sm font-semibold">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
         <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed">
           {post.body}
         </p>
 
-        {post.play_style && (
-          <p className="mt-4 text-sm">
-            <span className="font-semibold text-muted">지향 플레이 </span>
-            {post.play_style}
-          </p>
+        {/* 첨부 스쿼드 */}
+        {post.squad_id && (
+          <Link
+            href={`/squad/${encodeURIComponent(post.squad_id)}`}
+            className="mt-4 flex items-center justify-between rounded-xl border border-line bg-surface-2 px-4 py-3 transition hover:border-accent"
+          >
+            <span className="text-sm font-semibold">🧩 첨부된 스쿼드 보기</span>
+            <span className="text-[13px] text-accent">열기 →</span>
+          </Link>
         )}
+
         {post.contact && (
-          <p className="mt-2 text-sm">
+          <p className="mt-4 text-sm">
             <span className="font-semibold text-muted">연락 </span>
             <span className="break-all">{post.contact}</span>
           </p>
         )}
 
-        {isOwner && <ClubPostActions id={post.id} status={post.status} />}
+        {isOwner && <PostActions id={post.id} status={post.status} />}
       </article>
 
-      {/* 작성자 카드 — 구단주명 연동 시 전적 자동 첨부 */}
+      {/* 작성자 카드 */}
       <section className="panel mt-4 p-5">
         <p className="scoreboard text-[12px] font-semibold tracking-[0.2em] text-muted">
           작성자
