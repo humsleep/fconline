@@ -1,5 +1,15 @@
 # DEVLOG
 
+## 2026-07-10 — 선수 시즌 표시 + 슛 히트맵 + FC Scope 리브랜딩
+
+- **선수 시즌 표시**(핵심): `lib/nexon/players.ts`를 seasonid.json + spid.json 동시 로드로 재작성. 검색 결과가 `season`(대표 시즌명) + `seasons[]`(시즌 변형, spid 내림차순, 최대 16) 반환. 사용자가 카드별로 어느 시즌을 써야 하는지가 중요 → 스쿼드 빌더 검색에 **시즌 선택 드롭다운(펼치기)** + 피치·프리셋·저장뷰에 **골드 시즌 배지**
+- `lib/squad/store.ts`: SquadSlot이 시즌 정보 보유, resolvePreset가 hit.season에서 시즌 도출. `/squad/[id]` 조회는 getSeasonNames로 시즌 해석
+- **슛 히트맵**: `PlaystyleSection`에 최근 경기 누적 슛 히트맵(ShotMap + detectGoalCode) — 아키타입 시각 근거(박스 집중=포처형 / 외곽 분산=난사형)
+- **리브랜딩 FC Lab → FC Scope**(기존 동명 서비스 충돌 회피): UI 워드마크, 카드 엔진(render.tsx), OG 이미지, manifest, 공유 파일명(fcscope-card.png), 테마 키(`fcscope-theme`) 전반 반영. 잔여 브랜딩 grep 클린 확인
+- PR #1 squash merge, 빌드 통과
+- ⚠️ 실데이터 검증 대기(사용자 요청대로 개발 후 일괄): 슛맵 좌표 방향·골 감지, 시즌 표시, 프리셋 한글명 spid.json 보정, 플레이스타일 ANCHOR 실측 보정(BETA)
+- 다음: 실데이터 검증
+
 ## 2026-07-10 — 스쿼드 빌더 + 리그·팀 프리셋
 
 - `/squad` 빌더(client): 포메이션 4종 선택 → 피치 슬롯 탭 → 선수 검색 모달(디바운스) → 배치 → 저장·공유. 리그·팀 프리셋 드롭다운으로 자동 채우기
