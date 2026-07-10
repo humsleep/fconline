@@ -6,6 +6,9 @@ import { getPositionLabel } from "@/lib/nexon/meta";
 import { aggregatePlayers, type PlayerAggregate } from "@/lib/nexon/player-stats";
 import { getPlayerNames } from "@/lib/nexon/players";
 import { getRankerStatsCached, rankerKey, type RankerMap } from "@/lib/nexon/ranker";
+import { verdictFromRating } from "@/lib/verdict";
+import VerdictStamp from "@/app/components/VerdictStamp";
+import TugOfWar from "@/app/components/TugOfWar";
 
 const MATCH_COUNT = 30;
 const MAX_CARDS = 18;
@@ -83,61 +86,64 @@ function PlayerCard({
   name: string;
   rankerRating?: number;
 }) {
-  const ratingColor =
-    p.avgRating >= 7.5 ? "text-gold" : p.avgRating < 6 ? "text-lose" : "text-ink";
+  const hasRanker = typeof rankerRating === "number" && rankerRating > 0;
+  const gap = hasRanker ? p.avgRating - rankerRating! : undefined;
 
-  const gap =
-    typeof rankerRating === "number" && rankerRating > 0
-      ? p.avgRating - rankerRating
-      : null;
+  // 선수(게임 카드) 판정 — subjectType 'player'(카드 놀리기 허용). 문구는 spId로 고정.
+  const verdict = verdictFromRating({
+    rating: p.avgRating,
+    subjectType: "player",
+    seed: p.spId,
+    rankerGap: gap,
+  });
 
   return (
-    <div className="panel flex items-center gap-3 p-3">
-      <Image
-        src={`/api/player-image/${p.spId}`}
-        alt=""
-        width={48}
-        height={48}
-        unoptimized
-        className="h-12 w-12 flex-none rounded-lg bg-surface-2 object-cover"
-      />
+    <div className="panel p-3">
+      <div className="flex items-center gap-3">
+        <Image
+          src={`/api/player-image/${p.spId}`}
+          alt=""
+          width={48}
+          height={48}
+          unoptimized
+          className="h-12 w-12 flex-none rounded-lg bg-surface-2 object-cover"
+        />
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold">
-          {name}
-          <span className="ml-1.5 text-[11px] font-medium text-muted">
-            {getPositionLabel(p.mainPosition)}
-          </span>
-        </p>
-        <p className="scoreboard mt-0.5 text-[11px] text-muted">
-          {p.games}경기 · ⚽{p.goals} A{p.assists} · 패스 {p.passRate}%
-        </p>
-        {gap !== null && (
-          <p className="mt-0.5 text-[11px]">
-            <span className="text-muted">
-              랭커 {getPositionLabel(p.mainPosition)}{" "}
-            </span>
-            <span className="scoreboard font-semibold text-muted">
-              {rankerRating!.toFixed(1)}
-            </span>
-            <span
-              className={`scoreboard ml-1.5 font-bold ${
-                gap > 0 ? "text-win" : gap < 0 ? "text-lose" : "text-muted"
-              }`}
-            >
-              {gap > 0 ? "+" : gap < 0 ? "" : "±"}
-              {gap.toFixed(1)}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold">
+            {name}
+            <span className="ml-1.5 text-[11px] font-medium text-muted">
+              {getPositionLabel(p.mainPosition)}
             </span>
           </p>
-        )}
+          <div className="mt-1">
+            <VerdictStamp verdict={verdict} />
+          </div>
+        </div>
+
+        <div className="flex-none text-right">
+          <p className="text-[10px] text-muted">평균 평점</p>
+          <p className="scoreboard text-2xl font-bold text-ink">
+            {p.avgRating.toFixed(1)}
+          </p>
+        </div>
       </div>
 
-      <div className="flex-none text-right">
-        <p className="text-[10px] text-muted">평균 평점</p>
-        <p className={`scoreboard text-2xl font-bold ${ratingColor}`}>
-          {p.avgRating.toFixed(1)}
-        </p>
-      </div>
+      {/* 랭커 대비 — tug-of-war 발광 바 */}
+      {hasRanker && (
+        <div className="mt-2.5">
+          <TugOfWar
+            label={`평점 vs 랭커 ${getPositionLabel(p.mainPosition)}`}
+            mine={p.avgRating}
+            ranker={rankerRating!}
+            max={10}
+          />
+        </div>
+      )}
+
+      <p className="scoreboard mt-2 text-[11px] text-muted">
+        {p.games}경기 · ⚽{p.goals} A{p.assists} · 패스 {p.passRate}%
+      </p>
     </div>
   );
 }

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import ShotMap, { detectGoalCode, type ShotMapShot } from "@/app/components/ShotMap";
+import VerdictStamp from "@/app/components/VerdictStamp";
+import { verdictFromMatch } from "@/lib/verdict";
 import { formatMatchDate } from "@/lib/format";
 import { NexonApiError, isNotConfigured } from "@/lib/nexon/client";
 import { getMatchDetailCached } from "@/lib/nexon/cached";
@@ -79,6 +81,12 @@ export default async function MatchPage({
   const oppGoals = opp ? (opp.shoot?.goalTotalDisplay ?? opp.shoot?.goalTotal ?? 0) : null;
   const myPoss = mine.matchDetail?.possession ?? 50;
 
+  const matchVerdict = verdictFromMatch({
+    result: mine.matchDetail?.matchResult ?? "?",
+    myRating: mine.matchDetail?.averageRating ?? 0,
+    seed: detail.matchId,
+  });
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-16 pt-8">
       <p className="scoreboard rise text-xs font-semibold tracking-[0.25em] text-muted">
@@ -99,6 +107,11 @@ export default async function MatchPage({
         {mine.matchDetail?.matchEndType !== 0 && (
           <p className="mt-2 text-xs text-lose">몰수 경기</p>
         )}
+
+        {/* 심판 도장 — 실유저 대상이라 중립 톤(otherUser) */}
+        <div className="mt-3 flex justify-center">
+          <VerdictStamp verdict={matchVerdict} size="lg" showLiner />
+        </div>
 
         {/* 점유율 바 */}
         <div className="mx-auto mt-5 max-w-sm">
