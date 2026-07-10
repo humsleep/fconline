@@ -29,6 +29,7 @@ export async function POST(req: Request) {
   }
 
   const slots: SquadSlot[] = [];
+  const seen = new Set<string>();
   for (const raw of body.slots as unknown[]) {
     if (typeof raw !== "object" || raw === null) continue;
     const s = raw as Record<string, unknown>;
@@ -38,11 +39,13 @@ export async function POST(req: Request) {
     if (
       typeof slotId === "string" &&
       validSlotIds.has(slotId) &&
+      !seen.has(slotId) &&
       typeof spid === "number" &&
       Number.isInteger(spid) &&
       spid > 0 &&
       typeof nm === "string"
     ) {
+      seen.add(slotId);
       slots.push({ slotId, spid, name: nm.slice(0, 40) });
     }
   }

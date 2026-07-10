@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FORMATIONS, type Slot } from "@/lib/squad/formations";
+import { FORMATIONS, getFormation, type Slot } from "@/lib/squad/formations";
 import { presetsByLeague } from "@/lib/squad/presets";
 import SquadPitch, { type FilledSlot } from "./SquadPitch";
 
@@ -53,7 +53,34 @@ export default function SquadBuilder() {
     return () => clearTimeout(t);
   }, [query, activeSlot]);
 
-  const filledCount = Object.keys(filled).length;
+  // 모달 Escape 닫기
+  useEffect(() => {
+    if (!activeSlot) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActiveSlot(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [activeSlot]);
+
+  // 현재 포메이션에 실제로 존재하는 슬롯만 카운트 (orphan 제외)
+  const validSlotIds = new Set(getFormation(formationId).slots.map((s) => s.id));
+  const filledCount = Object.keys(filled).filter((id) =>
+    validSlotIds.has(id)
+  ).length;
+
+  // 포메이션 교체 — 새 포메이션에 없는 슬롯의 선수는 정리(무음 손실 방지)
+  function changeFormation(nextId: string) {
+    const nextValid = new Set(getFormation(nextId).slots.map((s) => s.id));
+    setFilled((f) => {
+      const n: Record<string, FilledSlot> = {};
+      for (const [id, v] of Object.entries(f)) {
+        if (nextValid.has(id)) n[id] = v;
+      }
+      return n;
+    });
+    setFormationId(nextId);
+  }
 
   function assign(hit: PlayerHit) {
     if (!activeSlot) return;
@@ -160,7 +187,7 @@ export default function SquadBuilder() {
         {FORMATIONS.map((f) => (
           <button
             key={f.id}
-            onClick={() => setFormationId(f.id)}
+            onClick={() => changeFormation(f.id)}
             className={`scoreboard rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors ${
               f.id === formationId
                 ? "bg-accent text-accent-ink"
@@ -212,11 +239,14 @@ export default function SquadBuilder() {
           onClick={() => setActiveSlot(null)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="squad-modal-title"
             className="panel flex max-h-[80vh] w-full max-w-md flex-col rounded-b-none p-4 sm:rounded-b-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold">
+              <h2 id="squad-modal-title" className="text-base font-bold">
                 {activeSlot.pos} 선수 선택
               </h2>
               <div className="flex items-center gap-2">
@@ -267,6 +297,7 @@ export default function SquadBuilder() {
                           alt=""
                           width={36}
                           height={36}
+                          loading="lazy"
                           className="h-9 w-9 flex-none rounded-lg bg-surface-2 object-cover"
                         />
                         <span className="text-sm font-medium">{r.name}</span>
