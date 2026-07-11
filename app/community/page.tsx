@@ -93,8 +93,19 @@ export default async function CommunityBoard({
 
       {/* 목록 */}
       {posts.length === 0 ? (
-        <div className="panel mt-6 px-6 py-16 text-center text-sm text-muted">
-          아직 글이 없어요. 첫 글을 남겨보세요!
+        <div className="panel mt-6 flex flex-col items-center px-6 py-14 text-center">
+          <p className="text-sm text-muted">
+            {type
+              ? `아직 ${POST_TYPES[type].label} 글이 없어요.`
+              : '아직 글이 없어요.'}{' '}
+            첫 글의 주인공이 되어보세요!
+          </p>
+          <Link
+            href={`/community/new${type ? `?type=${type}` : ''}`}
+            className="mt-4 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink"
+          >
+            + 첫 글 쓰기
+          </Link>
         </div>
       ) : (
         <ul className="mt-4 space-y-2">

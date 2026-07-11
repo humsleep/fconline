@@ -14,20 +14,30 @@ export interface Coord {
   y: number;
 }
 
+export interface DropPayload {
+  spid: number;
+  name: string;
+  season?: string;
+}
+
 export default function SquadPitch({
   formationId,
   filled,
   coords,
+  activeSlotId,
   onSlotClick,
   onMove,
+  onDropPlayer,
 }: {
   formationId: string;
   filled: Record<string, FilledSlot>;
-  /** 커스텀 좌표 오버라이드 (slotId → {x,y}). 없으면 포메이션 기본 좌표 */
   coords?: Record<string, Coord>;
+  activeSlotId?: string | null;
   onSlotClick?: (slot: Slot) => void;
   /** 커스텀 모드: 드래그로 좌표 변경 */
   onMove?: (slotId: string, x: number, y: number) => void;
+  /** 검색 패널에서 선수를 드롭했을 때 */
+  onDropPlayer?: (slotId: string, payload: DropPayload) => void;
 }) {
   const formation = getFormation(formationId);
   const pitchRef = useRef<HTMLDivElement>(null);
@@ -61,8 +71,20 @@ export default function SquadPitch({
   function onPointerUp(slot: Slot) {
     const d = dragRef.current;
     dragRef.current = null;
-    // 이동 없이 눌렀다 뗐으면 클릭(선수 선택)으로 처리
     if (d && !d.moved) onSlotClick?.(slot);
+  }
+
+  function handleDrop(e: React.DragEvent, slotId: string) {
+    if (!onDropPlayer) return;
+    e.preventDefault();
+    try {
+      const raw = e.dataTransfer.getData("text/plain");
+      if (!raw) return;
+      const payload = JSON.parse(raw) as DropPayload;
+      if (typeof payload?.spid === "number") onDropPlayer(slotId, payload);
+    } catch {
+      // 잘못된 페이로드 무시
+    }
   }
 
   return (
@@ -94,6 +116,7 @@ export default function SquadPitch({
       {formation.slots.map((slot) => {
         const p = filled[slot.id];
         const { x, y } = posOf(slot);
+        const active = activeSlotId === slot.id;
         const content = (
           <span className="flex flex-col items-center gap-1">
             {p ? (
@@ -103,16 +126,24 @@ export default function SquadPitch({
                 width={44}
                 height={44}
                 draggable={false}
-                className="h-11 w-11 rounded-full border-2 border-accent bg-surface-2 object-cover"
+                className={`h-11 w-11 rounded-full border-2 bg-surface-2 object-cover ${
+                  active ? "border-gold ring-2 ring-gold/40" : "border-accent"
+                }`}
               />
             ) : (
-              <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-line bg-surface-2/70 text-lg text-muted">
+              <span
+                className={`flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed bg-surface-2/70 text-lg ${
+                  active
+                    ? "border-gold text-gold ring-2 ring-gold/40"
+                    : "border-line text-muted"
+                }`}
+              >
                 +
               </span>
             )}
             <span
               className={`scoreboard max-w-[68px] truncate rounded px-1 text-[11px] font-bold ${
-                p ? "bg-bg/70 text-ink" : "text-muted"
+                p ? "bg-bg/70 text-ink" : active ? "text-gold" : "text-muted"
               }`}
             >
               {p ? p.name : slot.pos}
@@ -127,6 +158,7 @@ export default function SquadPitch({
 
         const style = { left: `${x}%`, top: `${y}%` } as const;
 
+        // 커스텀 모드: 포인터 드래그로 위치 이동
         if (onMove) {
           return (
             <button
@@ -142,11 +174,15 @@ export default function SquadPitch({
             </button>
           );
         }
-        return onSlotClick ? (
+
+        // 일반 모드: 클릭(활성화) + 선수 드롭 타깃
+        return onSlotClick || onDropPlayer ? (
           <button
             key={slot.id}
             type="button"
-            onClick={() => onSlotClick(slot)}
+            onClick={() => onSlotClick?.(slot)}
+            onDragOver={onDropPlayer ? (e) => e.preventDefault() : undefined}
+            onDrop={onDropPlayer ? (e) => handleDrop(e, slot.id) : undefined}
             className="absolute -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
             style={style}
           >

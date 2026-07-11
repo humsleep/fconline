@@ -104,7 +104,7 @@ export default function ProfileSetupPage() {
   if (!configured)
     return (
       <div className="mx-auto max-w-md p-12 text-center text-muted">
-        로그인 설정이 완료되지 않았습니다.
+        로그인 준비 중이에요. 잠시 후 다시 시도해 주세요.
       </div>
     );
 

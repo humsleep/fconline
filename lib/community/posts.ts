@@ -50,6 +50,30 @@ export async function listPosts(opts?: {
   }
 }
 
+export interface CommunityComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  squad_id: string | null;
+  created_at: string;
+}
+
+export async function listComments(postId: string): Promise<CommunityComment[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('community_comments')
+      .select('id, post_id, author_id, body, squad_id, created_at')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true })
+      .limit(200);
+    return (data as CommunityComment[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getPost(id: string): Promise<CommunityPost | null> {
   try {
     const supabase = await createClient();

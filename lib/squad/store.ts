@@ -4,6 +4,7 @@ import { getAdmin } from '@/lib/supabase/admin';
 import { resolvePlayer } from '@/lib/nexon/players';
 import { getFormation } from './formations';
 import { getPreset } from './presets';
+import { assignByPosition, type AssignInput } from './assign';
 
 export interface SquadSlot {
   slotId: string;
@@ -28,14 +29,32 @@ function shortId(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 10);
 }
 
+const DAILY_SAVE_LIMIT = 20;
+
 export async function saveSquad(input: {
   name: string;
   formation: string;
   slots: SquadSlot[];
   teamTag?: string | null;
-}): Promise<string | null> {
+  ipHash?: string | null;
+}): Promise<string | null | 'rate_limited'> {
   const db = getAdmin();
   if (!db) return null;
+
+  // IP당 일일 저장 한도 (무인증 저장 어뷰징 방지)
+  if (input.ipHash) {
+    try {
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const { count } = await db
+        .from('squads')
+        .select('id', { count: 'exact', head: true })
+        .eq('ip_hash', input.ipHash)
+        .gte('created_at', since);
+      if ((count ?? 0) >= DAILY_SAVE_LIMIT) return 'rate_limited';
+    } catch {
+      // 카운트 실패 시 저장은 허용(가용성 우선)
+    }
+  }
 
   const id = shortId();
   try {
@@ -45,6 +64,7 @@ export async function saveSquad(input: {
       formation: input.formation,
       slots: input.slots,
       team_tag: input.teamTag ?? null,
+      ip_hash: input.ipHash ?? null,
     });
     if (error) return null;
     return id;
@@ -87,16 +107,21 @@ export async function resolvePreset(presetId: string): Promise<{
   if (!preset) return null;
 
   const formation = getFormation(preset.formation);
-  const validSlotIds = new Set(formation.slots.map((s) => s.id));
 
-  const slots: SquadSlot[] = [];
-  // 넥슨 순차 큐/캐시 부담 없음 — resolvePlayer는 spid.json(메모이즈) 조회
+  // 이름 → spid 해석(넥슨 호출 아님, spid.json 메모이즈) 후 포지션 기반 배치
+  const resolved: AssignInput[] = [];
   for (const p of preset.players) {
-    if (!validSlotIds.has(p.slot)) continue;
     const hit = await resolvePlayer(p.name);
     if (hit)
-      slots.push({ slotId: p.slot, spid: hit.spid, name: hit.name, season: hit.season });
+      resolved.push({ pos: p.pos, name: hit.name, spid: hit.spid, season: hit.season });
   }
+  const placed = assignByPosition(formation.slots, resolved);
+  const slots: SquadSlot[] = Object.entries(placed).map(([slotId, v]) => ({
+    slotId,
+    spid: v.spid!,
+    name: v.name,
+    season: v.season,
+  }));
 
   return {
     formation: preset.formation,

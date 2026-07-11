@@ -38,6 +38,7 @@ export default function SearchForm({
     <form onSubmit={submit} role="search" className="relative w-full">
       <input
         ref={inputRef}
+        id={isLg ? "hero-search" : undefined}
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}

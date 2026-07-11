@@ -1,4 +1,5 @@
-// 포메이션 정의 — 슬롯 좌표(x: 0~100 좌우, y: 0~100, 100=우리 골대 쪽 하단).
+// 포메이션 정의 — 슬롯 좌표(x: 0~100 좌우, y: 0~100, 92=우리 골대 쪽 하단).
+// 행(row) 기반으로 좌표를 자동 계산해 FC온라인 주요 포메이션 전체를 커버한다.
 export interface Slot {
   id: string; // 안정 키
   pos: string; // 포지션 라벨 (GK, CB, ST ...)
@@ -6,74 +7,99 @@ export interface Slot {
   y: number;
 }
 
+export type Line = "4" | "3" | "5"; // 최종 수비 라인(백)
+
 export interface Formation {
   id: string;
   name: string;
+  line: Line; // 카테고리(수비 백 수)
   slots: Slot[];
 }
 
-const F433: Slot[] = [
-  { id: "gk", pos: "GK", x: 50, y: 92 },
-  { id: "lb", pos: "LB", x: 16, y: 72 },
-  { id: "lcb", pos: "CB", x: 38, y: 78 },
-  { id: "rcb", pos: "CB", x: 62, y: 78 },
-  { id: "rb", pos: "RB", x: 84, y: 72 },
-  { id: "lcm", pos: "CM", x: 30, y: 52 },
-  { id: "cm", pos: "CM", x: 50, y: 56 },
-  { id: "rcm", pos: "CM", x: 70, y: 52 },
-  { id: "lw", pos: "LW", x: 20, y: 24 },
-  { id: "st", pos: "ST", x: 50, y: 18 },
-  { id: "rw", pos: "RW", x: 80, y: 24 },
+/**
+ * 행 배열(뒤→앞, 첫 행은 GK)로 슬롯을 생성.
+ * y: GK=92, 필드 행은 78(수비)→16(공격) 선형 분포.
+ * x: 행 내 인원 균등 분포 (j+1)/(k+1)*100, [8,92] 클램프.
+ */
+function build(rows: string[][]): Slot[] {
+  const slots: Slot[] = [];
+  const outRows = rows.length - 1; // GK 제외
+  const counts: Record<string, number> = {};
+  rows.forEach((row, ri) => {
+    const y =
+      ri === 0
+        ? 92
+        : outRows <= 1
+          ? 20
+          : Math.round(78 - (ri - 1) * (62 / (outRows - 1)));
+    const k = row.length;
+    row.forEach((pos, j) => {
+      const x = Math.min(92, Math.max(8, Math.round(((j + 1) / (k + 1)) * 100)));
+      const key = pos.toLowerCase();
+      counts[key] = (counts[key] ?? 0) + 1;
+      const id = `${key}${counts[key]}`;
+      slots.push({ id, pos, x, y });
+    });
+  });
+  return slots;
+}
+
+interface Def {
+  id: string;
+  name: string;
+  line: Line;
+  rows: string[][];
+}
+
+// 뒤(수비)→앞(공격) 순서. 첫 행은 GK.
+const DEFS: Def[] = [
+  // ── 4백 ──
+  { id: "433", name: "4-3-3", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["CM", "CM", "CM"], ["LW", "ST", "RW"]] },
+  { id: "442", name: "4-4-2", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["LM", "CM", "CM", "RM"], ["ST", "ST"]] },
+  { id: "4231", name: "4-2-3-1", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["CDM", "CDM"], ["LAM", "CAM", "RAM"], ["ST"]] },
+  { id: "4141", name: "4-1-4-1", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["CDM"], ["LM", "CM", "CM", "RM"], ["ST"]] },
+  { id: "4312", name: "4-3-1-2", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["CM", "CM", "CM"], ["CAM"], ["ST", "ST"]] },
+  { id: "41212", name: "4-1-2-1-2", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["CDM"], ["LM", "RM"], ["CAM"], ["ST", "ST"]] },
+  { id: "4222", name: "4-2-2-2", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["CDM", "CDM"], ["LAM", "RAM"], ["ST", "ST"]] },
+  { id: "4411", name: "4-4-1-1", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["LM", "CM", "CM", "RM"], ["CF"], ["ST"]] },
+  { id: "451", name: "4-5-1", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["LM", "CM", "CM", "CM", "RM"], ["ST"]] },
+  { id: "4321", name: "4-3-2-1", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["CM", "CM", "CM"], ["CF", "CF"], ["ST"]] },
+  { id: "424", name: "4-2-4", line: "4", rows: [["GK"], ["LB", "CB", "CB", "RB"], ["CM", "CM"], ["LW", "ST", "ST", "RW"]] },
+  // ── 3백 ──
+  { id: "352", name: "3-5-2", line: "3", rows: [["GK"], ["CB", "CB", "CB"], ["LWB", "CM", "CM", "CM", "RWB"], ["ST", "ST"]] },
+  { id: "343", name: "3-4-3", line: "3", rows: [["GK"], ["CB", "CB", "CB"], ["LM", "CM", "CM", "RM"], ["LW", "ST", "RW"]] },
+  { id: "3412", name: "3-4-1-2", line: "3", rows: [["GK"], ["CB", "CB", "CB"], ["LM", "CM", "CM", "RM"], ["CAM"], ["ST", "ST"]] },
+  { id: "3142", name: "3-1-4-2", line: "3", rows: [["GK"], ["CB", "CB", "CB"], ["CDM"], ["LM", "CM", "CM", "RM"], ["ST", "ST"]] },
+  { id: "3421", name: "3-4-2-1", line: "3", rows: [["GK"], ["CB", "CB", "CB"], ["LM", "CM", "CM", "RM"], ["CAM", "CAM"], ["ST"]] },
+  // ── 5백 ──
+  { id: "532", name: "5-3-2", line: "5", rows: [["GK"], ["LWB", "CB", "CB", "CB", "RWB"], ["CM", "CM", "CM"], ["ST", "ST"]] },
+  { id: "541", name: "5-4-1", line: "5", rows: [["GK"], ["LWB", "CB", "CB", "CB", "RWB"], ["LM", "CM", "CM", "RM"], ["ST"]] },
+  { id: "523", name: "5-2-3", line: "5", rows: [["GK"], ["LWB", "CB", "CB", "CB", "RWB"], ["CM", "CM"], ["LW", "ST", "RW"]] },
 ];
 
-const F442: Slot[] = [
-  { id: "gk", pos: "GK", x: 50, y: 92 },
-  { id: "lb", pos: "LB", x: 16, y: 72 },
-  { id: "lcb", pos: "CB", x: 38, y: 78 },
-  { id: "rcb", pos: "CB", x: 62, y: 78 },
-  { id: "rb", pos: "RB", x: 84, y: 72 },
-  { id: "lm", pos: "LM", x: 18, y: 48 },
-  { id: "lcm", pos: "CM", x: 40, y: 52 },
-  { id: "rcm", pos: "CM", x: 60, y: 52 },
-  { id: "rm", pos: "RM", x: 82, y: 48 },
-  { id: "lst", pos: "ST", x: 38, y: 20 },
-  { id: "rst", pos: "ST", x: 62, y: 20 },
-];
+export const FORMATIONS: Formation[] = DEFS.map((d) => ({
+  id: d.id,
+  name: d.name,
+  line: d.line,
+  slots: build(d.rows),
+}));
 
-const F4231: Slot[] = [
-  { id: "gk", pos: "GK", x: 50, y: 92 },
-  { id: "lb", pos: "LB", x: 16, y: 72 },
-  { id: "lcb", pos: "CB", x: 38, y: 78 },
-  { id: "rcb", pos: "CB", x: 62, y: 78 },
-  { id: "rb", pos: "RB", x: 84, y: 72 },
-  { id: "ldm", pos: "CDM", x: 38, y: 58 },
-  { id: "rdm", pos: "CDM", x: 62, y: 58 },
-  { id: "lam", pos: "LAM", x: 20, y: 36 },
-  { id: "cam", pos: "CAM", x: 50, y: 34 },
-  { id: "ram", pos: "RAM", x: 80, y: 36 },
-  { id: "st", pos: "ST", x: 50, y: 16 },
-];
+export const LINE_LABEL: Record<Line, string> = {
+  "4": "4백",
+  "3": "3백",
+  "5": "5백",
+};
 
-const F352: Slot[] = [
-  { id: "gk", pos: "GK", x: 50, y: 92 },
-  { id: "lcb", pos: "CB", x: 30, y: 78 },
-  { id: "ccb", pos: "CB", x: 50, y: 80 },
-  { id: "rcb", pos: "CB", x: 70, y: 78 },
-  { id: "lwb", pos: "LWB", x: 12, y: 54 },
-  { id: "lcm", pos: "CM", x: 36, y: 52 },
-  { id: "cm", pos: "CM", x: 50, y: 56 },
-  { id: "rcm", pos: "CM", x: 64, y: 52 },
-  { id: "rwb", pos: "RWB", x: 88, y: 54 },
-  { id: "lst", pos: "ST", x: 38, y: 20 },
-  { id: "rst", pos: "ST", x: 62, y: 20 },
-];
+export const LINE_ORDER: Line[] = ["4", "3", "5"];
 
-export const FORMATIONS: Formation[] = [
-  { id: "433", name: "4-3-3", slots: F433 },
-  { id: "442", name: "4-4-2", slots: F442 },
-  { id: "4231", name: "4-2-3-1", slots: F4231 },
-  { id: "352", name: "3-5-2", slots: F352 },
-];
+/** 카테고리(백)별 포메이션 목록 */
+export function formationsByLine(): { line: Line; label: string; items: Formation[] }[] {
+  return LINE_ORDER.map((line) => ({
+    line,
+    label: LINE_LABEL[line],
+    items: FORMATIONS.filter((f) => f.line === line),
+  }));
+}
 
 export function getFormation(id: string): Formation {
   return FORMATIONS.find((f) => f.id === id) ?? FORMATIONS[0];

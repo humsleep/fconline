@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getPost } from '@/lib/community/posts';
+import { getPost, listComments } from '@/lib/community/posts';
 import { getProfilesByIds } from '@/lib/community/profile';
 import { createClient } from '@/lib/supabase/server';
 import { formatRelativeKr } from '@/lib/format';
 import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
 import PostActions from './PostActions';
+import Comments, { type CommentView } from './Comments';
 
 export async function generateMetadata({
   params,
@@ -29,19 +30,47 @@ export default async function PostDetail({
   if (!post) notFound();
 
   const cfg = POST_TYPES[post.type];
-  const profiles = await getProfilesByIds([post.author_id]);
+  const comments = await listComments(post.id);
+  const profiles = await getProfilesByIds([
+    post.author_id,
+    ...comments.map((c) => c.author_id),
+  ]);
   const author = profiles.get(post.author_id);
 
   let isOwner = false;
+  let loggedIn = false;
+  let canComment = false;
+  let userId: string | null = null;
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+    loggedIn = Boolean(user);
     isOwner = Boolean(user && user.id === post.author_id);
+    canComment = Boolean(user && profiles.get(user.id)?.nickname);
+    if (user && !profiles.has(user.id)) {
+      // 댓글 작성자 목록에 없더라도 내 프로필(닉네임 보유 여부)은 별도 확인
+      const { data: me } = await supabase
+        .from('profiles')
+        .select('nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+      canComment = Boolean(me?.nickname);
+    }
   } catch {
     // 익명 조회
   }
+
+  const commentViews: CommentView[] = comments.map((c) => ({
+    id: c.id,
+    body: c.body,
+    squad_id: c.squad_id,
+    created_at: c.created_at,
+    authorName: profiles.get(c.author_id)?.nickname ?? '알 수 없음',
+    isOwn: Boolean(userId && c.author_id === userId),
+  }));
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -125,6 +154,14 @@ export default async function PostDetail({
 
         {isOwner && <PostActions id={post.id} status={post.status} />}
       </article>
+
+      {/* 댓글 — 평가/제안이 오가는 핵심 루프 */}
+      <Comments
+        postId={post.id}
+        comments={commentViews}
+        canWrite={canComment}
+        loggedIn={loggedIn}
+      />
 
       {/* 작성자 카드 */}
       <section className="panel mt-4 p-5">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import SearchForm from "@/app/components/SearchForm";
 import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { NexonApiError, isMaintenance, isNotConfigured, isUserNotFound } from "@/lib/nexon/client";
@@ -377,30 +378,61 @@ function SquadSkeleton() {
 }
 
 function ErrorState({ err, nickname }: { err: unknown; nickname: string }) {
-  let title = "일시적인 오류가 발생했어요";
-  let desc = "잠시 후 다시 시도해주세요.";
+  const notFound = isUserNotFound(err);
+  const isDev = process.env.NODE_ENV !== "production";
 
-  if (isUserNotFound(err)) {
+  let title = "일시적으로 조회할 수 없어요";
+  let desc = "잠시 후 다시 시도해 주세요.";
+  let retry = true; // 일시 오류/점검 → 같은 주소 재시도가 1순위 CTA
+
+  if (notFound) {
     title = `‘${nickname}’ 구단주를 찾을 수 없어요`;
-    desc = "닉네임 철자를 확인해주세요. 최근에 닉네임을 변경했다면 넥슨 반영까지 시간이 걸릴 수 있습니다.";
+    desc =
+      "닉네임 철자를 확인해 주세요. 최근에 닉네임을 바꿨다면 넥슨 반영까지 시간이 걸릴 수 있어요.";
+    retry = false;
   } else if (isNotConfigured(err)) {
-    title = "서비스 준비 중입니다";
-    desc = "넥슨 API 연동 설정이 완료되지 않았습니다. (NEXON_API_KEY 미설정)";
+    title = "잠시 정비 중이에요";
+    desc = isDev
+      ? "넥슨 API 연동 설정이 완료되지 않았습니다. (NEXON_API_KEY 미설정)"
+      : "일시적으로 전적을 불러올 수 없어요. 잠시 후 다시 시도해 주세요.";
   } else if (isMaintenance(err)) {
-    title = "게임 점검 중입니다";
+    title = "게임 점검 중이에요";
     desc = "점검이 끝나면 다시 조회할 수 있어요.";
   }
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-24 text-center">
-      <p className="scoreboard text-5xl font-bold text-surface-2">4:04</p>
+      {notFound && (
+        <p
+          aria-hidden
+          className="scoreboard text-5xl font-bold"
+          style={{ color: "color-mix(in srgb, var(--ink) 12%, transparent)" }}
+        >
+          4:04
+        </p>
+      )}
       <h1 className="mt-4 text-xl font-bold">{title}</h1>
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">{desc}</p>
+
+      {notFound ? (
+        // 오타 회복: 닉네임 프리필 재검색 (재입력 마찰 제거)
+        <div className="mt-8 w-full max-w-md">
+          <SearchForm size="lg" defaultValue={nickname} />
+        </div>
+      ) : retry ? (
+        <a
+          href={`/user/${encodeURIComponent(nickname)}`}
+          className="scoreboard mt-8 rounded-lg bg-accent px-5 py-2.5 text-sm font-bold text-accent-ink transition-opacity hover:opacity-90"
+        >
+          다시 시도
+        </a>
+      ) : null}
+
       <Link
         href="/"
-        className="scoreboard mt-8 rounded-lg bg-accent px-5 py-2.5 text-sm font-bold text-accent-ink transition-opacity hover:opacity-90"
+        className="mt-4 text-[13px] text-muted underline underline-offset-2"
       >
-        다시 검색
+        홈에서 다시 검색
       </Link>
     </div>
   );

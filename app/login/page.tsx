@@ -60,9 +60,14 @@ function LoginContent() {
         </p>
 
         {!configured ? (
-          <p className="mt-6 rounded-lg bg-surface-2 px-4 py-3 text-sm text-muted">
-            로그인 설정이 아직 완료되지 않았습니다. (Supabase 환경변수 미설정)
-          </p>
+          <div className="mt-6 rounded-lg bg-surface-2 px-4 py-3 text-sm text-muted">
+            <p>
+              로그인 준비 중이에요. 전적 검색·진단·스쿼드 빌더는 로그인 없이
+              바로 쓸 수 있어요.
+              {process.env.NODE_ENV !== 'production' &&
+                ' (Supabase 환경변수 미설정)'}
+            </p>
+          </div>
         ) : (
           <button
             onClick={signInWithGoogle}

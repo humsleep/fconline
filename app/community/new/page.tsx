@@ -47,14 +47,17 @@ function NewPostForm() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace('/login?next=/community/new');
+      // 선택한 유형(type)을 로그인 후에도 유지
+      router.replace(
+        `/login?next=${encodeURIComponent(`/community/new?type=${initialType}`)}`
+      );
       return;
     }
     fetch('/api/profile')
       .then((r) => (r.ok ? r.json() : { profile: null }))
       .then((d) => setHasNickname(Boolean(d.profile?.nickname)))
       .catch(() => setHasNickname(false));
-  }, [user, loading, router]);
+  }, [user, loading, router, initialType]);
 
   const togglePos = (p: string) =>
     setPositions((cur) =>
@@ -109,7 +112,7 @@ function NewPostForm() {
   if (!configured)
     return (
       <div className="mx-auto max-w-md p-12 text-center text-muted">
-        로그인 설정이 완료되지 않았습니다.
+        로그인 준비 중이에요. 잠시 후 다시 시도해 주세요.
       </div>
     );
   if (!hasNickname)
