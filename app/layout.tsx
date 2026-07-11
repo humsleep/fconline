@@ -80,6 +80,12 @@ export default function RootLayout({
                 스쿼드
               </Link>
               <Link
+                href="/meta"
+                className="text-sm font-semibold text-muted transition-colors hover:text-ink"
+              >
+                픽 랭킹
+              </Link>
+              <Link
                 href="/community"
                 className="text-sm font-semibold text-muted transition-colors hover:text-ink"
               >

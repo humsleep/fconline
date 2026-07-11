@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SearchForm from "./components/SearchForm";
 import FocusSearchCard from "./components/FocusSearchCard";
+import { DEMO_NICKNAME } from "@/lib/demo";
 
 const FEATURES = [
   {
@@ -30,6 +31,13 @@ const FEATURES = [
     desc: "포메이션에 선수를 배치해 나만의 스쿼드를. 프리미어리그 아스날처럼 팀을 고르면 자동으로 채워집니다.",
     hint: "바로가기 →",
     href: "/squad",
+  },
+  {
+    tag: "랭커 픽 랭킹",
+    title: "지금 랭커는 누굴 쓸까",
+    desc: "상위 랭커가 실제 경기에서 가장 많이 쓴 카드를 포지션별로. 매일 갱신되는 메타 랭킹.",
+    hint: "바로가기 →",
+    href: "/meta",
   },
   {
     tag: "커뮤니티",
@@ -82,6 +90,16 @@ export default function Home() {
         <div className="rise rise-3 relative mt-8 w-full max-w-md">
           <SearchForm size="lg" />
         </div>
+
+        {/* 데모 구단주 — 검색할 닉네임이 없어도 바로 가치 체험 */}
+        {DEMO_NICKNAME && (
+          <Link
+            href={`/user/${encodeURIComponent(DEMO_NICKNAME)}`}
+            className="rise rise-3 relative mt-4 inline-flex items-center gap-1.5 rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+          >
+            👀 검색할 닉네임이 없다면? 예시 리포트 구경하기 →
+          </Link>
+        )}
       </section>
 
       {/* 기능 */}

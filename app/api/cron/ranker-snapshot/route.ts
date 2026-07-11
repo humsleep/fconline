@@ -59,10 +59,36 @@ export async function GET(req: Request) {
       }
     }
 
-    const top = [...freq.values()]
+    let top = [...freq.values()]
       .sort((a, b) => b.n - a.n)
       .slice(0, TOP_PLAYERS)
       .map((p) => ({ id: p.id, po: p.po }));
+
+    // 폴백: match_cache가 비면(콜드스타트) 직전 스냅샷의 조합을 재예열
+    // → 한 번 시딩되면 검색이 없어도 랭킹이 매일 갱신·유지된다.
+    if (top.length === 0) {
+      try {
+        const { data: prev } = await db
+          .from('ranker_stats_snapshot')
+          .select('sp_id, sp_position, snapshot_date')
+          .eq('match_type', matchtype)
+          .is('payload->empty', null)
+          .order('snapshot_date', { ascending: false })
+          .limit(TOP_PLAYERS * 3);
+        const seen = new Set<string>();
+        const combos: { id: number; po: number }[] = [];
+        for (const r of prev ?? []) {
+          const key = rankerKey(r.sp_id as number, r.sp_position as number);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          combos.push({ id: r.sp_id as number, po: r.sp_position as number });
+          if (combos.length >= TOP_PLAYERS) break;
+        }
+        top = combos;
+      } catch {
+        // 폴백 실패 시 이번 타입은 건너뜀
+      }
+    }
 
     const warmed = await getRankerStatsCached(matchtype, top);
     summary[`type_${matchtype}`] = warmed.size;

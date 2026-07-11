@@ -1,7 +1,32 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+
+const RECENT_KEY = "fcscope-recent-searches";
+const RECENT_MAX = 5;
+
+function loadRecent(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+    return Array.isArray(raw) ? raw.filter((x) => typeof x === "string").slice(0, RECENT_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function rememberSearch(nickname: string) {
+  try {
+    const next = [nickname, ...loadRecent().filter((r) => r !== nickname)].slice(
+      0,
+      RECENT_MAX
+    );
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    // storage 불가 환경 무시
+  }
+}
 
 export default function SearchForm({
   size = "lg",
@@ -12,55 +37,90 @@ export default function SearchForm({
 }) {
   const router = useRouter();
   const [value, setValue] = useState(defaultValue);
+  const [recent, setRecent] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  const isLg = size === "lg";
 
   // 모바일 하단탭 "검색"(/?focus=1) 진입 시 자동 포커스 (히어로 입력만)
   useEffect(() => {
-    if (size !== "lg") return;
+    if (!isLg) return;
     if (new URLSearchParams(window.location.search).get("focus") === "1") {
       inputRef.current?.focus();
     }
-  }, [size]);
+    setRecent(loadRecent()); // 최근 검색 칩 (hydration-safe: 마운트 후 로드)
+  }, [isLg]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const nickname = value.trim();
     if (!nickname) return;
+    rememberSearch(nickname);
     startTransition(() => {
       router.push(`/user/${encodeURIComponent(nickname)}`);
     });
   }
 
-  const isLg = size === "lg";
+  function clearRecent() {
+    try {
+      localStorage.removeItem(RECENT_KEY);
+    } catch {}
+    setRecent([]);
+  }
 
   return (
-    <form onSubmit={submit} role="search" className="relative w-full">
-      <input
-        ref={inputRef}
-        id={isLg ? "hero-search" : undefined}
-        type="search"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="구단주명 검색"
-        aria-label="구단주명 검색"
-        autoComplete="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        enterKeyHint="search"
-        className={`input-search ${
-          isLg ? "h-14 pl-5 pr-24 text-base" : "h-9 pl-3 pr-16 text-sm"
-        }`}
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className={`scoreboard absolute top-1/2 -translate-y-1/2 rounded-lg bg-accent font-bold text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50 ${
-          isLg ? "right-2 h-10 px-5 text-sm" : "right-1.5 h-6 px-3 text-xs"
-        }`}
-      >
-        {pending ? "…" : "GO"}
-      </button>
-    </form>
+    <div className="w-full">
+      <form onSubmit={submit} role="search" className="relative w-full">
+        <input
+          ref={inputRef}
+          id={isLg ? "hero-search" : undefined}
+          type="search"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="구단주명 검색"
+          aria-label="구단주명 검색"
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          enterKeyHint="search"
+          className={`input-search ${
+            isLg ? "h-14 pl-5 pr-24 text-base" : "h-9 pl-3 pr-16 text-sm"
+          }`}
+        />
+        <button
+          type="submit"
+          disabled={pending}
+          className={`scoreboard absolute top-1/2 -translate-y-1/2 rounded-lg bg-accent font-bold text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50 ${
+            isLg ? "right-2 h-10 px-5 text-sm" : "right-1.5 h-6 px-3 text-xs"
+          }`}
+        >
+          {pending ? "…" : "GO"}
+        </button>
+      </form>
+
+      {/* 최근 검색 칩 — 한글 닉네임 반복 입력 마찰 제거 */}
+      {isLg && recent.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
+          <span className="text-[12px] text-muted">최근</span>
+          {recent.map((r) => (
+            <Link
+              key={r}
+              href={`/user/${encodeURIComponent(r)}`}
+              onClick={() => rememberSearch(r)}
+              className="max-w-[10rem] truncate rounded-full bg-surface-2 px-3 py-1 text-[13px] font-medium text-ink transition-colors hover:bg-accent hover:text-accent-ink"
+            >
+              {r}
+            </Link>
+          ))}
+          <button
+            onClick={clearRecent}
+            className="text-[12px] text-muted underline underline-offset-2"
+            aria-label="최근 검색 지우기"
+          >
+            지우기
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

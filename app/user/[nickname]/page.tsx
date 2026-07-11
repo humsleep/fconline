@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import SearchForm from "@/app/components/SearchForm";
+import { DEMO_NICKNAME } from "@/lib/demo";
 import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { NexonApiError, isMaintenance, isNotConfigured, isUserNotFound } from "@/lib/nexon/client";
@@ -418,6 +419,14 @@ function ErrorState({ err, nickname }: { err: unknown; nickname: string }) {
         // 오타 회복: 닉네임 프리필 재검색 (재입력 마찰 제거)
         <div className="mt-8 w-full max-w-md">
           <SearchForm size="lg" defaultValue={nickname} />
+          {DEMO_NICKNAME && (
+            <Link
+              href={`/user/${encodeURIComponent(DEMO_NICKNAME)}`}
+              className="mt-3 inline-block text-[13px] text-muted underline underline-offset-2"
+            >
+              또는 예시 리포트 구경하기 →
+            </Link>
+          )}
         </div>
       ) : retry ? (
         <a

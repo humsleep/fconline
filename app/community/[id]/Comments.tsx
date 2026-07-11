@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatRelativeKr } from '@/lib/format';
+import MySquadPicker from '@/app/components/MySquadPicker';
 
 export interface CommentView {
   id: string;
@@ -125,12 +126,13 @@ export default function Comments({
             className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
           />
           {showSquad ? (
-            <input
-              value={squadId}
-              onChange={(e) => setSquadId(e.target.value.trim().slice(0, 32))}
-              placeholder="제안 스쿼드 공유코드 (스쿼드 빌더에서 저장하면 생겨요)"
-              className="mt-2 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
-            />
+            <div className="mt-2">
+              <MySquadPicker
+                value={squadId}
+                onChange={setSquadId}
+                placeholder="제안 스쿼드 공유코드"
+              />
+            </div>
           ) : (
             <button
               onClick={() => setShowSquad(true)}

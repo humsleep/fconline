@@ -28,6 +28,8 @@ export interface PostTypeConfig {
   fields: PostField[];
   bodyLabel: string;
   bodyPlaceholder: string;
+  /** "템플릿으로 시작" — 빈 본문에 삽입되는 유형별 글 틀 */
+  template: string;
 }
 
 export const POST_TYPE_ORDER: PostType[] = [
@@ -48,6 +50,8 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
     fields: ['squad'],
     bodyLabel: '소개',
     bodyPlaceholder: '스쿼드 컨셉, 핵심 카드, 전술 등을 자유롭게 적어주세요.',
+    template:
+      '⚽ 포메이션:\n🌟 핵심 카드:\n🧠 운영 컨셉:\n💬 한마디:',
   },
   squad_rate: {
     label: '스쿼드 평가 요청',
@@ -57,6 +61,8 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
     fields: ['squad', 'budget'],
     bodyLabel: '요청 내용',
     bodyPlaceholder: '고민되는 포지션, 예산, 목표 등급 등을 적으면 조언받기 좋아요.',
+    template:
+      '🎯 현재 등급:\n⚽ 포메이션:\n😥 고민 포지션:\n💰 예산:\n🙏 이런 조언 부탁해요:',
   },
   squad_make: {
     label: '스쿼드 만들어줘',
@@ -66,6 +72,8 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
     fields: ['budget'],
     bodyLabel: '원하는 조건',
     bodyPlaceholder: '예산, 선호 포메이션, 좋아하는 리그·선수 등을 적어주세요.',
+    template:
+      '💰 예산:\n⚽ 선호 포메이션:\n❤️ 좋아하는 리그/선수:\n🎯 목표 등급:\n📌 기타 조건:',
   },
   club_recruit: {
     label: '클럽원 모집',
@@ -75,6 +83,8 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
     fields: ['region', 'positions', 'contact'],
     bodyLabel: '모집 내용',
     bodyPlaceholder: '활동 시간대, 클럽 분위기, 지원 방법 등을 적어주세요.',
+    template:
+      '🛡️ 클럽 이름:\n⏰ 주 활동 시간대:\n🎯 클럽 성향(빡겜/즐겜):\n✅ 이런 분 환영:\n📩 지원 방법:',
   },
   club_match: {
     label: '클럽전 상대 구함',
@@ -84,6 +94,8 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
     fields: ['region', 'schedule', 'contact'],
     bodyLabel: '매치 내용',
     bodyPlaceholder: '우리 클럽 수준, 원하는 형식(정규/캐주얼), 가능 시간 등을 적어주세요.',
+    template:
+      '🛡️ 우리 클럽:\n📊 평균 등급대:\n⏰ 가능 시간:\n⚔️ 원하는 형식(단판/홈앤어웨이):\n📩 연락 방법:',
   },
   tournament: {
     label: '대회',
@@ -93,11 +105,14 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
     fields: ['date', 'format', 'entry', 'contact'],
     bodyLabel: '대회 안내',
     bodyPlaceholder: '대회 규칙, 상품(명예/뱃지), 진행 방식, 참가 신청 방법 등을 적어주세요.',
+    template:
+      '🏆 대회 이름:\n📅 일정:\n👥 모집 인원:\n📋 진행 방식:\n🎁 보상(명예/뱃지):\n📩 참가 신청:',
   },
 };
 
 export function isPostType(v: string): v is PostType {
-  return v in POST_TYPES;
+  // `in` 은 프로토타입 체인까지 봐서 ?type=constructor 크래시 가능 — 자기 속성만
+  return Object.hasOwn(POST_TYPES, v);
 }
 
 // meta jsonb에 담기는 유형별 자유 텍스트 필드
