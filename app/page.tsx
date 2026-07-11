@@ -1,27 +1,28 @@
 import Link from "next/link";
 import SearchForm from "./components/SearchForm";
+import FocusSearchCard from "./components/FocusSearchCard";
 
 const FEATURES = [
   {
     tag: "매치 리포트",
     title: "슛맵으로 왜 졌는지 본다",
     desc: "경기별 슛 좌표·선수 평점·POTM까지. 점유율 말고 진짜 원인을 짚어줍니다.",
-    hint: "구단주명 검색 → 경기 선택",
-    href: null,
+    hint: "내 구단주명 검색하고 시작 →",
+    href: "/?focus=1",
   },
   {
     tag: "선수 성적표",
     title: "내 카드, 랭커 대비 몇 점?",
     desc: "내 스쿼드 선수별 실사용 평점을 랭커 평균과 나란히. 능력치가 아니라 실전 데이터로.",
-    hint: "구단주명 검색 → 선수 성적표",
-    href: null,
+    hint: "내 구단주명 검색하고 시작 →",
+    href: "/?focus=1",
   },
   {
     tag: "스쿼드 클리닉",
     title: "내 스쿼드 종합 진단",
     desc: "라인별 강약·약한 고리·과의존까지 룰베이스로 진단. 어디를 바꿔야 할지 짚어줍니다.",
-    hint: "구단주명 검색 → 스쿼드",
-    href: null,
+    hint: "내 구단주명 검색하고 시작 →",
+    href: "/?focus=1",
   },
   {
     tag: "스쿼드 빌더",
@@ -48,14 +49,20 @@ export default function Home() {
         <svg
           aria-hidden
           viewBox="0 0 400 240"
-          className="pointer-events-none absolute inset-x-0 top-4 mx-auto h-56 w-full max-w-lg opacity-[0.08]"
+          className="pointer-events-none absolute inset-x-0 -top-6 mx-auto h-72 w-full max-w-lg opacity-[0.06]"
+          style={{
+            maskImage:
+              "linear-gradient(to bottom, black 30%, transparent 85%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, black 30%, transparent 85%)",
+          }}
           fill="none"
           stroke="var(--accent)"
           strokeWidth="1.5"
         >
-          <rect x="20" y="10" width="360" height="220" rx="4" />
-          <line x1="20" y1="120" x2="380" y2="120" />
-          <circle cx="200" cy="120" r="42" />
+          {/* 센터서클 모티프만 — 사각 테두리는 '깨진 카드'처럼 보여 제거 */}
+          <line x1="0" y1="120" x2="400" y2="120" />
+          <circle cx="200" cy="120" r="56" />
           <circle cx="200" cy="120" r="3" fill="var(--accent)" stroke="none" />
         </svg>
 
@@ -102,19 +109,16 @@ export default function Home() {
                 </p>
               </>
             );
-            const cls = `panel rise rise-${i + 1} block p-5`;
-            return f.href ? (
-              <Link
-                key={f.title}
-                href={f.href}
-                className={`${cls} transition-colors hover:border-accent/50`}
-              >
+            const cls = `panel rise rise-${i + 1} block w-full p-5 transition-colors hover:border-accent/50`;
+            return f.href === "/?focus=1" ? (
+              // 검색으로 시작하는 기능 — 히어로 검색창으로 스크롤+포커스 (죽은 카드 방지)
+              <FocusSearchCard key={f.title} className={cls}>
+                {inner}
+              </FocusSearchCard>
+            ) : (
+              <Link key={f.title} href={f.href} className={cls}>
                 {inner}
               </Link>
-            ) : (
-              <article key={f.title} className={cls}>
-                {inner}
-              </article>
             );
           })}
         </div>

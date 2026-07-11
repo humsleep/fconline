@@ -57,7 +57,10 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('fcscope-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
           }}
         />
-        <header className="sticky top-0 z-40 border-b border-line/70 bg-bg/85 backdrop-blur">
+        <header
+          className="sticky top-0 z-40 border-b border-line/70 bg-bg/85 backdrop-blur"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
           <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4">
             <Link
               href="/"
@@ -69,12 +72,20 @@ export default function RootLayout({
                 BETA
               </span>
             </Link>
-            <Link
-              href="/community"
-              className="ml-auto hidden text-sm font-semibold text-muted transition-colors hover:text-ink md:block"
-            >
-              커뮤니티
-            </Link>
+            <nav className="ml-auto hidden items-center gap-4 md:flex">
+              <Link
+                href="/squad"
+                className="text-sm font-semibold text-muted transition-colors hover:text-ink"
+              >
+                스쿼드
+              </Link>
+              <Link
+                href="/community"
+                className="text-sm font-semibold text-muted transition-colors hover:text-ink"
+              >
+                커뮤니티
+              </Link>
+            </nav>
             <div className="hidden w-56 md:block">
               <SearchForm size="sm" />
             </div>

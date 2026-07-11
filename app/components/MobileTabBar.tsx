@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { focusHeroSearch } from "./FocusSearchCard";
 
 const TABS = [
   {
@@ -65,6 +66,12 @@ export default function MobileTabBar() {
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
+                onClick={(e) => {
+                  // 이미 홈인데 "검색"을 누르면 내비게이션 대신 히어로 검색창 포커스
+                  if (t.href === "/?focus=1" && pathname === "/") {
+                    if (focusHeroSearch()) e.preventDefault();
+                  }
+                }}
                 className={`flex h-14 flex-col items-center justify-center gap-1 text-[12px] font-semibold transition-colors ${
                   active ? "text-accent" : "text-muted"
                 }`}

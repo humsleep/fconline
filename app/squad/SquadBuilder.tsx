@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FORMATIONS, getFormation, type Slot } from "@/lib/squad/formations";
+import {
+  formationsByLine,
+  getFormation,
+  type Slot,
+} from "@/lib/squad/formations";
 import { presetsByLeague } from "@/lib/squad/presets";
+import { assignByPosition } from "@/lib/squad/assign";
 import SquadPitch, { type Coord, type FilledSlot } from "./SquadPitch";
 
 interface SeasonVariant {
@@ -19,6 +24,7 @@ interface PlayerHit {
 }
 
 const LEAGUES = presetsByLeague();
+const LINE_GROUPS = formationsByLine();
 
 export default function SquadBuilder() {
   const router = useRouter();
@@ -29,75 +35,130 @@ export default function SquadBuilder() {
   const [name, setName] = useState("내 스쿼드");
   const [teamTag, setTeamTag] = useState<string | null>(null);
 
-  const [activeSlot, setActiveSlot] = useState<Slot | null>(null);
+  const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlayerHit[]>([]);
   const [searching, setSearching] = useState(false);
-  const [expanded, setExpanded] = useState<number | null>(null); // 시즌 펼친 pid
+  const [expanded, setExpanded] = useState<number | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [presetLoading, setPresetLoading] = useState(false);
+  const [mineNick, setMineNick] = useState("");
+  const [mineLoading, setMineLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  // 검색 디바운스
+  const searchPanelRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const pitchWrapRef = useRef<HTMLDivElement>(null);
+
+  // 모바일(검색 패널이 피치 아래에 쌓이는 폭) 여부
+  const isStacked = () =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 767px)").matches;
+
+  const formation = useMemo(() => getFormation(formationId), [formationId]);
+
+  // 검색 디바운스 (패널이 항상 열려 있으므로 query만 의존)
   useEffect(() => {
-    if (!activeSlot) return;
     const q = query.trim();
     if (q.length < 1) {
       setResults([]);
+      setSearching(false); // 입력 삭제 시 스피너 고착 방지
+      setExpanded(null);
       return;
     }
     setSearching(true);
+    const ctrl = new AbortController(); // 늦게 도착한 이전 응답의 결과 덮어쓰기 방지
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/players/search?q=${encodeURIComponent(q)}`);
+        const res = await fetch(
+          `/api/players/search?q=${encodeURIComponent(q)}`,
+          { signal: ctrl.signal }
+        );
         const data = await res.json();
         setResults(data.players ?? []);
-      } catch {
-        setResults([]);
-      } finally {
+        setExpanded(null);
         setSearching(false);
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") {
+          setResults([]);
+          setSearching(false);
+        }
       }
     }, 250);
-    return () => clearTimeout(t);
-  }, [query, activeSlot]);
-
-  // 모달 Escape 닫기
-  useEffect(() => {
-    if (!activeSlot) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActiveSlot(null);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [activeSlot]);
+  }, [query]);
 
-  // 현재 포메이션에 실제로 존재하는 슬롯만 카운트 (orphan 제외)
-  const validSlotIds = new Set(getFormation(formationId).slots.map((s) => s.id));
+  const validSlotIds = useMemo(
+    () => new Set(formation.slots.map((s) => s.id)),
+    [formation]
+  );
   const filledCount = Object.keys(filled).filter((id) =>
     validSlotIds.has(id)
   ).length;
 
-  // 포메이션 교체 — 새 포메이션에 없는 슬롯의 선수/좌표 정리(무음 손실 방지)
+  // 포메이션 전환 — 기존 선수를 포지션 기반으로 새 포메이션에 재배치(유실 방지)
   function changeFormation(nextId: string) {
-    const nextValid = new Set(getFormation(nextId).slots.map((s) => s.id));
+    const next = getFormation(nextId);
     setFilled((f) => {
+      const players = Object.entries(f)
+        .filter(([id]) => validSlotIds.has(id))
+        .map(([id, v]) => {
+          const slot = formation.slots.find((s) => s.id === id);
+          return {
+            pos: slot?.pos ?? "CM",
+            name: v.name,
+            spid: v.spid,
+            season: v.season,
+          };
+        });
+      const placed = assignByPosition(next.slots, players);
       const n: Record<string, FilledSlot> = {};
-      for (const [id, v] of Object.entries(f)) if (nextValid.has(id)) n[id] = v;
+      for (const [slotId, v] of Object.entries(placed))
+        n[slotId] = { spid: v.spid!, name: v.name, season: v.season };
       return n;
     });
-    setCoords({}); // 포메이션 바꾸면 커스텀 좌표 초기화(기본 배치로)
+    setCoords({});
     setFormationId(nextId);
+    setActiveSlotId(null);
+    setPickerOpen(false);
   }
 
-  // 특정 시즌 카드로 배치 (spid + 시즌명)
-  function assign(name: string, spid: number, season: string) {
-    if (!activeSlot) return;
-    setFilled((f) => ({ ...f, [activeSlot.id]: { spid, name, season } }));
-    setActiveSlot(null);
-    setQuery("");
-    setResults([]);
-    setExpanded(null);
+  function firstEmptySlot(): string | null {
+    for (const s of formation.slots) if (!filled[s.id]) return s.id;
+    return null;
+  }
+
+  // 검색 결과 클릭/드롭으로 배치. 같은 선수가 이미 있으면 그 자리에서 이동(중복 방지).
+  function place(slotId: string | null, spid: number, name: string, season?: string) {
+    const target = slotId ?? activeSlotId ?? firstEmptySlot();
+    if (!target) {
+      setNotice("빈 자리가 없어요. 슬롯을 비우고 다시 배치하세요.");
+      return;
+    }
+    const n = { ...filled };
+    for (const [id, v] of Object.entries(n))
+      if (v.spid === spid && id !== target) delete n[id];
+    n[target] = { spid, name, season };
+    setFilled(n);
+    setNotice("");
+
+    if (slotId) {
+      // 드롭 배치: 대상이 명시적이므로 활성 해제
+      setActiveSlotId(null);
+      return;
+    }
+    // 클릭 배치: 다음 빈 자리를 자동 선택해 연속 배치. 다 차면 피치로 복귀.
+    const nextEmpty = formation.slots.find((s) => !n[s.id])?.id ?? null;
+    setActiveSlotId(nextEmpty);
+    if (!nextEmpty && isStacked()) {
+      pitchWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
 
   function clearSlot(slotId: string) {
@@ -108,10 +169,22 @@ export default function SquadBuilder() {
     });
   }
 
+  function onSlotClick(slot: Slot) {
+    // 채워진 슬롯을 다시 누르면 활성 토글, 비우기는 배지로
+    const next = activeSlotId === slot.id ? null : slot.id;
+    setActiveSlotId(next);
+    // 모바일: 자리 탭 → 검색 패널로 스크롤 + 입력 포커스 (왕복 스크롤 제거)
+    if (next && isStacked()) {
+      searchPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      searchInputRef.current?.focus({ preventScroll: true });
+    }
+  }
+
   async function loadPreset(id: string) {
     if (!id) return;
     setPresetLoading(true);
     setError("");
+    setNotice("");
     try {
       const res = await fetch(`/api/squad/preset?id=${encodeURIComponent(id)}`);
       if (!res.ok) throw new Error();
@@ -130,13 +203,56 @@ export default function SquadBuilder() {
       }
       setFilled(next);
       setCoords({});
-      if ((data.slots?.length ?? 0) === 0) {
+      setActiveSlotId(null);
+      if ((data.slots?.length ?? 0) === 0)
         setError("이 팀 선수를 아직 자동 매칭하지 못했어요. 직접 채워보세요.");
-      }
     } catch {
       setError("프리셋을 불러오지 못했어요.");
     } finally {
       setPresetLoading(false);
+    }
+  }
+
+  async function loadMySquad() {
+    const nick = mineNick.trim();
+    if (!nick || mineLoading) return;
+    setMineLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      const res = await fetch(
+        `/api/squad/from-user?nickname=${encodeURIComponent(nick)}`
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "불러오기 실패");
+      const players = (data.players ?? []) as {
+        spid: number;
+        name: string;
+        pos: string;
+        season: string;
+      }[];
+      const placed = assignByPosition(
+        formation.slots,
+        players.map((p) => ({
+          pos: p.pos,
+          name: p.name,
+          spid: p.spid,
+          season: p.season,
+        }))
+      );
+      const next: Record<string, FilledSlot> = {};
+      for (const [slotId, v] of Object.entries(placed))
+        next[slotId] = { spid: v.spid!, name: v.name, season: v.season };
+      setFilled(next);
+      setCoords({});
+      setTeamTag(null);
+      setName(`${nick} 스쿼드`);
+      setActiveSlotId(null);
+      setNotice(`${players.length}명을 최근 라인업 기준으로 배치했어요.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "불러오기 실패");
+    } finally {
+      setMineLoading(false);
     }
   }
 
@@ -159,10 +275,13 @@ export default function SquadBuilder() {
         body: JSON.stringify({ name, formation: formationId, slots, teamTag }),
       });
       const data = await res.json();
-      if (res.ok && data.id) {
-        router.push(`/squad/${data.id}`);
-      } else {
-        setError(data.error === "save failed" ? "저장 기능이 아직 설정되지 않았어요." : "저장에 실패했어요.");
+      if (res.ok && data.id) router.push(`/squad/${data.id}`);
+      else {
+        setError(
+          data.error === "save failed"
+            ? "저장 기능이 아직 설정되지 않았어요."
+            : (data.error ?? "저장에 실패했어요.")
+        );
         setSaving(false);
       }
     } catch {
@@ -172,151 +291,207 @@ export default function SquadBuilder() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-8 md:pb-16">
+    <div className="mx-auto w-full max-w-5xl px-4 pb-24 pt-8 md:pb-16">
       <h1 className="text-2xl font-bold sm:text-3xl">스쿼드 빌더</h1>
       <p className="mt-1 text-[13px] text-muted">
-        포메이션을 고르고 선수를 배치하세요. 리그·팀을 고르면 자동으로 채워드립니다.
+        포메이션을 고르고 선수를 배치하세요. PC는 오른쪽에서 선수를 끌어다 놓고,
+        모바일은 자리를 탭한 뒤 선수를 선택하면 됩니다.
       </p>
 
-      {/* 팀 프리셋 */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <label className="text-[13px] font-semibold text-muted">빠른 시작</label>
-        <select
-          defaultValue=""
-          onChange={(e) => loadPreset(e.target.value)}
-          disabled={presetLoading}
-          className="input-search h-10 max-w-full px-3 text-sm"
-        >
-          <option value="">리그 · 팀 선택</option>
-          {LEAGUES.map((lg) => (
-            <optgroup key={lg.league} label={lg.league}>
-              {lg.teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.team}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        {presetLoading && <span className="text-[13px] text-muted">불러오는 중…</span>}
+      {/* 빠른 시작: 프리셋 + 내 스쿼드 불러오기 */}
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="flex items-center gap-2">
+          <select
+            defaultValue=""
+            onChange={(e) => loadPreset(e.target.value)}
+            disabled={presetLoading}
+            className="input-search h-10 min-w-0 flex-1 px-3 text-sm"
+            aria-label="리그·팀 프리셋"
+          >
+            <option value="">리그 · 팀 선택</option>
+            {LEAGUES.map((lg) => (
+              <optgroup key={lg.league} label={lg.league}>
+                {lg.teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.team}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            value={mineNick}
+            onChange={(e) => setMineNick(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && loadMySquad()}
+            placeholder="구단주명 → 내 스쿼드 불러오기"
+            className="input-search h-10 min-w-0 flex-1 px-3 text-sm"
+            aria-label="구단주명"
+          />
+          <button
+            onClick={loadMySquad}
+            disabled={mineLoading || !mineNick.trim()}
+            className="scoreboard h-10 flex-none rounded-lg bg-surface-2 px-3 text-[13px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-40"
+          >
+            {mineLoading ? "불러오는 중…" : "불러오기"}
+          </button>
+        </div>
       </div>
 
-      {/* 포메이션 + 커스텀 */}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {FORMATIONS.map((f) => (
+      {/* 포메이션 picker — 접힘형(현재 포메이션 + 변경 시에만 전체 목록) */}
+      <div className="mt-4">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            key={f.id}
-            onClick={() => changeFormation(f.id)}
-            className={`scoreboard rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors ${
-              f.id === formationId
+            onClick={() => setPickerOpen((o) => !o)}
+            aria-expanded={pickerOpen}
+            className={`scoreboard flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition-colors ${
+              pickerOpen
                 ? "bg-accent text-accent-ink"
-                : "bg-surface-2 text-muted hover:text-ink"
+                : "bg-surface-2 text-ink hover:bg-accent hover:text-accent-ink"
             }`}
           >
-            {f.name}
+            {/* 라벨은 부모 색 상속 — hover/open 시 대비 유지 */}
+            <span className="text-[11px] font-semibold tracking-[0.15em] text-current opacity-70">
+              포메이션
+            </span>
+            {formation.name}
+            <span aria-hidden className="text-[11px]">
+              {pickerOpen ? "▲" : "▼"}
+            </span>
           </button>
-        ))}
-        <button
-          onClick={() => setCustom((c) => !c)}
-          className={`scoreboard ml-auto rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors ${
-            custom ? "bg-gold/20 text-gold" : "bg-surface-2 text-muted hover:text-ink"
-          }`}
-        >
-          {custom ? "✓ 자유 배치" : "자유 배치"}
-        </button>
+          <button
+            onClick={() => setCustom((c) => !c)}
+            className={`scoreboard ml-auto rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              custom ? "bg-gold/20 text-gold" : "bg-surface-2 text-muted hover:text-ink"
+            }`}
+          >
+            {custom ? "✓ 자유 배치" : "자유 배치"}
+          </button>
+        </div>
+        {pickerOpen && (
+          <div className="panel mt-2 space-y-2.5 p-3">
+            {LINE_GROUPS.map((g) => (
+              <div key={g.line} className="flex flex-wrap items-center gap-1.5">
+                <span className="scoreboard w-8 flex-none text-[11px] font-bold text-muted">
+                  {g.label}
+                </span>
+                {g.items.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => changeFormation(f.id)}
+                    className={`scoreboard rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors ${
+                      f.id === formationId
+                        ? "bg-accent text-accent-ink"
+                        : "bg-surface-2 text-muted hover:text-ink"
+                    }`}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            ))}
+            <p className="text-[12px] text-muted">
+              포메이션을 바꿔도 배치한 선수는 포지션 기준으로 자동 이동합니다.
+            </p>
+          </div>
+        )}
       </div>
       {custom && (
         <p className="mt-2 text-[13px] text-muted">
           선수를 <b className="text-ink">드래그</b>해 원하는 위치로 옮기세요. 탭하면
-          선수 교체.
+          선수 선택.
         </p>
       )}
 
-      {/* 피치 */}
-      <div className="mt-4">
-        <SquadPitch
-          formationId={formationId}
-          filled={filled}
-          coords={coords}
-          onSlotClick={(slot) => {
-            setActiveSlot(slot);
-            setQuery("");
-            setResults([]);
-          }}
-          onMove={
-            custom
-              ? (slotId, x, y) => setCoords((c) => ({ ...c, [slotId]: { x, y } }))
-              : undefined
-          }
-        />
-      </div>
+      {/* 본문: 피치 + 검색 패널 */}
+      <div className="mt-4 grid gap-4 md:grid-cols-[1fr_320px]">
+        {/* 피치 + 저장 */}
+        <div ref={pitchWrapRef} className="scroll-mt-16">
+          <SquadPitch
+            formationId={formationId}
+            filled={filled}
+            coords={coords}
+            activeSlotId={activeSlotId}
+            onSlotClick={onSlotClick}
+            onMove={
+              custom
+                ? (slotId, x, y) => setCoords((c) => ({ ...c, [slotId]: { x, y } }))
+                : undefined
+            }
+            onDropPlayer={
+              custom
+                ? undefined
+                : (slotId, p) => place(slotId, p.spid, p.name, p.season)
+            }
+          />
 
-      {/* 이름 + 저장 */}
-      <div className="mt-4 flex items-center gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={40}
-          className="input-search h-11 flex-1 px-3 text-sm"
-          placeholder="스쿼드 이름"
-          aria-label="스쿼드 이름"
-        />
-        <button
-          onClick={save}
-          disabled={filledCount === 0 || saving}
-          className="scoreboard h-11 flex-none rounded-lg bg-accent px-5 text-sm font-bold text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-40"
-        >
-          {saving ? "저장 중…" : `저장 · 공유 (${filledCount}/11)`}
-        </button>
-      </div>
-      {error && <p className="mt-2 text-[13px] text-lose">{error}</p>}
-
-      {/* 선수 검색 모달 */}
-      {activeSlot && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
-          onClick={() => setActiveSlot(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="squad-modal-title"
-            className="panel flex max-h-[80vh] w-full max-w-md flex-col rounded-b-none p-4 sm:rounded-b-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h2 id="squad-modal-title" className="text-base font-bold">
-                {activeSlot.pos} 선수 선택
-              </h2>
-              <div className="flex items-center gap-2">
-                {filled[activeSlot.id] && (
-                  <button
-                    onClick={() => {
-                      clearSlot(activeSlot.id);
-                      setActiveSlot(null);
-                    }}
-                    className="text-[13px] text-lose"
-                  >
-                    비우기
-                  </button>
-                )}
-                <button
-                  onClick={() => setActiveSlot(null)}
-                  className="text-[13px] text-muted"
-                  aria-label="닫기"
-                >
-                  닫기
-                </button>
-              </div>
+          {activeSlotId && filled[activeSlotId] && (
+            <div className="mx-auto mt-2 flex max-w-md items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-[13px]">
+              <span className="text-muted">
+                선택된 자리:{" "}
+                <b className="text-ink">
+                  {formation.slots.find((s) => s.id === activeSlotId)?.pos}
+                </b>
+              </span>
+              <button
+                onClick={() => {
+                  clearSlot(activeSlotId);
+                  setActiveSlotId(null);
+                }}
+                className="font-semibold text-lose"
+              >
+                비우기
+              </button>
             </div>
+          )}
+
+          <div className="mx-auto mt-3 flex max-w-md items-center gap-2">
             <input
-              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={40}
+              className="input-search h-11 flex-1 px-3 text-sm"
+              placeholder="스쿼드 이름"
+              aria-label="스쿼드 이름"
+            />
+            <button
+              onClick={save}
+              disabled={filledCount === 0 || saving}
+              className="scoreboard h-11 flex-none rounded-lg bg-accent px-5 text-sm font-bold text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {saving ? "저장 중…" : `저장 (${filledCount}/11)`}
+            </button>
+          </div>
+          {filledCount === 0 && !error && (
+            <p className="mt-2 text-center text-[12px] text-muted">
+              선수를 1명 이상 배치하면 저장할 수 있어요.
+            </p>
+          )}
+          {error && <p className="mt-2 text-center text-[13px] text-lose">{error}</p>}
+          {notice && <p className="mt-2 text-center text-[13px] text-accent">{notice}</p>}
+        </div>
+
+        {/* 검색 패널 */}
+        <div ref={searchPanelRef} className="scroll-mt-16 md:sticky md:top-20 md:self-start">
+          <div className="panel flex max-h-[70vh] flex-col p-3">
+            <p className="text-[13px] font-semibold">
+              선수 검색
+              <span className="ml-1.5 font-normal text-muted">
+                {activeSlotId
+                  ? `→ ${formation.slots.find((s) => s.id === activeSlotId)?.pos} 자리`
+                  : "PC는 드래그, 모바일은 자리 탭 후 선택"}
+              </span>
+            </p>
+            <input
+              ref={searchInputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="선수 이름 검색 (예: 손흥민)"
-              className="input-search mt-3 h-11 px-3 text-sm"
+              placeholder="선수 이름 (예: 손흥민)"
+              className="input-search mt-2 h-11 px-3 text-sm"
+              aria-label="선수 이름 검색"
             />
-            <div className="mt-3 flex-1 overflow-y-auto">
+            <div className="mt-2 flex-1 overflow-y-auto">
               {searching ? (
                 <p className="py-6 text-center text-sm text-muted">검색 중…</p>
               ) : results.length === 0 ? (
@@ -327,17 +502,33 @@ export default function SquadBuilder() {
                 <ul className="space-y-1">
                   {results.map((r) => (
                     <li key={r.pid}>
-                      <div className="flex w-full items-center gap-3 rounded-lg px-2 py-2">
+                      <div
+                        draggable={!custom}
+                        onDragStart={(e) =>
+                          e.dataTransfer.setData(
+                            "text/plain",
+                            JSON.stringify({
+                              spid: r.spid,
+                              name: r.name,
+                              season: r.season,
+                            })
+                          )
+                        }
+                        className={`flex items-center gap-2 rounded-lg px-2 py-2 ${
+                          custom ? "" : "cursor-grab active:cursor-grabbing"
+                        } hover:bg-surface-2`}
+                      >
                         <img
                           src={`/api/player-image/${r.spid}`}
                           alt=""
                           width={36}
                           height={36}
                           loading="lazy"
+                          draggable={false}
                           className="h-9 w-9 flex-none rounded-lg bg-surface-2 object-cover"
                         />
                         <button
-                          onClick={() => assign(r.name, r.spid, r.season)}
+                          onClick={() => place(null, r.spid, r.name, r.season)}
                           className="flex min-w-0 flex-1 items-center gap-2 text-left"
                         >
                           <span className="truncate text-sm font-medium">{r.name}</span>
@@ -360,14 +551,26 @@ export default function SquadBuilder() {
                           </button>
                         )}
                       </div>
-                      {/* 시즌 선택 (같은 선수의 다른 시즌 카드) */}
                       {expanded === r.pid && (
                         <div className="flex flex-wrap gap-1.5 px-2 pb-2 pt-1">
                           {r.seasons.map((s) => (
                             <button
                               key={s.spid}
-                              onClick={() => assign(r.name, s.spid, s.season)}
-                              className="scoreboard rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink"
+                              draggable={!custom}
+                              onDragStart={(e) =>
+                                e.dataTransfer.setData(
+                                  "text/plain",
+                                  JSON.stringify({
+                                    spid: s.spid,
+                                    name: r.name,
+                                    season: s.season,
+                                  })
+                                )
+                              }
+                              onClick={() => place(null, s.spid, r.name, s.season)}
+                              className={`scoreboard rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink ${
+                                custom ? "" : "cursor-grab active:cursor-grabbing"
+                              }`}
                             >
                               {s.season || `S${Math.floor(s.spid / 1000000)}`}
                             </button>
@@ -381,7 +584,7 @@ export default function SquadBuilder() {
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { saveSquad, type SquadSlot } from "@/lib/squad/store";
 import { getFormation, FORMATIONS } from "@/lib/squad/formations";
+import { clientIpFrom, hashIp } from "@/lib/security/ip-hash";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
 
   const slots: SquadSlot[] = [];
   const seen = new Set<string>();
+  const seenSpid = new Set<number>(); // 같은 선수 중복 배치 방지
   for (const raw of body.slots as unknown[]) {
     if (typeof raw !== "object" || raw === null) continue;
     const s = raw as Record<string, unknown>;
@@ -43,9 +45,11 @@ export async function POST(req: Request) {
       typeof spid === "number" &&
       Number.isInteger(spid) &&
       spid > 0 &&
+      !seenSpid.has(spid) &&
       typeof nm === "string"
     ) {
       seen.add(slotId);
+      seenSpid.add(spid);
       const slot: SquadSlot = { slotId, spid, name: nm.slice(0, 40) };
       // 커스텀 좌표(선택) — 0~100 범위만
       const x = s.x;
@@ -66,7 +70,14 @@ export async function POST(req: Request) {
       ? body.teamTag
       : null;
 
-  const id = await saveSquad({ name, formation: formationId, slots, teamTag });
+  const ipHash = hashIp(clientIpFrom(req.headers));
+  const id = await saveSquad({ name, formation: formationId, slots, teamTag, ipHash });
+  if (id === "rate_limited") {
+    return Response.json(
+      { error: "오늘 저장 한도에 도달했어요. 내일 다시 시도해 주세요." },
+      { status: 429 }
+    );
+  }
   if (!id) {
     return Response.json({ error: "save failed" }, { status: 503 });
   }
