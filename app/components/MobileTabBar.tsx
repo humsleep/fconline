@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { focusHeroSearch } from "./FocusSearchCard";
 
 const TABS = [
   {
@@ -37,13 +36,12 @@ const TABS = [
     ),
   },
   {
-    href: "/?focus=1",
-    label: "검색",
-    match: (p: string) => p.startsWith("/user") || p.startsWith("/live"),
+    href: "/meta",
+    label: "픽 랭킹",
+    match: (p: string) => p.startsWith("/meta"),
     icon: (
       <>
-        <circle cx="11" cy="11" r="6.5" />
-        <path d="m20 20-3.5-3.5" />
+        <path d="M5 20V10M12 20V4M19 20v-7" />
       </>
     ),
   },
@@ -66,12 +64,6 @@ export default function MobileTabBar() {
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
-                onClick={(e) => {
-                  // 이미 홈인데 "검색"을 누르면 내비게이션 대신 히어로 검색창 포커스
-                  if (t.href === "/?focus=1" && pathname === "/") {
-                    if (focusHeroSearch()) e.preventDefault();
-                  }
-                }}
                 className={`flex h-14 flex-col items-center justify-center gap-1 text-[12px] font-semibold transition-colors ${
                   active ? "text-accent" : "text-muted"
                 }`}

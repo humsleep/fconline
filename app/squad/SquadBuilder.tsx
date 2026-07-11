@@ -9,6 +9,7 @@ import {
 } from "@/lib/squad/formations";
 import { presetsByLeague } from "@/lib/squad/presets";
 import { assignByPosition } from "@/lib/squad/assign";
+import { rememberMySquad } from "@/app/components/MySquadPicker";
 import SquadPitch, { type Coord, type FilledSlot } from "./SquadPitch";
 
 interface SeasonVariant {
@@ -25,6 +26,46 @@ interface PlayerHit {
 
 const LEAGUES = presetsByLeague();
 const LINE_GROUPS = formationsByLine();
+
+/** 배치된 카드의 시즌 분포 — 시즌 팀컬러 구성 참고용 */
+function SeasonMix({
+  filled,
+  validSlotIds,
+}: {
+  filled: Record<string, FilledSlot>;
+  validSlotIds: Set<string>;
+}) {
+  const counts = new Map<string, number>();
+  for (const [id, v] of Object.entries(filled)) {
+    if (!validSlotIds.has(id)) continue;
+    const key = v.season?.trim() || "기타";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  if (sorted.length === 0) return null;
+  return (
+    <div className="mx-auto mt-2 max-w-md rounded-lg bg-surface-2/70 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="scoreboard text-[11px] font-bold tracking-[0.15em] text-muted">
+          시즌 구성
+        </span>
+        {sorted.map(([season, n]) => (
+          <span
+            key={season}
+            className={`scoreboard rounded px-1.5 py-0.5 text-[11px] font-bold ${
+              n >= 3 ? "bg-gold/20 text-gold" : "bg-surface px-1.5 text-muted"
+            }`}
+          >
+            {season} ×{n}
+          </span>
+        ))}
+      </div>
+      <p className="mt-1 text-[11px] text-muted">
+        같은 시즌 카드를 모으면 게임 내 시즌 팀컬러에 유리해요.
+      </p>
+    </div>
+  );
+}
 
 export default function SquadBuilder() {
   const router = useRouter();
@@ -275,8 +316,10 @@ export default function SquadBuilder() {
         body: JSON.stringify({ name, formation: formationId, slots, teamTag }),
       });
       const data = await res.json();
-      if (res.ok && data.id) router.push(`/squad/${data.id}`);
-      else {
+      if (res.ok && data.id) {
+        rememberMySquad({ id: data.id, name, formation: formation.name });
+        router.push(`/squad/${data.id}`);
+      } else {
         setError(
           data.error === "save failed"
             ? "저장 기능이 아직 설정되지 않았어요."
@@ -425,6 +468,14 @@ export default function SquadBuilder() {
                 : (slotId, p) => place(slotId, p.spid, p.name, p.season)
             }
           />
+
+          {/* 시즌 팀컬러 구성 — 같은 시즌 카드가 몇 장인지 실시간 표시 */}
+          {filledCount > 0 && (
+            <SeasonMix
+              filled={filled}
+              validSlotIds={validSlotIds}
+            />
+          )}
 
           {activeSlotId && filled[activeSlotId] && (
             <div className="mx-auto mt-2 flex max-w-md items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-[13px]">

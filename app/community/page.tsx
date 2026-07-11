@@ -71,18 +71,20 @@ export default async function CommunityBoard({
         </Link>
       </div>
 
-      {/* 유형 탭 */}
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        <TabChip label="전체" href={tabHref(null)} active={!type} />
-        {POST_TYPE_ORDER.map((t) => (
-          <TabChip
-            key={t}
-            label={`${POST_TYPES[t].emoji} ${POST_TYPES[t].label}`}
-            href={tabHref(t)}
-            active={type === t}
-          />
-        ))}
-      </div>
+      {/* 유형 탭 — 글이 거의 없을 땐 빈 필터만 늘어놓지 않는다(콜드스타트) */}
+      {(type !== null || count >= 5) && (
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          <TabChip label="전체" href={tabHref(null)} active={!type} />
+          {POST_TYPE_ORDER.map((t) => (
+            <TabChip
+              key={t}
+              label={`${POST_TYPES[t].emoji} ${POST_TYPES[t].label}`}
+              href={tabHref(t)}
+              active={type === t}
+            />
+          ))}
+        </div>
+      )}
 
       {/* 유형 설명 */}
       {type && (

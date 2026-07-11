@@ -8,23 +8,28 @@ import { createClient } from '@/lib/supabase/client';
 export default function AuthButton() {
   const { user, loading, configured } = useUser();
   const [nickname, setNickname] = useState<string | null>(null);
+  const [fcNickname, setFcNickname] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) {
       setNickname(null);
+      setFcNickname(null);
       return;
     }
     let active = true;
     const supabase = createClient();
     supabase
       .from('profiles')
-      .select('nickname')
+      .select('nickname, verified_nickname')
       .eq('id', user.id)
       .maybeSingle()
       .then(({ data }) => {
-        if (active) setNickname(data?.nickname ?? null);
+        if (active) {
+          setNickname(data?.nickname ?? null);
+          setFcNickname(data?.verified_nickname ?? null);
+        }
       });
     return () => {
       active = false;
@@ -85,6 +90,16 @@ export default function AuthButton() {
           role="menu"
           className="absolute right-0 z-50 mt-1 w-40 overflow-hidden rounded-lg border border-line bg-surface shadow-lg"
         >
+          {fcNickname && (
+            <Link
+              href={`/user/${encodeURIComponent(fcNickname)}`}
+              role="menuitem"
+              className="block px-4 py-2.5 text-[13px] font-semibold text-accent hover:bg-surface-2"
+              onClick={() => setOpen(false)}
+            >
+              ⚽ 내 전적
+            </Link>
+          )}
           <Link
             href="/profile/setup"
             role="menuitem"
