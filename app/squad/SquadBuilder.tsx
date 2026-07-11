@@ -10,6 +10,7 @@ import {
 import { presetsByLeague } from "@/lib/squad/presets";
 import { assignByPosition } from "@/lib/squad/assign";
 import { rememberMySquad } from "@/app/components/MySquadPicker";
+import SeasonBadge from "@/app/components/SeasonBadge";
 import SquadPitch, { type Coord, type FilledSlot } from "./SquadPitch";
 
 interface SeasonVariant {
@@ -583,11 +584,11 @@ export default function SquadBuilder() {
                           className="flex min-w-0 flex-1 items-center gap-2 text-left"
                         >
                           <span className="truncate text-sm font-medium">{r.name}</span>
-                          {r.season && (
-                            <span className="scoreboard flex-none rounded bg-gold/15 px-1.5 py-0.5 text-[11px] font-bold text-gold">
-                              {r.season}
-                            </span>
-                          )}
+                          <SeasonBadge
+                            spid={r.spid}
+                            season={r.season}
+                            className="flex-none"
+                          />
                         </button>
                         {r.seasons.length > 1 && (
                           <button
@@ -619,10 +620,11 @@ export default function SquadBuilder() {
                                 )
                               }
                               onClick={() => place(null, s.spid, r.name, s.season)}
-                              className={`scoreboard rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink ${
+                              className={`scoreboard flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink ${
                                 custom ? "" : "cursor-grab active:cursor-grabbing"
                               }`}
                             >
+                              <SeasonBadge spid={s.spid} season={s.season} size="xs" />
                               {s.season || `S${Math.floor(s.spid / 1000000)}`}
                             </button>
                           ))}

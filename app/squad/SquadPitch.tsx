@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { getFormation, type Slot } from "@/lib/squad/formations";
+import SeasonBadge from "@/app/components/SeasonBadge";
 
 export interface FilledSlot {
   spid: number;
@@ -148,10 +149,13 @@ export default function SquadPitch({
             >
               {p ? p.name : slot.pos}
             </span>
-            {p?.season && (
-              <span className="scoreboard -mt-0.5 max-w-[68px] truncate rounded bg-gold/20 px-1 text-[10px] font-bold text-gold">
-                {p.season}
-              </span>
+            {p && (
+              <SeasonBadge
+                spid={p.spid}
+                season={p.season}
+                size="xs"
+                className="-mt-0.5 max-w-[68px] rounded bg-bg/60 px-0.5"
+              />
             )}
           </span>
         );

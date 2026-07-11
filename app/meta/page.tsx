@@ -5,6 +5,7 @@ import { getAdmin } from "@/lib/supabase/admin";
 import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
 import { getPositionLabel } from "@/lib/nexon/meta";
 import { baseLabelOfCode, posLineOf } from "@/lib/squad/assign";
+import SeasonBadge from "@/app/components/SeasonBadge";
 import type { RankerStat } from "@/lib/nexon/types";
 
 export const revalidate = 3600; // 스냅샷은 일 단위 — 1시간 캐시면 충분
@@ -179,11 +180,14 @@ export default async function MetaPage() {
                               {getPositionLabel(r.position)}
                             </span>
                           </p>
-                          <p className="scoreboard mt-0.5 text-[12px] text-muted">
-                            <span className="rounded bg-gold/15 px-1 py-0.5 font-bold text-gold">
-                              {seasons.get(r.spId) ?? ""}
-                            </span>
-                            <span className="ml-1.5">
+                          <p className="scoreboard mt-0.5 flex items-center gap-1.5 text-[12px] text-muted">
+                            <SeasonBadge
+                              spid={r.spId}
+                              season={seasons.get(r.spId)}
+                              size="xs"
+                              className="flex-none"
+                            />
+                            <span>
                               평점 {r.rating.toFixed(2)}
                               {line === "ATT" && ` · 경기당 ⚽${r.goalsPerMatch}`}
                             </span>
