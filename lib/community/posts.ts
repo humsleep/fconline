@@ -18,6 +18,8 @@ export interface CommunityPost {
   created_at: string;
   /** 0009 마이그레이션 후 존재 — 미실행 환경 대비 optional */
   comment_count?: number;
+  /** 0010 마이그레이션 후 존재 — 신고 누적 자동 숨김 */
+  hidden?: boolean;
 }
 
 // '*' 선택 — comment_count(0009) 미실행 환경에서도 목록이 죽지 않게
@@ -46,7 +48,9 @@ export async function listPosts(opts?: {
     if (opts?.type) q = q.eq('type', opts.type);
     if (opts?.region) q = q.eq('region', opts.region);
     const { data, count } = await q;
-    return { posts: (data as CommunityPost[]) ?? [], count: count ?? 0 };
+    // 숨김(신고 누적) 제외 — 컬럼 미존재 환경 호환 위해 JS 필터
+    const posts = ((data as CommunityPost[]) ?? []).filter((p) => !p.hidden);
+    return { posts, count: count ?? 0 };
   } catch {
     return { posts: [], count: 0 };
   }
@@ -59,6 +63,7 @@ export interface CommunityComment {
   body: string;
   squad_id: string | null;
   created_at: string;
+  hidden?: boolean;
 }
 
 export async function listComments(postId: string): Promise<CommunityComment[]> {
@@ -66,11 +71,11 @@ export async function listComments(postId: string): Promise<CommunityComment[]> 
     const supabase = await createClient();
     const { data } = await supabase
       .from('community_comments')
-      .select('id, post_id, author_id, body, squad_id, created_at')
+      .select('*')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
       .limit(200);
-    return (data as CommunityComment[]) ?? [];
+    return ((data as CommunityComment[]) ?? []).filter((c) => !c.hidden);
   } catch {
     return [];
   }

@@ -8,6 +8,7 @@ import { formatRelativeKr } from '@/lib/format';
 import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
 import PostActions from './PostActions';
 import Comments, { type CommentView } from './Comments';
+import ReportButton from '@/app/components/ReportButton';
 
 export async function generateMetadata({
   params,
@@ -72,6 +73,24 @@ export default async function PostDetail({
     isOwn: Boolean(userId && c.author_id === userId),
   }));
 
+  // 신고 누적 자동 숨김 — 본인·관리 확인용 외 노출 차단
+  if (post.hidden && !isOwner) {
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-24 text-center">
+        <h1 className="text-xl font-bold">숨김 처리된 글이에요</h1>
+        <p className="mt-2 text-sm text-muted">
+          신고 누적으로 노출이 중단됐어요. 문제가 있다고 생각되면 문의해 주세요.
+        </p>
+        <Link
+          href="/community"
+          className="scoreboard mt-8 rounded-lg bg-accent px-5 py-2.5 text-sm font-bold text-accent-ink"
+        >
+          커뮤니티로
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-8 md:pb-16">
       <Link
@@ -86,6 +105,11 @@ export default async function PostDetail({
           <span className="rounded bg-surface-2 px-2 py-0.5 text-[13px] font-semibold text-ink">
             {cfg.emoji} {cfg.label}
           </span>
+          {post.hidden && (
+            <span className="rounded bg-lose/15 px-2 py-0.5 text-[13px] font-semibold text-lose">
+              신고 누적 숨김 (본인에게만 표시)
+            </span>
+          )}
           {post.status === 'closed' && (
             <span className="rounded bg-surface-2 px-2 py-0.5 text-[13px] font-semibold text-muted">
               마감
@@ -152,7 +176,13 @@ export default async function PostDetail({
           </p>
         )}
 
-        {isOwner && <PostActions id={post.id} status={post.status} />}
+        {isOwner ? (
+          <PostActions id={post.id} status={post.status} />
+        ) : (
+          <div className="mt-6 flex justify-end border-t border-line pt-4">
+            <ReportButton targetType="post" targetId={post.id} />
+          </div>
+        )}
       </article>
 
       {/* 댓글 — 평가/제안이 오가는 핵심 루프 */}

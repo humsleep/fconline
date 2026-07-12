@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatRelativeKr } from '@/lib/format';
 import MySquadPicker from '@/app/components/MySquadPicker';
+import ReportButton from '@/app/components/ReportButton';
 
 export interface CommentView {
   id: string;
@@ -115,13 +116,19 @@ export default function Comments({
                 <div className="flex items-center gap-2 text-[13px]">
                   <span className="font-semibold text-ink">{c.authorName}</span>
                   <span className="text-muted">{formatRelativeKr(c.created_at)}</span>
-                  {c.isOwn && (
+                  {c.isOwn ? (
                     <button
                       onClick={() => remove(c.id)}
                       className="ml-auto text-[13px] text-lose"
                     >
                       삭제
                     </button>
+                  ) : (
+                    <ReportButton
+                      targetType="comment"
+                      targetId={c.id}
+                      className="ml-auto"
+                    />
                   )}
                 </div>
                 <div className="mt-1 rounded-xl rounded-tl-sm bg-surface-2 px-3 py-2">

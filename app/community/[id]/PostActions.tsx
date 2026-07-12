@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function PostActions({
@@ -46,6 +47,12 @@ export default function PostActions({
 
   return (
     <div className="mt-6 flex gap-2 border-t border-line pt-4">
+      <Link
+        href={`/community/${id}/edit`}
+        className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-surface-2"
+      >
+        수정
+      </Link>
       <button
         onClick={toggle}
         disabled={busy}
