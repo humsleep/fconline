@@ -111,7 +111,7 @@ export default function ProfileSetupPage() {
   const hasNickname = Boolean(profile?.nickname);
 
   return (
-    <div className="mx-auto w-full max-w-lg px-4 py-8">
+    <div className="mx-auto w-full max-w-lg px-4 pb-24 pt-8 md:pb-16">
       <h1 className="text-2xl font-bold">프로필 설정</h1>
       <p className="mt-1 text-sm text-muted">
         커뮤니티 활동에 쓸 닉네임을 정하고, 내 FC Online 구단주명을 연동하세요.
