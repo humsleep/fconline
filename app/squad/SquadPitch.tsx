@@ -143,7 +143,7 @@ export default function SquadPitch({
               </span>
             )}
             <span
-              className={`scoreboard max-w-[68px] truncate rounded px-1 text-[11px] font-bold ${
+              className={`scoreboard max-w-[68px] truncate rounded px-1 text-[12px] font-bold ${
                 p ? "bg-bg/70 text-ink" : active ? "text-gold" : "text-muted"
               }`}
             >

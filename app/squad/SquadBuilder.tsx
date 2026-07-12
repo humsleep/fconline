@@ -47,13 +47,13 @@ function SeasonMix({
   return (
     <div className="mx-auto mt-2 max-w-md rounded-lg bg-surface-2/70 px-3 py-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="scoreboard text-[11px] font-bold tracking-[0.15em] text-muted">
+        <span className="scoreboard text-[12px] font-bold tracking-[0.15em] text-muted">
           시즌 구성
         </span>
         {sorted.map(([season, n]) => (
           <span
             key={season}
-            className={`scoreboard rounded px-1.5 py-0.5 text-[11px] font-bold ${
+            className={`scoreboard rounded px-1.5 py-0.5 text-[12px] font-bold ${
               n >= 3 ? "bg-gold/20 text-gold" : "bg-surface px-1.5 text-muted"
             }`}
           >
@@ -61,7 +61,7 @@ function SeasonMix({
           </span>
         ))}
       </div>
-      <p className="mt-1 text-[11px] text-muted">
+      <p className="mt-1 text-[12px] text-muted">
         같은 시즌 카드를 모으면 게임 내 시즌 팀컬러에 유리해요.
       </p>
     </div>
@@ -337,7 +337,7 @@ export default function SquadBuilder() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-24 pt-8 md:pb-16">
       <h1 className="text-2xl font-bold sm:text-3xl">스쿼드 빌더</h1>
-      <p className="mt-1 text-[13px] text-muted">
+      <p className="mt-1 text-sm text-muted">
         포메이션을 고르고 선수를 배치하세요. PC는 오른쪽에서 선수를 끌어다 놓고,
         모바일은 자리를 탭한 뒤 선수를 선택하면 됩니다.
       </p>
@@ -376,7 +376,7 @@ export default function SquadBuilder() {
           <button
             onClick={loadMySquad}
             disabled={mineLoading || !mineNick.trim()}
-            className="scoreboard h-10 flex-none rounded-lg bg-surface-2 px-3 text-[13px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-40"
+            className="scoreboard h-10 flex-none rounded-lg bg-surface-2 px-3 text-sm font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-40"
           >
             {mineLoading ? "불러오는 중…" : "불러오기"}
           </button>
@@ -396,17 +396,17 @@ export default function SquadBuilder() {
             }`}
           >
             {/* 라벨은 부모 색 상속 — hover/open 시 대비 유지 */}
-            <span className="text-[11px] font-semibold tracking-[0.15em] text-current opacity-70">
+            <span className="text-[12px] font-semibold tracking-[0.15em] text-current opacity-70">
               포메이션
             </span>
             {formation.name}
-            <span aria-hidden className="text-[11px]">
+            <span aria-hidden className="text-[12px]">
               {pickerOpen ? "▲" : "▼"}
             </span>
           </button>
           <button
             onClick={() => setCustom((c) => !c)}
-            className={`scoreboard ml-auto rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+            className={`scoreboard ml-auto rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
               custom ? "bg-gold/20 text-gold" : "bg-surface-2 text-muted hover:text-ink"
             }`}
           >
@@ -417,14 +417,14 @@ export default function SquadBuilder() {
           <div className="panel mt-2 space-y-2.5 p-3">
             {LINE_GROUPS.map((g) => (
               <div key={g.line} className="flex flex-wrap items-center gap-1.5">
-                <span className="scoreboard w-8 flex-none text-[11px] font-bold text-muted">
+                <span className="scoreboard w-8 flex-none text-[12px] font-bold text-muted">
                   {g.label}
                 </span>
                 {g.items.map((f) => (
                   <button
                     key={f.id}
                     onClick={() => changeFormation(f.id)}
-                    className={`scoreboard rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors ${
+                    className={`scoreboard rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-colors ${
                       f.id === formationId
                         ? "bg-accent text-accent-ink"
                         : "bg-surface-2 text-muted hover:text-ink"
@@ -435,14 +435,14 @@ export default function SquadBuilder() {
                 ))}
               </div>
             ))}
-            <p className="text-[12px] text-muted">
+            <p className="text-[13px] text-muted">
               포메이션을 바꿔도 배치한 선수는 포지션 기준으로 자동 이동합니다.
             </p>
           </div>
         )}
       </div>
       {custom && (
-        <p className="mt-2 text-[13px] text-muted">
+        <p className="mt-2 text-sm text-muted">
           선수를 <b className="text-ink">드래그</b>해 원하는 위치로 옮기세요. 탭하면
           선수 선택.
         </p>
@@ -479,7 +479,7 @@ export default function SquadBuilder() {
           )}
 
           {activeSlotId && filled[activeSlotId] && (
-            <div className="mx-auto mt-2 flex max-w-md items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-[13px]">
+            <div className="mx-auto mt-2 flex max-w-md items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
               <span className="text-muted">
                 선택된 자리:{" "}
                 <b className="text-ink">
@@ -516,18 +516,18 @@ export default function SquadBuilder() {
             </button>
           </div>
           {filledCount === 0 && !error && (
-            <p className="mt-2 text-center text-[12px] text-muted">
+            <p className="mt-2 text-center text-[13px] text-muted">
               선수를 1명 이상 배치하면 저장할 수 있어요.
             </p>
           )}
-          {error && <p className="mt-2 text-center text-[13px] text-lose">{error}</p>}
-          {notice && <p className="mt-2 text-center text-[13px] text-accent">{notice}</p>}
+          {error && <p className="mt-2 text-center text-sm text-lose">{error}</p>}
+          {notice && <p className="mt-2 text-center text-sm text-accent">{notice}</p>}
         </div>
 
         {/* 검색 패널 */}
         <div ref={searchPanelRef} className="scroll-mt-16 md:sticky md:top-20 md:self-start">
           <div className="panel flex max-h-[70vh] flex-col p-3">
-            <p className="text-[13px] font-semibold">
+            <p className="text-sm font-semibold">
               선수 검색
               <span className="ml-1.5 font-normal text-muted">
                 {activeSlotId
@@ -595,7 +595,7 @@ export default function SquadBuilder() {
                             onClick={() =>
                               setExpanded((e) => (e === r.pid ? null : r.pid))
                             }
-                            className="flex-none rounded px-2 py-1 text-[12px] font-semibold text-muted transition-colors hover:text-accent"
+                            className="flex-none rounded px-2 py-1 text-[13px] font-semibold text-muted transition-colors hover:text-accent"
                             aria-label="시즌 선택"
                           >
                             시즌 {r.seasons.length}
@@ -620,7 +620,7 @@ export default function SquadBuilder() {
                                 )
                               }
                               onClick={() => place(null, s.spid, r.name, s.season)}
-                              className={`scoreboard flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink ${
+                              className={`scoreboard flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink ${
                                 custom ? "" : "cursor-grab active:cursor-grabbing"
                               }`}
                             >

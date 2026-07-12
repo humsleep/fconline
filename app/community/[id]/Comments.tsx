@@ -75,19 +75,19 @@ export default function Comments({
 
   return (
     <section className="panel mt-4 p-5">
-      <p className="scoreboard text-[12px] font-semibold tracking-[0.2em] text-muted">
+      <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
         댓글 {comments.length > 0 && `(${comments.length})`}
       </p>
 
       {comments.length === 0 ? (
-        <p className="mt-3 text-[13px] text-muted">
+        <p className="mt-3 text-sm text-muted">
           아직 댓글이 없어요. 첫 의견을 남겨보세요!
         </p>
       ) : (
         <ul className="mt-3 space-y-3">
           {comments.map((c) => (
             <li key={c.id} className="border-b border-line/60 pb-3 last:border-0 last:pb-0">
-              <div className="flex items-center gap-2 text-[12px]">
+              <div className="flex items-center gap-2 text-[13px]">
                 <span className="font-semibold text-ink">{c.authorName}</span>
                 <span className="text-muted">{formatRelativeKr(c.created_at)}</span>
                 {c.isOwn && (
@@ -105,7 +105,7 @@ export default function Comments({
               {c.squad_id && (
                 <Link
                   href={`/squad/${encodeURIComponent(c.squad_id)}`}
-                  className="mt-1.5 inline-flex items-center gap-1 rounded-lg bg-surface-2 px-2.5 py-1 text-[12px] font-semibold text-accent"
+                  className="mt-1.5 inline-flex items-center gap-1 rounded-lg bg-surface-2 px-2.5 py-1 text-[13px] font-semibold text-accent"
                 >
                   🧩 제안 스쿼드 보기 →
                 </Link>
@@ -136,7 +136,7 @@ export default function Comments({
           ) : (
             <button
               onClick={() => setShowSquad(true)}
-              className="mt-1 text-[12px] text-muted underline underline-offset-2"
+              className="mt-1 text-[13px] text-muted underline underline-offset-2"
             >
               + 제안 스쿼드 첨부
             </button>
@@ -149,11 +149,11 @@ export default function Comments({
             >
               {busy ? '등록 중…' : '댓글 등록'}
             </button>
-            {error && <p className="text-[13px] text-lose">{error}</p>}
+            {error && <p className="text-sm text-lose">{error}</p>}
           </div>
         </div>
       ) : (
-        <p className="mt-4 text-[13px] text-muted">
+        <p className="mt-4 text-sm text-muted">
           {loggedIn ? (
             <>
               댓글을 쓰려면{' '}

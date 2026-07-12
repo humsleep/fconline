@@ -140,7 +140,7 @@ export default function LiveSession({
             LIVE · {nickname}
           </span>
         </div>
-        <span className="text-[13px] text-muted" aria-live="polite">
+        <span className="text-sm text-muted" aria-live="polite">
           {reconnecting
             ? "재연결 중…"
             : !lastChecked
@@ -151,7 +151,7 @@ export default function LiveSession({
 
       {/* 세션 대시보드 */}
       <section className="panel mt-4 px-5 py-4" aria-live="polite">
-        <p className="scoreboard text-[12px] font-semibold tracking-[0.2em] text-muted">
+        <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
           이번 세션 (켠 뒤부터)
         </p>
         {sessionMatches.length === 0 ? (
@@ -168,7 +168,7 @@ export default function LiveSession({
                 <span className="mx-1 text-muted">-</span>
                 <span className="text-lose">{rec.lose}</span>
               </p>
-              <p className="text-[12px] text-muted">세션 전적</p>
+              <p className="text-[13px] text-muted">세션 전적</p>
             </div>
             {rec.streak !== 0 && (
               <div>
@@ -180,18 +180,18 @@ export default function LiveSession({
                   {Math.abs(rec.streak)}
                   {rec.streak > 0 ? "연승" : "연패"}
                 </p>
-                <p className="text-[12px] text-muted">현재 흐름</p>
+                <p className="text-[13px] text-muted">현재 흐름</p>
               </div>
             )}
             <div>
               <p className="scoreboard text-2xl font-bold">
                 {rec.goalsFor}:{rec.goalsAgainst}
               </p>
-              <p className="text-[12px] text-muted">득실</p>
+              <p className="text-[13px] text-muted">득실</p>
             </div>
             <div className="min-w-28">
               <Sparkline values={[...sessionMatches].reverse().map((m) => m.me.rating)} />
-              <p className="text-[12px] text-muted">평점 추이</p>
+              <p className="text-[13px] text-muted">평점 추이</p>
             </div>
           </div>
         )}
@@ -200,7 +200,7 @@ export default function LiveSession({
       {/* 직전 경기 */}
       {latest && (
         <section className="mt-4">
-          <p className="scoreboard text-[12px] font-semibold tracking-[0.2em] text-muted">
+          <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
             가장 최근 경기
           </p>
           <div className="mt-2">
@@ -212,7 +212,7 @@ export default function LiveSession({
       {/* 세션 경기 목록 */}
       {sessionMatches.length > 0 && (
         <section className="mt-5">
-          <p className="scoreboard text-[12px] font-semibold tracking-[0.2em] text-muted">
+          <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
             세션 경기 {sessionMatches.length}
           </p>
           <ul className="mt-2 space-y-1.5">
@@ -225,7 +225,7 @@ export default function LiveSession({
         </section>
       )}
 
-      <p className="mt-8 text-center text-[13px] leading-relaxed text-muted">
+      <p className="mt-8 text-center text-sm leading-relaxed text-muted">
         넥슨 API는 <b>끝난 경기</b>만 제공합니다. 경기 종료 후 반영까지 몇 분 걸릴 수
         있어요. 탭을 켜두면 60초마다 자동으로 확인합니다.
       </p>
@@ -261,7 +261,7 @@ function LiveMatchRow({
         <p className="truncate text-sm font-medium">
           {m.opponent ? `vs ${m.opponent.nickname}` : "상대 정보 없음"}
         </p>
-        <p className="mt-0.5 text-[13px] text-muted">{formatMatchDate(m.matchDate)}</p>
+        <p className="mt-0.5 text-sm text-muted">{formatMatchDate(m.matchDate)}</p>
       </div>
       <span className="scoreboard text-xs font-bold text-muted">리포트 →</span>
     </Link>

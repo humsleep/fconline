@@ -30,7 +30,7 @@ export default function GlobalError({
       </button>
       <Link
         href="/"
-        className="mt-4 text-[13px] text-muted underline underline-offset-2"
+        className="mt-4 text-sm text-muted underline underline-offset-2"
       >
         홈으로
       </Link>

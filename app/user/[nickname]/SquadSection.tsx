@@ -86,7 +86,7 @@ export default async function SquadSection({
       {/* 실전 가치 요약 (구단가치 대체) */}
       <section className="panel mt-4 flex items-center gap-4 px-5 py-4">
         <div className="min-w-0 flex-1">
-          <p className="scoreboard text-[12px] font-semibold tracking-[0.2em] text-muted">
+          <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
             스쿼드 실전 가치
           </p>
           <div className="mt-1.5">
@@ -94,14 +94,14 @@ export default async function SquadSection({
           </div>
         </div>
         <div className="flex-none text-right">
-          <p className="text-[12px] text-muted">실사용 평점</p>
+          <p className="text-[13px] text-muted">실사용 평점</p>
           <p className="scoreboard text-3xl font-bold text-accent">
             {squadRating.toFixed(2)}
           </p>
         </div>
       </section>
 
-      <p className="mt-3 text-[13px] text-muted">
+      <p className="mt-3 text-sm text-muted">
         최근 {details.length}경기 · {MIN_GAMES}경기 이상 출전 선수 · 랭커 평균은
         같은 포지션 상위 랭커 기준
       </p>
@@ -156,7 +156,7 @@ function PlayerCard({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">
             {name}
-            <span className="ml-1.5 text-[13px] font-medium text-muted">
+            <span className="ml-1.5 text-sm font-medium text-muted">
               {getPositionLabel(p.mainPosition)}
             </span>
           </p>
@@ -166,7 +166,7 @@ function PlayerCard({
         </div>
 
         <div className="flex-none text-right">
-          <p className="text-[12px] text-muted">평균 평점</p>
+          <p className="text-[13px] text-muted">평균 평점</p>
           <p className="scoreboard text-2xl font-bold text-ink">
             {p.avgRating.toFixed(1)}
           </p>
@@ -185,7 +185,7 @@ function PlayerCard({
         </div>
       )}
 
-      <p className="scoreboard mt-2 text-[13px] text-muted">
+      <p className="scoreboard mt-2 text-sm text-muted">
         {p.games}경기 · ⚽{p.goals} A{p.assists} · 패스 {p.passRate}%
       </p>
     </div>

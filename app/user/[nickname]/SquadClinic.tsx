@@ -41,10 +41,10 @@ export default function SquadClinic({
   return (
     <section className="panel mt-4 overflow-hidden p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="scoreboard text-[12px] font-bold tracking-[0.2em] text-accent">
+        <span className="scoreboard text-[13px] font-bold tracking-[0.2em] text-accent">
           SQUAD CLINIC
         </span>
-        <span className="rounded bg-gold/15 px-2 py-0.5 text-[12px] font-bold text-gold">
+        <span className="rounded bg-gold/15 px-2 py-0.5 text-[13px] font-bold text-gold">
           BETA
         </span>
       </div>
@@ -55,7 +55,7 @@ export default function SquadClinic({
         <div className="min-w-0 flex-1 space-y-2.5">
           {result.lines.map((l) => (
             <div key={l.line}>
-              <div className="flex items-baseline justify-between text-[12px]">
+              <div className="flex items-baseline justify-between text-[13px]">
                 <span className="font-semibold">
                   {l.label}
                   <span className="ml-1.5 text-muted">{l.count}명</span>
@@ -110,7 +110,7 @@ export default function SquadClinic({
       {result.issues.length > 0 && (
         <ul className="mt-4 space-y-1.5">
           {result.issues.map((it, i) => (
-            <li key={i} className="flex items-start gap-2 text-[13px]">
+            <li key={i} className="flex items-start gap-2 text-sm">
               <span
                 aria-hidden
                 className={
@@ -130,7 +130,7 @@ export default function SquadClinic({
         </ul>
       )}
 
-      <p className="mt-4 text-[12px] leading-relaxed text-muted">
+      <p className="mt-4 text-[13px] leading-relaxed text-muted">
         최근 {matches}경기 · 주전 {result.players}명 · 룰베이스 진단(AI 미사용) ·
         랭커 커버리지 {Math.round(result.rankerCoverage * 100)}%
       </p>
@@ -154,7 +154,7 @@ function ScoreDial({ result }: { result: SquadClinicResult }) {
             <span className="scoreboard text-3xl font-bold" style={{ color }}>
               {pct}
             </span>
-            <span className="block text-[11px] text-muted">/ 100</span>
+            <span className="block text-[12px] text-muted">/ 100</span>
           </div>
         </div>
       </div>
@@ -162,7 +162,7 @@ function ScoreDial({ result }: { result: SquadClinicResult }) {
         <p className={"text-lg font-bold " + BAND_COLOR[result.band]}>
           {BAND_LABEL[result.band]}
         </p>
-        <p className="scoreboard text-[12px] text-muted">
+        <p className="scoreboard text-[13px] text-muted">
           실사용 평점 {result.squadRating.toFixed(2)}
         </p>
       </div>
@@ -170,7 +170,7 @@ function ScoreDial({ result }: { result: SquadClinicResult }) {
         <p className={"text-xl font-bold " + BAND_COLOR[result.band]}>
           {BAND_LABEL[result.band]}
         </p>
-        <p className="scoreboard mt-0.5 text-[13px] text-muted">
+        <p className="scoreboard mt-0.5 text-sm text-muted">
           실사용 평점 {result.squadRating.toFixed(2)}
           {typeof result.avgGap === "number" && (
             <span
@@ -204,9 +204,9 @@ function ChipCard({
   const toneText = tone === "win" ? "text-win" : "text-lose";
   return (
     <div className="panel p-3">
-      <p className={"text-[12px] font-semibold " + toneText}>{title}</p>
+      <p className={"text-[13px] font-semibold " + toneText}>{title}</p>
       {players.length === 0 ? (
-        <p className="mt-2 text-[13px] text-muted">{empty}</p>
+        <p className="mt-2 text-sm text-muted">{empty}</p>
       ) : (
         <ul className="mt-2 space-y-1.5">
           {players.map((p) => (
@@ -219,13 +219,13 @@ function ChipCard({
                 unoptimized
                 className="h-7 w-7 flex-none rounded-md bg-surface-2 object-cover"
               />
-              <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                 {nameOf(p.spId)}
                 <span className="ml-1.5 font-normal text-muted">
                   {getPositionLabel(p.position)}
                 </span>
               </span>
-              <span className="scoreboard flex-none text-[13px] font-bold text-ink">
+              <span className="scoreboard flex-none text-sm font-bold text-ink">
                 {p.avgRating.toFixed(1)}
                 {typeof p.gap === "number" && (
                   <span className={"ml-1 " + toneText}>

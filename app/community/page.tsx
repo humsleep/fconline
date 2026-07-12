@@ -88,7 +88,7 @@ export default async function CommunityBoard({
 
       {/* 유형 설명 */}
       {type && (
-        <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-[13px] text-muted">
+        <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">
           {POST_TYPES[type].blurb}
         </p>
       )}
@@ -123,24 +123,24 @@ export default async function CommunityBoard({
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={
-                        'rounded px-1.5 py-0.5 text-[12px] font-semibold ' +
+                        'rounded px-1.5 py-0.5 text-[13px] font-semibold ' +
                         ACCENT_BADGE[cfg.accent]
                       }
                     >
                       {cfg.emoji} {cfg.label}
                     </span>
                     {p.status === 'closed' && (
-                      <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[12px] font-semibold text-muted">
+                      <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[13px] font-semibold text-muted">
                         마감
                       </span>
                     )}
                     {p.region && (
-                      <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[12px] text-muted">
+                      <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[13px] text-muted">
                         📍 {p.region}
                       </span>
                     )}
                     {p.squad_id && (
-                      <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[12px] text-muted">
+                      <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[13px] text-muted">
                         스쿼드 첨부
                       </span>
                     )}
@@ -153,7 +153,7 @@ export default async function CommunityBoard({
                       {p.positions.map((pos) => (
                         <span
                           key={pos}
-                          className="scoreboard rounded bg-surface-2 px-1.5 py-0.5 text-[12px] text-muted"
+                          className="scoreboard rounded bg-surface-2 px-1.5 py-0.5 text-[13px] text-muted"
                         >
                           {pos}
                         </span>
@@ -161,14 +161,14 @@ export default async function CommunityBoard({
                     </div>
                   )}
                   {Object.keys(p.meta).length > 0 && (
-                    <p className="mt-1.5 truncate text-[12px] text-muted">
+                    <p className="mt-1.5 truncate text-[13px] text-muted">
                       {Object.entries(p.meta)
                         .map(([k, v]) => `${META_FIELD_LABELS[k] ?? k}: ${v}`)
                         .join(' · ')}
                     </p>
                   )}
 
-                  <div className="mt-2 flex items-center gap-2 text-[12px] text-muted">
+                  <div className="mt-2 flex items-center gap-2 text-[13px] text-muted">
                     <span className="font-semibold text-ink">
                       {author?.nickname ?? '알 수 없음'}
                     </span>
@@ -224,7 +224,7 @@ function TabChip({
     <Link
       href={href}
       className={
-        'rounded-full px-3 py-1 text-[13px] font-medium transition ' +
+        'rounded-full px-3 py-1 text-sm font-medium transition ' +
         (active
           ? 'bg-accent text-accent-ink'
           : 'bg-surface-2 text-muted hover:text-ink')

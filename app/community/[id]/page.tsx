@@ -76,29 +76,29 @@ export default async function PostDetail({
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <Link
         href={`/community?type=${post.type}`}
-        className="text-[13px] text-muted underline underline-offset-2"
+        className="text-sm text-muted underline underline-offset-2"
       >
         ← {cfg.label} 목록
       </Link>
 
       <article className="panel mt-3 p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-ink">
+          <span className="rounded bg-surface-2 px-2 py-0.5 text-[13px] font-semibold text-ink">
             {cfg.emoji} {cfg.label}
           </span>
           {post.status === 'closed' && (
-            <span className="rounded bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-muted">
+            <span className="rounded bg-surface-2 px-2 py-0.5 text-[13px] font-semibold text-muted">
               마감
             </span>
           )}
           {post.region && (
-            <span className="rounded bg-accent/10 px-2 py-0.5 text-[12px] font-semibold text-accent">
+            <span className="rounded bg-accent/10 px-2 py-0.5 text-[13px] font-semibold text-accent">
               📍 {post.region}
             </span>
           )}
         </div>
         <h1 className="mt-2 text-2xl font-bold">{post.title}</h1>
-        <p className="mt-1 text-[12px] text-muted">
+        <p className="mt-1 text-[13px] text-muted">
           {formatRelativeKr(post.created_at)}
         </p>
 
@@ -108,7 +108,7 @@ export default async function PostDetail({
             {post.positions.map((p) => (
               <span
                 key={p}
-                className="scoreboard rounded-lg bg-surface-2 px-2 py-1 text-[13px] font-semibold text-ink"
+                className="scoreboard rounded-lg bg-surface-2 px-2 py-1 text-sm font-semibold text-ink"
               >
                 {p}
               </span>
@@ -121,7 +121,7 @@ export default async function PostDetail({
           <dl className="mt-4 grid gap-2 sm:grid-cols-2">
             {Object.entries(post.meta).map(([k, v]) => (
               <div key={k} className="rounded-lg bg-surface-2 px-3 py-2">
-                <dt className="text-[12px] text-muted">
+                <dt className="text-[13px] text-muted">
                   {META_FIELD_LABELS[k] ?? k}
                 </dt>
                 <dd className="text-sm font-semibold">{v}</dd>
@@ -141,7 +141,7 @@ export default async function PostDetail({
             className="mt-4 flex items-center justify-between rounded-xl border border-line bg-surface-2 px-4 py-3 transition hover:border-accent"
           >
             <span className="text-sm font-semibold">🧩 첨부된 스쿼드 보기</span>
-            <span className="text-[13px] text-accent">열기 →</span>
+            <span className="text-sm text-accent">열기 →</span>
           </Link>
         )}
 
@@ -165,18 +165,18 @@ export default async function PostDetail({
 
       {/* 작성자 카드 */}
       <section className="panel mt-4 p-5">
-        <p className="scoreboard text-[12px] font-semibold tracking-[0.2em] text-muted">
+        <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
           작성자
         </p>
         <div className="mt-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-lg font-bold">{author?.nickname ?? '알 수 없음'}</p>
             {author?.verified_nickname ? (
-              <p className="text-[13px] text-accent">
+              <p className="text-sm text-accent">
                 ✓ FC Online: {author.verified_nickname}
               </p>
             ) : (
-              <p className="text-[13px] text-muted">구단주명 미연동</p>
+              <p className="text-sm text-muted">구단주명 미연동</p>
             )}
           </div>
           {author?.verified_nickname && (

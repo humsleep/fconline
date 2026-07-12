@@ -95,7 +95,7 @@ export default function Home() {
         {DEMO_NICKNAME && (
           <Link
             href={`/user/${encodeURIComponent(DEMO_NICKNAME)}`}
-            className="rise rise-3 relative mt-4 inline-flex items-center gap-1.5 rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+            className="rise rise-3 relative mt-4 inline-flex items-center gap-1.5 rounded-full border border-line px-4 py-2 text-sm font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
           >
             👀 검색할 닉네임이 없다면? 예시 리포트 구경하기 →
           </Link>
@@ -111,15 +111,15 @@ export default function Home() {
           {FEATURES.map((f, i) => {
             const inner = (
               <>
-                <p className="scoreboard text-[12px] font-bold tracking-[0.2em] text-gold">
+                <p className="scoreboard text-[13px] font-bold tracking-[0.2em] text-gold">
                   {f.tag}
                 </p>
                 <h3 className="mt-2 text-base font-bold">{f.title}</h3>
-                <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                <p className="mt-2 text-sm leading-relaxed text-muted">
                   {f.desc}
                 </p>
                 <p
-                  className={`mt-3 text-[13px] font-semibold ${
+                  className={`mt-3 text-sm font-semibold ${
                     f.href ? "text-accent" : "text-muted"
                   }`}
                 >
