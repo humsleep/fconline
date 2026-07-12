@@ -15,8 +15,8 @@ export default function PrivacyPage() {
       <div className="mt-6 space-y-6 text-sm leading-relaxed">
         <section>
           <h2 className="text-base font-bold">1. 수집하는 개인정보와 목적</h2>
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full min-w-[28rem] border-collapse text-left">
+          <div className="mt-2">
+            <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-line text-muted">
                   <th className="py-2 pr-3 font-semibold">항목</th>
