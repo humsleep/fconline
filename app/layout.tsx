@@ -5,6 +5,7 @@ import SearchForm from "./components/SearchForm";
 import MobileTabBar from "./components/MobileTabBar";
 import ThemeToggle from "./components/ThemeToggle";
 import AuthButton from "./components/AuthButton";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 const chakra = Chakra_Petch({
@@ -20,6 +21,7 @@ const plex = IBM_Plex_Sans_KR({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://fconline-beryl.vercel.app"),
   title: {
     default: "FC Scope — FC온라인 전적·스쿼드 진단 랩",
     template: "%s · FC Scope",
@@ -110,10 +112,22 @@ export default function RootLayout({
               FC Scope은 비공식 팬 서비스입니다. Data based on NEXON Open API.
               게임 데이터의 저작권은 NEXON·EA에 있습니다.
             </p>
+            <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              <Link href="/terms" className="hover:text-ink">
+                이용약관
+              </Link>
+              <Link href="/privacy" className="font-semibold hover:text-ink">
+                개인정보처리방침
+              </Link>
+              <a href="mailto:boheme88@naver.com" className="hover:text-ink">
+                문의
+              </a>
+            </p>
           </div>
         </footer>
 
         <MobileTabBar />
+        <Analytics />
       </body>
     </html>
   );

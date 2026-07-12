@@ -10,6 +10,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const next = safeNextPath(searchParams.get('next'));
   const hasError = searchParams.get('error');
@@ -30,9 +31,20 @@ function LoginContent() {
 
   const signInWithGoogle = async () => {
     if (!configured) return;
+    if (!agreed) {
+      setError('이용약관과 개인정보처리방침에 동의해 주세요.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
+      // 동의 시점 기록 (분쟁 대비 로컬 증적)
+      try {
+        localStorage.setItem(
+          'fcscope-consent',
+          JSON.stringify({ termsV: 1, privacyV: 1, at: new Date().toISOString() })
+        );
+      } catch {}
       const supabase = createClient();
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
       const { error } = await supabase.auth.signInWithOAuth({
@@ -69,10 +81,29 @@ function LoginContent() {
             </p>
           </div>
         ) : (
+          <>
+          <label className="mt-6 flex cursor-pointer items-start gap-2 rounded-lg bg-surface-2 px-3 py-2.5 text-left text-sm">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[var(--accent)]"
+            />
+            <span className="text-muted">
+              <Link href="/terms" target="_blank" className="text-accent underline underline-offset-2">
+                이용약관
+              </Link>
+              과{' '}
+              <Link href="/privacy" target="_blank" className="text-accent underline underline-offset-2">
+                개인정보처리방침
+              </Link>
+              에 동의합니다.
+            </span>
+          </label>
           <button
             onClick={signInWithGoogle}
             disabled={loading}
-            className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold transition hover:bg-surface-2 disabled:opacity-60"
+            className="mt-3 flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold transition hover:bg-surface-2 disabled:opacity-60"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
               <path
@@ -94,6 +125,7 @@ function LoginContent() {
             </svg>
             {loading ? '이동 중…' : 'Google로 계속하기'}
           </button>
+          </>
         )}
 
         {error && <p className="mt-4 text-sm text-lose">{error}</p>}
