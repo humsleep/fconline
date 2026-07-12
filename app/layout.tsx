@@ -5,6 +5,7 @@ import SearchForm from "./components/SearchForm";
 import MobileTabBar from "./components/MobileTabBar";
 import ThemeToggle from "./components/ThemeToggle";
 import AuthButton from "./components/AuthButton";
+import NoticeBanner from "./components/NoticeBanner";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
@@ -103,6 +104,8 @@ export default function RootLayout({
             </div>
           </div>
         </header>
+
+        <NoticeBanner />
 
         <main className="flex-1">{children}</main>
 
