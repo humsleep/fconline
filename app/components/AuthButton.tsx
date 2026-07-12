@@ -58,7 +58,7 @@ export default function AuthButton() {
     return (
       <Link
         href="/login"
-        className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold hover:bg-surface-2"
+        className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-surface-2"
       >
         로그인
       </Link>
@@ -68,7 +68,7 @@ export default function AuthButton() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold hover:bg-surface-2"
+        className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-surface-2"
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -94,7 +94,7 @@ export default function AuthButton() {
             <Link
               href={`/user/${encodeURIComponent(fcNickname)}`}
               role="menuitem"
-              className="block px-4 py-2.5 text-[13px] font-semibold text-accent hover:bg-surface-2"
+              className="block px-4 py-2.5 text-sm font-semibold text-accent hover:bg-surface-2"
               onClick={() => setOpen(false)}
             >
               ⚽ 내 전적
@@ -103,7 +103,7 @@ export default function AuthButton() {
           <Link
             href="/profile/setup"
             role="menuitem"
-            className="block px-4 py-2.5 text-[13px] hover:bg-surface-2"
+            className="block px-4 py-2.5 text-sm hover:bg-surface-2"
             onClick={() => setOpen(false)}
           >
             프로필 설정
@@ -111,7 +111,7 @@ export default function AuthButton() {
           <Link
             href="/community"
             role="menuitem"
-            className="block px-4 py-2.5 text-[13px] hover:bg-surface-2"
+            className="block px-4 py-2.5 text-sm hover:bg-surface-2"
             onClick={() => setOpen(false)}
           >
             커뮤니티
@@ -119,7 +119,7 @@ export default function AuthButton() {
           <button
             role="menuitem"
             onClick={() => signOut()}
-            className="block w-full px-4 py-2.5 text-left text-[13px] text-lose hover:bg-surface-2"
+            className="block w-full px-4 py-2.5 text-left text-sm text-lose hover:bg-surface-2"
           >
             로그아웃
           </button>

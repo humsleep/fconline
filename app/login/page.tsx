@@ -98,12 +98,12 @@ function LoginContent() {
 
         {error && <p className="mt-4 text-sm text-lose">{error}</p>}
 
-        <p className="mt-6 text-[12px] leading-relaxed text-muted">
+        <p className="mt-6 text-[13px] leading-relaxed text-muted">
           로그인 시 서비스 이용에 필요한 최소 정보(이메일·프로필)만 사용합니다.
         </p>
         <Link
           href="/"
-          className="mt-4 inline-block text-[13px] text-muted underline underline-offset-2"
+          className="mt-4 inline-block text-sm text-muted underline underline-offset-2"
         >
           홈으로
         </Link>

@@ -30,7 +30,7 @@ export default function VerdictStamp({
         {verdict.grade}
       </span>
       {showLiner && (
-        <span className={`${lg ? "text-sm" : "text-[13px]"} text-muted`}>
+        <span className={`${lg ? "text-sm" : "text-sm"} text-muted`}>
           {verdict.oneLiner}
         </span>
       )}

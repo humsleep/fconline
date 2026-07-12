@@ -68,7 +68,7 @@ export default function MySquadPicker({
           placeholder={placeholder}
           className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
         />
-        <p className="mt-1 text-[12px] text-muted">
+        <p className="mt-1 text-[13px] text-muted">
           <Link href="/squad" className="text-accent underline underline-offset-2">
             스쿼드 빌더
           </Link>
@@ -110,7 +110,7 @@ export default function MySquadPicker({
           onChange('');
           setManual(true);
         }}
-        className="mt-1 text-[12px] text-muted underline underline-offset-2"
+        className="mt-1 text-[13px] text-muted underline underline-offset-2"
       >
         공유코드 직접 입력
       </button>

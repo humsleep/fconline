@@ -120,7 +120,7 @@ export default function ProfileSetupPage() {
       {/* 닉네임 */}
       <section className="panel mt-6 p-5">
         <h2 className="text-sm font-bold">커뮤니티 닉네임</h2>
-        <p className="mt-1 text-[13px] text-muted">
+        <p className="mt-1 text-sm text-muted">
           {NICKNAME_MIN}~{NICKNAME_MAX}자. 커뮤니티 글에 표시됩니다.
         </p>
         <div className="mt-3 flex gap-2">
@@ -144,12 +144,12 @@ export default function ProfileSetupPage() {
       {/* FC Online 구단주명 연동 */}
       <section className="panel mt-4 p-5">
         <h2 className="text-sm font-bold">FC Online 구단주명 연동</h2>
-        <p className="mt-1 text-[13px] text-muted">
+        <p className="mt-1 text-sm text-muted">
           연동하면 내 커뮤니티 글에 전적 카드가 자동으로 붙습니다.
           {!hasNickname && ' (닉네임 등록 후 가능)'}
         </p>
         {profile?.verified_nickname && (
-          <p className="mt-2 rounded-lg bg-accent/10 px-3 py-2 text-[13px] text-accent">
+          <p className="mt-2 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
             연동됨: <b>{profile.verified_nickname}</b>
           </p>
         )}
@@ -181,7 +181,7 @@ export default function ProfileSetupPage() {
         </p>
       )}
 
-      <div className="mt-6 flex gap-3 text-[13px]">
+      <div className="mt-6 flex gap-3 text-sm">
         <Link href="/community" className="text-accent underline underline-offset-2">
           커뮤니티 보러가기
         </Link>

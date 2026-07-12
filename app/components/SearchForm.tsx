@@ -101,20 +101,20 @@ export default function SearchForm({
       {/* 최근 검색 칩 — 한글 닉네임 반복 입력 마찰 제거 */}
       {isLg && recent.length > 0 && (
         <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
-          <span className="text-[12px] text-muted">최근</span>
+          <span className="text-[13px] text-muted">최근</span>
           {recent.map((r) => (
             <Link
               key={r}
               href={`/user/${encodeURIComponent(r)}`}
               onClick={() => rememberSearch(r)}
-              className="max-w-[10rem] truncate rounded-full bg-surface-2 px-3 py-1 text-[13px] font-medium text-ink transition-colors hover:bg-accent hover:text-accent-ink"
+              className="max-w-[10rem] truncate rounded-full bg-surface-2 px-3 py-1 text-sm font-medium text-ink transition-colors hover:bg-accent hover:text-accent-ink"
             >
               {r}
             </Link>
           ))}
           <button
             onClick={clearRecent}
-            className="text-[12px] text-muted underline underline-offset-2"
+            className="text-[13px] text-muted underline underline-offset-2"
             aria-label="최근 검색 지우기"
           >
             지우기

@@ -76,7 +76,7 @@ export default async function UserPage({
           </p>
           <Link
             href={`/live/${encodeURIComponent(basic.nickname)}`}
-            className="scoreboard mb-0.5 ml-auto inline-flex items-center gap-1.5 rounded-lg bg-lose/15 px-3 py-1.5 text-[13px] font-bold text-lose transition-colors hover:bg-lose/25"
+            className="scoreboard mb-0.5 ml-auto inline-flex items-center gap-1.5 rounded-lg bg-lose/15 px-3 py-1.5 text-sm font-bold text-lose transition-colors hover:bg-lose/25"
           >
             <span className="live-dot inline-block h-2 w-2 rounded-full bg-lose" />
             라이브 세션
@@ -85,10 +85,10 @@ export default async function UserPage({
         {divisionCards.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
             {divisionCards.map((d) => (
-              <p key={d.matchTypeName} className="text-[12px] text-muted">
+              <p key={d.matchTypeName} className="text-[13px] text-muted">
                 {d.matchTypeName}{" "}
                 <span className="font-bold text-gold">{d.divisionName}</span>
-                <span className="ml-1 text-[12px]">({d.date})</span>
+                <span className="ml-1 text-[13px]">({d.date})</span>
               </p>
             ))}
           </div>
@@ -110,7 +110,7 @@ export default async function UserPage({
             href={`/user/${encodeURIComponent(basic.nickname)}?type=${t.type}${
               activeView === "matches" ? "" : `&view=${activeView}`
             }`}
-            className={`scoreboard rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
+            className={`scoreboard rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
               t.type === matchType
                 ? "bg-accent text-accent-ink"
                 : "bg-surface-2 text-muted hover:text-ink"
@@ -207,20 +207,20 @@ async function MatchSection({
       <section className="panel mt-4 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
           <div>
-            <p className="text-[12px] font-medium text-muted">최근 {rec.played}경기 승률</p>
+            <p className="text-[13px] font-medium text-muted">최근 {rec.played}경기 승률</p>
             <p className="scoreboard text-4xl font-bold text-accent">{rec.winRate}%</p>
             <p className="scoreboard mt-0.5 text-xs font-semibold text-muted">
               {rec.win}승 {rec.draw}무 {rec.lose}패
             </p>
           </div>
           <div>
-            <p className="text-[12px] font-medium text-muted">최근 10경기 폼</p>
+            <p className="text-[13px] font-medium text-muted">최근 10경기 폼</p>
             <div className="mt-1.5 flex gap-1">
               {recent10.map((m) => (
                 <span
                   key={m.matchId}
                   title={`${m.result} ${m.me.goals}:${m.opponent?.goals ?? "-"}`}
-                  className={`scoreboard flex h-6 w-6 items-center justify-center rounded text-[12px] font-bold ${
+                  className={`scoreboard flex h-6 w-6 items-center justify-center rounded text-[13px] font-bold ${
                     m.result === "승"
                       ? "bg-win/15 text-win"
                       : m.result === "패"
@@ -234,7 +234,7 @@ async function MatchSection({
             </div>
           </div>
           <div className="min-w-32">
-            <p className="text-[12px] font-medium text-muted">경기 평점 흐름</p>
+            <p className="text-[13px] font-medium text-muted">경기 평점 흐름</p>
             <RatingSparkline values={[...summaries].reverse().map((m) => m.me.rating)} />
           </div>
         </div>
@@ -296,7 +296,7 @@ function RatingSparkline({ values }: { values: number[] }) {
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="panel px-3 py-2.5">
-      <p className="text-[12px] font-medium text-muted">{label}</p>
+      <p className="text-[13px] font-medium text-muted">{label}</p>
       <p className="scoreboard mt-0.5 text-lg font-bold">{value}</p>
     </div>
   );
@@ -323,14 +323,14 @@ function MatchRow({ m, ouid }: { m: MatchSummary; ouid: string }) {
         <p className="truncate text-sm font-medium">
           {m.opponent ? `vs ${m.opponent.nickname}` : "상대 정보 없음"}
         </p>
-        <p className="mt-0.5 text-[13px] text-muted">
+        <p className="mt-0.5 text-sm text-muted">
           {formatMatchDate(m.matchDate)}
           {m.forfeit && <span className="ml-1.5 text-lose">몰수</span>}
         </p>
       </div>
 
       <div className="hidden text-right sm:block">
-        <p className="text-[12px] text-muted">평점</p>
+        <p className="text-[13px] text-muted">평점</p>
         <p className="scoreboard text-sm font-semibold">
           {m.me.rating > 0 ? m.me.rating.toFixed(1) : "-"}
         </p>
@@ -422,7 +422,7 @@ function ErrorState({ err, nickname }: { err: unknown; nickname: string }) {
           {DEMO_NICKNAME && (
             <Link
               href={`/user/${encodeURIComponent(DEMO_NICKNAME)}`}
-              className="mt-3 inline-block text-[13px] text-muted underline underline-offset-2"
+              className="mt-3 inline-block text-sm text-muted underline underline-offset-2"
             >
               또는 예시 리포트 구경하기 →
             </Link>
@@ -439,7 +439,7 @@ function ErrorState({ err, nickname }: { err: unknown; nickname: string }) {
 
       <Link
         href="/"
-        className="mt-4 text-[13px] text-muted underline underline-offset-2"
+        className="mt-4 text-sm text-muted underline underline-offset-2"
       >
         홈에서 다시 검색
       </Link>

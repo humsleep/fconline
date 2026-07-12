@@ -26,7 +26,7 @@ export default function SeasonBadge({
     return (
       <span
         className={`scoreboard rounded bg-gold/15 px-1 py-0.5 font-bold text-gold ${
-          size === "xs" ? "text-[10px]" : "text-[11px]"
+          size === "xs" ? "text-[11px]" : "text-[12px]"
         } ${className}`}
       >
         {label}

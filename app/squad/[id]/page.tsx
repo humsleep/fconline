@@ -62,7 +62,7 @@ export default async function SquadViewPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-8 md:pb-16">
-      <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
+      <p className="scoreboard text-sm font-semibold tracking-[0.2em] text-muted">
         {getFormation(squad.formation).name} · {squad.slots.length}명
       </p>
       <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{squad.name}</h1>

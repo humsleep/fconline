@@ -143,7 +143,7 @@ function NewPostForm() {
             type="button"
             onClick={() => setType(t)}
             className={
-              'rounded-full px-3 py-1.5 text-[13px] font-medium transition ' +
+              'rounded-full px-3 py-1.5 text-sm font-medium transition ' +
               (type === t
                 ? 'bg-accent text-accent-ink'
                 : 'bg-surface-2 text-muted hover:text-ink')
@@ -153,7 +153,7 @@ function NewPostForm() {
           </button>
         ))}
       </div>
-      <p className="mt-2 text-[13px] text-muted">{cfg.blurb}</p>
+      <p className="mt-2 text-sm text-muted">{cfg.blurb}</p>
 
       <div className="mt-5 space-y-5">
         <Field label={`제목 (${title.length}/${TITLE_MAX})`}>
@@ -197,7 +197,7 @@ function NewPostForm() {
                   type="button"
                   onClick={() => togglePos(p)}
                   className={
-                    'scoreboard rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition ' +
+                    'scoreboard rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ' +
                     (positions.includes(p)
                       ? 'bg-accent text-accent-ink'
                       : 'bg-surface-2 text-muted hover:text-ink')
@@ -233,7 +233,7 @@ function NewPostForm() {
             <button
               type="button"
               onClick={() => setBody(cfg.template)}
-              className="mt-1 text-[12px] text-accent underline underline-offset-2"
+              className="mt-1 text-[13px] text-accent underline underline-offset-2"
             >
               📋 템플릿으로 시작하기
             </button>
@@ -299,7 +299,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-semibold text-muted">
+      <span className="mb-1.5 block text-sm font-semibold text-muted">
         {label}
       </span>
       {children}
