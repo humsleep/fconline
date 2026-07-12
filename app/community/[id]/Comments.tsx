@@ -15,6 +15,29 @@ export interface CommentView {
   isOwn: boolean;
 }
 
+// 닉네임 이니셜 아바타 — 이름 해시로 색 고정(같은 사람 = 같은 색)
+const AVATAR_COLORS = [
+  'bg-accent/20 text-accent',
+  'bg-gold/20 text-gold',
+  'bg-win/20 text-win',
+  'bg-lose/15 text-lose',
+  'bg-surface-2 text-ink',
+];
+
+function Avatar({ name }: { name: string }) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  const color = AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+  return (
+    <span
+      aria-hidden
+      className={`mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-sm font-bold ${color}`}
+    >
+      {name.slice(0, 1)}
+    </span>
+  );
+}
+
 export default function Comments({
   postId,
   comments,
@@ -84,32 +107,37 @@ export default function Comments({
           아직 댓글이 없어요. 첫 의견을 남겨보세요!
         </p>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="mt-4 space-y-4">
           {comments.map((c) => (
-            <li key={c.id} className="border-b border-line/60 pb-3 last:border-0 last:pb-0">
-              <div className="flex items-center gap-2 text-[13px]">
-                <span className="font-semibold text-ink">{c.authorName}</span>
-                <span className="text-muted">{formatRelativeKr(c.created_at)}</span>
-                {c.isOwn && (
-                  <button
-                    onClick={() => remove(c.id)}
-                    className="ml-auto text-lose"
-                  >
-                    삭제
-                  </button>
-                )}
+            <li key={c.id} className="flex gap-2.5">
+              <Avatar name={c.authorName} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-[13px]">
+                  <span className="font-semibold text-ink">{c.authorName}</span>
+                  <span className="text-muted">{formatRelativeKr(c.created_at)}</span>
+                  {c.isOwn && (
+                    <button
+                      onClick={() => remove(c.id)}
+                      className="ml-auto text-[13px] text-lose"
+                    >
+                      삭제
+                    </button>
+                  )}
+                </div>
+                <div className="mt-1 rounded-xl rounded-tl-sm bg-surface-2 px-3 py-2">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {c.body}
+                  </p>
+                  {c.squad_id && (
+                    <Link
+                      href={`/squad/${encodeURIComponent(c.squad_id)}`}
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-[13px] font-semibold text-accent"
+                    >
+                      🧩 제안 스쿼드 보기 →
+                    </Link>
+                  )}
+                </div>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
-                {c.body}
-              </p>
-              {c.squad_id && (
-                <Link
-                  href={`/squad/${encodeURIComponent(c.squad_id)}`}
-                  className="mt-1.5 inline-flex items-center gap-1 rounded-lg bg-surface-2 px-2.5 py-1 text-[13px] font-semibold text-accent"
-                >
-                  🧩 제안 스쿼드 보기 →
-                </Link>
-              )}
             </li>
           ))}
         </ul>

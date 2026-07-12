@@ -132,7 +132,7 @@ function NewPostForm() {
     );
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8">
+    <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-8 md:pb-16">
       <h1 className="text-2xl font-bold">글쓰기</h1>
 
       {/* 유형 선택 */}

@@ -218,3 +218,12 @@ body {
   border-radius: 0.5rem;
   animation: shimmer 0.9s ease-in-out infinite alternate;
 }
+
+/* 가로 스크롤 칩 바 — 스크롤바 숨김 (모바일 커뮤니티 필터 표준 패턴) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

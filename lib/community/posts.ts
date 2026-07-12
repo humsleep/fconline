@@ -16,10 +16,12 @@ export interface CommunityPost {
   meta: Record<string, string>;
   status: string;
   created_at: string;
+  /** 0009 마이그레이션 후 존재 — 미실행 환경 대비 optional */
+  comment_count?: number;
 }
 
-const COLUMNS =
-  'id, author_id, type, title, body, region, positions, contact, squad_id, meta, status, created_at';
+// '*' 선택 — comment_count(0009) 미실행 환경에서도 목록이 죽지 않게
+const COLUMNS = '*';
 
 export function shortId(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 10);

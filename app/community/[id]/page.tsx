@@ -73,7 +73,7 @@ export default async function PostDetail({
   }));
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-8 md:pb-16">
       <Link
         href={`/community?type=${post.type}`}
         className="text-sm text-muted underline underline-offset-2"
