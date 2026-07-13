@@ -3,6 +3,7 @@ import { getSeasonNames } from "@/lib/nexon/players";
 import { renderSquadCard } from "@/lib/card/squad-card";
 
 export const runtime = "nodejs";
+export const maxDuration = 60; // 선수 사진+시즌 엠블럼 최대 ~22개 서버 프리페치
 
 export async function GET(
   _req: Request,
