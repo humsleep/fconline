@@ -11,6 +11,7 @@ import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summar
 import { formatAchievementDate, formatMatchDate } from "@/lib/format";
 import SquadSection from "./SquadSection";
 import PlaystyleSection from "./PlaystyleSection";
+import ReportSection from "./ReportSection";
 import ShareCardButton from "@/app/components/ShareCardButton";
 
 export const maxDuration = 60; // 콜드 조회: 매치 상세 최대 30건 순차 호출 대비
@@ -43,7 +44,13 @@ export default async function UserPage({
   const matchType =
     MATCH_TABS.find((t) => t.type === Number(type))?.type ?? MATCH_TABS[0].type;
   const activeView =
-    view === "squad" ? "squad" : view === "style" ? "style" : "matches";
+    view === "squad"
+      ? "squad"
+      : view === "style"
+        ? "style"
+        : view === "report"
+          ? "report"
+          : "matches";
 
   let ouid: string;
   let basic: Awaited<ReturnType<typeof getUserBasic>>;
@@ -127,10 +134,11 @@ export default async function UserPage({
       </nav>
 
       {/* 뷰 서브탭 */}
-      <nav className="rise rise-2 mt-2 flex gap-4 border-b border-line/70">
+      <nav className="scrollbar-hide rise rise-2 mt-2 flex gap-4 overflow-x-auto border-b border-line/70">
         {(
           [
             { view: "matches", label: "경기 기록" },
+            { view: "report", label: "분석" },
             { view: "squad", label: "선수 성적표" },
             { view: "style", label: "플레이스타일" },
           ] as const
@@ -143,7 +151,7 @@ export default async function UserPage({
             <Link
               key={v.view}
               href={href}
-              className={`-mb-px border-b-2 px-1 pb-2 text-sm font-semibold transition-colors ${
+              className={`-mb-px flex-none whitespace-nowrap border-b-2 px-1 pb-2 text-sm font-semibold transition-colors ${
                 on
                   ? "border-accent text-ink"
                   : "border-transparent text-muted hover:text-ink"
@@ -162,6 +170,10 @@ export default async function UserPage({
       ) : activeView === "style" ? (
         <Suspense key={`st-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
           <PlaystyleSection ouid={ouid} matchType={matchType} />
+        </Suspense>
+      ) : activeView === "report" ? (
+        <Suspense key={`rp-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
+          <ReportSection ouid={ouid} matchType={matchType} />
         </Suspense>
       ) : (
         <Suspense key={`${ouid}-${matchType}`} fallback={<MatchSkeleton />}>
