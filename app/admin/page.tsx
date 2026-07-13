@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getAdmin } from '@/lib/supabase/admin';
 import { isAdminEmail } from '@/lib/admin-auth';
 import { formatRelativeKr } from '@/lib/format';
-import { ModerateButtons, NoticeForm } from './AdminActions';
+import { ModerateButtons, NoticeForm, SeedForm } from './AdminActions';
 
 export const metadata: Metadata = {
   title: '운영',
@@ -140,6 +140,16 @@ export default async function AdminPage() {
         </h2>
         <div className="mt-3">
           <NoticeForm current={currentNotice} />
+        </div>
+      </section>
+
+      {/* 픽 랭킹 시딩 */}
+      <section className="panel mt-4 p-5">
+        <h2 className="scoreboard text-sm font-bold tracking-[0.2em] text-muted">
+          픽 랭킹 시딩
+        </h2>
+        <div className="mt-3">
+          <SeedForm />
         </div>
       </section>
 

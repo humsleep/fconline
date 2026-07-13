@@ -50,6 +50,90 @@ export function ModerateButtons({
   );
 }
 
+interface SeedResult {
+  results: { nickname: string; ok: boolean; matches: number; note?: string }[];
+  combos: number;
+  warmed: number;
+  hint: string;
+}
+
+export function SeedForm() {
+  const [raw, setRaw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<SeedResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const nicknames = [...new Set(raw.split(/[\n,]/).map((s) => s.trim()).filter(Boolean))];
+
+  const run = async () => {
+    if (nicknames.length === 0 || busy) return;
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch('/api/admin/seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nicknames: nicknames.slice(0, 5) }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error ?? '실패');
+      setResult(d as SeedResult);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '실패');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <p className="text-[13px] text-muted">
+        활동 중인 구단주명을 줄바꿈/쉼표로 최대 5개 입력 → 최근 공식경기 30판씩 수집(match_cache) +
+        자주 쓰인 선수 조합의 랭커 스탯 워밍까지 한 번에 처리해요. 사이트에서 하나씩 검색할 필요 없음.
+      </p>
+      <textarea
+        value={raw}
+        onChange={(e) => setRaw(e.target.value.slice(0, 300))}
+        placeholder={'닉네임1\n닉네임2\n닉네임3'}
+        rows={3}
+        className="mt-2 w-full resize-none rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+      />
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-[13px] text-muted">
+          {nicknames.length > 5 ? '앞의 5개만 실행됩니다' : `${nicknames.length}개 입력됨`}
+        </span>
+        <button
+          onClick={run}
+          disabled={busy || nicknames.length === 0}
+          className="ml-auto flex-none rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50"
+        >
+          {busy ? '수집 중… (최대 수 분)' : '시딩 실행'}
+        </button>
+      </div>
+      {error && <p className="mt-2 text-[13px] text-lose">{error}</p>}
+      {result && (
+        <div className="mt-3 rounded-lg bg-surface-2 p-3 text-sm">
+          <ul className="space-y-1">
+            {result.results.map((r) => (
+              <li key={r.nickname} className="flex items-center gap-2">
+                <span className={r.ok ? 'text-win' : 'text-lose'}>{r.ok ? '✓' : '✗'}</span>
+                <span className="min-w-0 flex-1 truncate">{r.nickname}</span>
+                <span className="flex-none text-[13px] text-muted">
+                  {r.ok ? `경기 ${r.matches}건` : r.note}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[13px] text-muted">
+            조합 {result.combos}개 중 랭커 스탯 {result.warmed}건 워밍 — {result.hint}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NoticeForm({ current }: { current: string | null }) {
   const router = useRouter();
   const [text, setText] = useState('');
