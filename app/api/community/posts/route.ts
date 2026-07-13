@@ -34,6 +34,20 @@ export async function POST(request: Request) {
       { status: 403 }
     );
 
+  // 작성 간격 제한 사전 체크(30초) — RLS(0013)와 이중 방어. 명확한 메시지를 주기 위함.
+  const { data: recent } = await supabase
+    .from('community_posts')
+    .select('created_at')
+    .eq('author_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (recent?.created_at && Date.now() - new Date(recent.created_at).getTime() < 30_000)
+    return NextResponse.json(
+      { error: '조금 천천히요! 글은 30초에 한 번 작성할 수 있어요.' },
+      { status: 429 }
+    );
+
   let payload: Record<string, unknown>;
   try {
     payload = await request.json();
@@ -105,7 +119,7 @@ export async function POST(request: Request) {
   if (error) {
     if (error.code === '42501')
       return NextResponse.json(
-        { error: '작성 권한이 없습니다. 닉네임 등록을 확인하세요.' },
+        { error: '작성이 거부됐어요. 닉네임 등록 또는 작성 간격(30초)을 확인하세요.' },
         { status: 403 }
       );
     if (error.code === '42P01')

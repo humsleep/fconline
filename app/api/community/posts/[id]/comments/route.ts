@@ -27,6 +27,20 @@ export async function POST(
       { status: 403 }
     );
 
+  // 작성 간격 제한 사전 체크(10초) — RLS(0013)와 이중 방어.
+  const { data: recent } = await supabase
+    .from('community_comments')
+    .select('created_at')
+    .eq('author_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (recent?.created_at && Date.now() - new Date(recent.created_at).getTime() < 10_000)
+    return NextResponse.json(
+      { error: '조금 천천히요! 댓글은 10초에 한 번 달 수 있어요.' },
+      { status: 429 }
+    );
+
   let payload: Record<string, unknown>;
   try {
     payload = await request.json();
@@ -59,6 +73,11 @@ export async function POST(
       return NextResponse.json(
         { error: '댓글 테이블이 없습니다. 마이그레이션(0007)을 실행하세요.' },
         { status: 500 }
+      );
+    if (error.code === '42501')
+      return NextResponse.json(
+        { error: '작성이 거부됐어요. 닉네임 등록 또는 작성 간격(10초)을 확인하세요.' },
+        { status: 403 }
       );
     return NextResponse.json({ error: '등록에 실패했습니다.' }, { status: 500 });
   }
