@@ -1,5 +1,15 @@
 # DEVLOG
 
+## 2026-07-13 — 스쿼드 카드 핵심선수 버그 수정 + QA 테스트 스위트
+
+- **버그**: 스쿼드 공유 카드가 "핵심 선수"로 슬롯 배열 앞 2명(대개 GK·수비수)을 뽑아, 홀란이 최전방인 4-3-3인데도 골키퍼가 대표로 박힘(사용자 제보). 데이터 뒤바뀜 아니라 선정 로직 결함
+- **수정**: `lib/squad/card-badges.ts` — `pickKeyPlayers()`가 공격 포지션 우선(작을수록 공격인 y, 자유배치 좌표 우선) 정렬로 선정, `topSeason()` 순수 함수 분리. match/user 카드는 집계 통계만 써서 무결(점검 완료)
+- **테스트(요청: 전체 단위+통합)**:
+  - `scripts/qa-unit-tests.ts` (`npm test`): 순수 로직 61 assert — 카드 핵심선수 회귀, report 집계/인사이트, summary, verdict 티어·톤게이트, rate-limit, ip-hash, formations, assign, presets, playstyle. 전부 통과
+  - `scripts/qa-smoke.sh` (`npm run test:smoke`): 프로덕션 서버 HTTP 통합 18건 — 공개 200/관리자 은닉 404/인증 401·403/넥슨 graceful. 전부 통과
+  - `scripts/qa-shim.cjs`: 테스트 컨텍스트에서 `server-only` 무력화(빌드 무관), `tsx` devDep 추가
+- PR #18 squash merge
+
 ## 2026-07-13 — 분석 리포트 탭 (경쟁사 시각화 참고 + 자동 코칭)
 
 - **설계 회의 3렌즈**(데이터 가용성 감사 / 모바일 시각화 설계 / 차별화 전략): 경쟁 서비스(fifaaddict류) 6패널 스크린샷 참고. 결론 = 순수 신규 가치는 "시간대별 득실"뿐, 나머지는 기존 ShotMap·성적표·플레이스타일과 중복 → 클론 대신 **차트는 근거·자동 코칭 문장이 주인공**인 FC Scope식으로 재구성. 데이터는 전부 이미 가져오는 30경기 상세 → 넥슨 추가 호출 0
