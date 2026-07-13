@@ -31,13 +31,14 @@ export async function POST(req: Request) {
 
   const slots: SquadSlot[] = [];
   const seen = new Set<string>();
-  const seenSpid = new Set<number>(); // 같은 선수 중복 배치 방지
+  const seenPid = new Set<number>(); // 시즌 달라도 같은 선수(pid) 중복 배치 방지 (인게임 규칙)
   for (const raw of body.slots as unknown[]) {
     if (typeof raw !== "object" || raw === null) continue;
     const s = raw as Record<string, unknown>;
     const slotId = s.slotId;
     const spid = s.spid;
     const nm = s.name;
+    const pid = typeof spid === "number" ? spid % 1_000_000 : -1;
     if (
       typeof slotId === "string" &&
       validSlotIds.has(slotId) &&
@@ -45,11 +46,11 @@ export async function POST(req: Request) {
       typeof spid === "number" &&
       Number.isInteger(spid) &&
       spid > 0 &&
-      !seenSpid.has(spid) &&
+      !seenPid.has(pid) &&
       typeof nm === "string"
     ) {
       seen.add(slotId);
-      seenSpid.add(spid);
+      seenPid.add(pid);
       const slot: SquadSlot = { slotId, spid, name: nm.slice(0, 40) };
       // 커스텀 좌표(선택) — 0~100 범위만
       const x = s.x;

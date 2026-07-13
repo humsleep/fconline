@@ -9,6 +9,7 @@ import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
 import PostActions from './PostActions';
 import Comments, { type CommentView } from './Comments';
 import ReportButton from '@/app/components/ReportButton';
+import AttachedSquad from './AttachedSquad';
 
 export async function generateMetadata({
   params,
@@ -158,16 +159,8 @@ export default async function PostDetail({
           {post.body}
         </p>
 
-        {/* 첨부 스쿼드 */}
-        {post.squad_id && (
-          <Link
-            href={`/squad/${encodeURIComponent(post.squad_id)}`}
-            className="mt-4 flex items-center justify-between rounded-xl border border-line bg-surface-2 px-4 py-3 transition hover:border-accent"
-          >
-            <span className="text-sm font-semibold">🧩 첨부된 스쿼드 보기</span>
-            <span className="text-sm text-accent">열기 →</span>
-          </Link>
-        )}
+        {/* 첨부 스쿼드 — 본문과 함께 자동으로 펼쳐서 표시 */}
+        {post.squad_id && <AttachedSquad squadId={post.squad_id} />}
 
         {post.contact && (
           <p className="mt-4 text-sm">
