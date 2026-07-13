@@ -17,6 +17,7 @@ import { getPositionLabel } from '../lib/nexon/meta';
 import { baseLabelOfCode, assignByPosition } from '../lib/squad/assign';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
+import { squadCardTree } from '../lib/card/squad-card';
 import type { Squad } from '../lib/squad/store';
 
 let pass = 0;
@@ -84,6 +85,13 @@ const ts = topSeason(squad433, new Map());
 ok(ts !== null && ts.count === 1, 'topSeason 최다 카운트');
 const tsFallback = topSeason({ ...squad433, slots: [{ slotId: 'a', spid: 26000001, name: 'x' }] }, new Map([[26000001, '26TOTY']]));
 eq(tsFallback, { season: '26TOTY', count: 1 }, 'topSeason은 seasonNames 폴백을 사용');
+
+// squadCardTree: 포메이션 피치 카드 트리 — 폰트 서브셋에 스쿼드명·포메이션명·선수명 포함
+const cardTree = squadCardTree(squad433, new Map(), true);
+ok(cardTree.element != null, '스쿼드 카드 트리 생성');
+ok(cardTree.fontText.includes('보엠 스쿼드'), '카드 폰트텍스트에 스쿼드명 포함');
+ok(cardTree.fontText.includes('4-3-3'), '카드 폰트텍스트에 포메이션명 포함');
+ok(cardTree.fontText.includes('홀란') || cardTree.fontText.includes('엘링'), '카드 폰트텍스트에 선수명 포함');
 
 // ── formations ───────────────────────────────────────────────
 section('formations');
