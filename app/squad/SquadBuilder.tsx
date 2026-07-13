@@ -9,7 +9,7 @@ import {
 } from "@/lib/squad/formations";
 import { presetsByLeague } from "@/lib/squad/presets";
 import { assignByPosition } from "@/lib/squad/assign";
-import { rememberMySquad } from "@/app/components/MySquadPicker";
+import { rememberMySquad, countMySquads, MAX_MY_SQUADS } from "@/app/components/MySquadPicker";
 import SeasonBadge from "@/app/components/SeasonBadge";
 import SquadPitch, { type Coord, type FilledSlot } from "./SquadPitch";
 import SeasonMix from "./SeasonMix";
@@ -137,7 +137,10 @@ export default function SquadBuilder() {
     return null;
   }
 
-  // 검색 결과 클릭/드롭으로 배치. 같은 선수가 이미 있으면 그 자리에서 이동(중복 방지).
+  // 실선수 번호(pid) — 시즌(spid 앞 3자리)이 달라도 같은 선수면 중복 배치 금지 (인게임 규칙)
+  const pidOf = (spid: number) => spid % 1_000_000;
+
+  // 검색 결과 클릭/드롭으로 배치. 같은 선수(pid)가 이미 있으면 그 자리를 비워 중복 방지.
   function place(slotId: string | null, spid: number, name: string, season?: string) {
     const target = slotId ?? activeSlotId ?? firstEmptySlot();
     if (!target) {
@@ -145,11 +148,15 @@ export default function SquadBuilder() {
       return;
     }
     const n = { ...filled };
+    let moved = false;
     for (const [id, v] of Object.entries(n))
-      if (v.spid === spid && id !== target) delete n[id];
+      if (pidOf(v.spid) === pidOf(spid) && id !== target) {
+        delete n[id];
+        moved = true;
+      }
     n[target] = { spid, name, season };
     setFilled(n);
-    setNotice("");
+    setNotice(moved ? "같은 선수는 한 명만 — 기존 자리에서 옮겼어요." : "");
 
     // 배치 완료 → 선택 해제 + 시즌 패널 접기. 다음 포지션은 사용자가 직접 탭해서 고른다.
     setActiveSlotId(null);
@@ -168,19 +175,48 @@ export default function SquadBuilder() {
     });
   }
 
-  function onSlotClick(slot: Slot) {
-    // 채워진 슬롯을 다시 누르면 활성 토글, 비우기는 배지로
-    const next = activeSlotId === slot.id ? null : slot.id;
-    setActiveSlotId(next);
-    if (!next) return;
-    // 채워진 자리 = 선수 확인(랭커 스탯 패널) — 검색으로 이동하지 않음
-    if (filled[slot.id]) return;
-    // 빈 자리 = 즉시 검색 — 입력 포커스(+기존 검색어 전체선택), 모바일은 패널로 스크롤
+  // 드래그로 다른 자리에 떨어뜨리면 서로 교환(양쪽 다 선수면 스왑, 빈 자리면 이동).
+  // 두 슬롯의 커스텀 좌표는 제거해 포메이션 기본 위치로 정렬.
+  function swapSlots(fromId: string, toId: string) {
+    if (fromId === toId) return;
+    setFilled((f) => {
+      const a = f[fromId];
+      if (!a) return f; // 빈 자리를 드래그한 경우 변화 없음
+      const b = f[toId];
+      const n = { ...f };
+      if (b) {
+        n[fromId] = b;
+        n[toId] = a;
+      } else {
+        delete n[fromId];
+        n[toId] = a;
+      }
+      return n;
+    });
+    setCoords((c) => {
+      const n = { ...c };
+      delete n[fromId];
+      delete n[toId];
+      return n;
+    });
+    setActiveSlotId(null);
+    setExpanded(null);
+  }
+
+  function focusSearch() {
     if (isStacked()) {
       searchPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     searchInputRef.current?.focus({ preventScroll: true });
     searchInputRef.current?.select();
+  }
+
+  function onSlotClick(slot: Slot) {
+    // 자리를 누르면 활성 토글 + 즉시 검색(빈 자리든 채워진 자리든 교체 검색 가능)
+    const next = activeSlotId === slot.id ? null : slot.id;
+    setActiveSlotId(next);
+    if (!next) return;
+    focusSearch();
   }
 
   async function loadPreset(id: string) {
@@ -261,6 +297,13 @@ export default function SquadBuilder() {
 
   async function save() {
     if (filledCount === 0 || saving) return;
+    // 개인당 최대 10개 — 내 스쿼드 목록(이 기기)이 꽉 차면 저장 차단
+    if (countMySquads() >= MAX_MY_SQUADS) {
+      setError(
+        `스쿼드는 최대 ${MAX_MY_SQUADS}개까지 저장할 수 있어요. 기존 스쿼드를 지운 뒤 다시 시도해 주세요.`
+      );
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -410,6 +453,7 @@ export default function SquadBuilder() {
             onMove={(slotId, x, y) =>
               setCoords((c) => ({ ...c, [slotId]: { x, y } }))
             }
+            onSwap={swapSlots}
             onDropPlayer={(slotId, p) => place(slotId, p.spid, p.name, p.season)}
           />
 

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const KEY = 'fcscope-my-squads';
-const MAX = 20;
+export const MAX_MY_SQUADS = 10; // 개인당 최대 스쿼드 등록 개수
+const MAX = MAX_MY_SQUADS;
 
 export interface MySquad {
   id: string;
@@ -22,6 +23,12 @@ function loadMySquads(): MySquad[] {
   } catch {
     return [];
   }
+}
+
+/** 이 기기에 저장된 내 스쿼드 개수 (10개 제한 체크용). SSR에서는 0. */
+export function countMySquads(): number {
+  if (typeof window === 'undefined') return 0;
+  return loadMySquads().length;
 }
 
 /** 스쿼드 저장 성공 시 호출 — "내가 만든 스쿼드" 목록(localStorage)에 기록 */

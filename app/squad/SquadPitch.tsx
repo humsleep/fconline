@@ -31,6 +31,7 @@ export default function SquadPitch({
   activeSlotId,
   onSlotClick,
   onMove,
+  onSwap,
   onDropPlayer,
 }: {
   formationId: string;
@@ -40,6 +41,8 @@ export default function SquadPitch({
   onSlotClick?: (slot: Slot) => void;
   /** 슬롯 드래그로 좌표 변경 (자유 배치 — 상시 허용) */
   onMove?: (slotId: string, x: number, y: number) => void;
+  /** 드래그를 다른 자리 위에서 놓으면 두 슬롯 교환/이동 */
+  onSwap?: (fromSlotId: string, toSlotId: string) => void;
   /** 검색 패널에서 선수를 드롭했을 때 */
   onDropPlayer?: (slotId: string, payload: DropPayload) => void;
 }) {
@@ -50,9 +53,28 @@ export default function SquadPitch({
     moved: boolean;
     startX: number;
     startY: number;
+    lastX: number;
+    lastY: number;
   } | null>(null);
 
   const interactive = Boolean(onSlotClick || onMove || onDropPlayer);
+
+  // 드롭 지점에서 가장 가까운 '다른' 슬롯 찾기 (스왑 대상). 임계 밖이면 null → 자유 배치 유지.
+  const SNAP_THRESHOLD = 13; // % 거리
+  function nearestOtherSlot(fromId: string, pt: Coord): Slot | null {
+    let best: Slot | null = null;
+    let bestDist = Infinity;
+    for (const s of formation.slots) {
+      if (s.id === fromId) continue;
+      const p = posOf(s);
+      const d = Math.hypot(p.x - pt.x, p.y - pt.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = s;
+      }
+    }
+    return best && bestDist <= SNAP_THRESHOLD ? best : null;
+  }
 
   function posOf(slot: Slot): Coord {
     return coords?.[slot.id] ?? { x: slot.x, y: slot.y };
@@ -74,12 +96,16 @@ export default function SquadPitch({
       moved: false,
       startX: e.clientX,
       startY: e.clientY,
+      lastX: e.clientX,
+      lastY: e.clientY,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
   function onPointerMove(e: React.PointerEvent) {
     const d = dragRef.current;
     if (!d || !onMove) return;
+    d.lastX = e.clientX;
+    d.lastY = e.clientY;
     if (!d.moved) {
       const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
       if (dist < DRAG_THRESHOLD) return; // 아직 탭 범위
@@ -91,8 +117,18 @@ export default function SquadPitch({
   function onPointerUp(slot: Slot) {
     const d = dragRef.current;
     dragRef.current = null;
-    // 임계값 미만 이동 = 탭(선수 선택)
-    if (!d || !d.moved) onSlotClick?.(slot);
+    if (!d) return;
+    // 임계값 미만 이동 = 탭(선수 선택/검색)
+    if (!d.moved) {
+      onSlotClick?.(slot);
+      return;
+    }
+    // 드래그 종료: 다른 자리 위에 놓았고 그 자리를 드래그한 선수가 채우고 있으면 교환/이동
+    if (onSwap && filled[d.id]) {
+      const target = nearestOtherSlot(d.id, clientToPct(d.lastX, d.lastY));
+      if (target) onSwap(d.id, target.id);
+    }
+    // 대상이 없으면 onMove로 이미 반영된 자유 배치 좌표를 유지
   }
 
   function handleDrop(e: React.DragEvent, slotId: string) {
