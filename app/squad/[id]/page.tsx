@@ -5,6 +5,7 @@ import { getFormation } from "@/lib/squad/formations";
 import { getSquad } from "@/lib/squad/store";
 import { getSeasonNames } from "@/lib/nexon/players";
 import SquadPitch, { type Coord, type FilledSlot } from "../SquadPitch";
+import SeasonMix from "../SeasonMix";
 
 export async function generateMetadata({
   params,
@@ -70,6 +71,11 @@ export default async function SquadViewPage({
       <div className="mt-4">
         <SquadPitch formationId={squad.formation} filled={filled} coords={coords} />
       </div>
+
+      {/* 이 스쿼드에 적용되는 팀컬러(시즌 구성) */}
+      <SeasonMix
+        seasons={squad.slots.map((s) => s.season ?? seasons.get(s.spid))}
+      />
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <ShareCardButton
