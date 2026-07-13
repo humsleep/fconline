@@ -10,9 +10,34 @@ import { NexonApiError, isNotConfigured } from "@/lib/nexon/client";
 import { getMatchDetailCached } from "@/lib/nexon/cached";
 import { getMatchTypeName, getPositionLabel } from "@/lib/nexon/meta";
 import { getPlayerNames } from "@/lib/nexon/players";
+import { SITE_URL } from "@/lib/site";
 import type { MatchInfoEntry } from "@/lib/nexon/types";
 
-export const metadata: Metadata = { title: "매치 리포트" };
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ matchId: string }>;
+  searchParams: Promise<{ me?: string }>;
+}): Promise<Metadata> {
+  const [{ matchId }, { me }] = await Promise.all([params, searchParams]);
+  const title = "매치 리포트";
+  const description = "FC온라인 경기 슛맵 · 판정 카드";
+  // 넥슨 추가 호출 없이 카드 라우트 URL만 구성(카드 렌더는 캐시된 match-detail 사용)
+  const image = `${SITE_URL}/api/card/match/${matchId}${
+    me ? `?me=${encodeURIComponent(me)}` : ""
+  }`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: image, width: 1200, height: 630 }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
+  };
+}
 
 export default async function MatchPage({
   params,

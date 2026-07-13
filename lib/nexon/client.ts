@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { isNexonPaused } from './pause';
+
 const BASE = 'https://open.api.nexon.com';
 
 /** 넥슨 오픈API 에러. code는 OPENAPI00003 같은 공통 에러 코드 또는 NOT_CONFIGURED. */
@@ -33,6 +35,16 @@ export function isMaintenance(err: unknown): boolean {
 /** 넥슨 호출 한도 초과(429) — 재시도 유도 대신 "잠시 후" 안내가 맞는 상태 */
 export function isRateLimited(err: unknown): boolean {
   return err instanceof NexonApiError && err.status === 429;
+}
+
+/** 넥슨 응답 지연(8초 초과) — 재시도하면 대개 정상 */
+export function isTimeout(err: unknown): boolean {
+  return err instanceof NexonApiError && err.code === 'TIMEOUT';
+}
+
+/** 운영자 수동 kill-switch로 넥슨 팬아웃을 정지시킨 상태 */
+export function isPaused(err: unknown): boolean {
+  return err instanceof NexonApiError && err.code === 'PAUSED';
 }
 
 /** 캐시 정책: 초 단위 revalidate 또는 불변 데이터(match-detail)용 'immutable' */
@@ -96,11 +108,18 @@ export function nexonFetch<T>(
     return res.json() as Promise<T>;
   };
 
-  // 앞선 요청의 성공/실패와 무관하게 순차 실행
-  const result = queue.then(run, run);
-  queue = result.then(
-    () => undefined,
-    () => undefined
-  );
-  return result;
+  // kill-switch는 순차 큐 '진입 전'에 검사한다(임계경로에 Supabase 왕복을 넣지 않음).
+  // 정지 상태면 넥슨을 아예 호출하지 않고 PAUSED로 단락.
+  return (async () => {
+    if (await isNexonPaused()) {
+      throw new NexonApiError('넥슨 조회가 일시 중단되었습니다', 503, 'PAUSED');
+    }
+    // 앞선 요청의 성공/실패와 무관하게 순차 실행
+    const result = queue.then(run, run);
+    queue = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
+  })();
 }

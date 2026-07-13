@@ -4,6 +4,7 @@ import ShareCardButton from "@/app/components/ShareCardButton";
 import { getFormation } from "@/lib/squad/formations";
 import { getSquad } from "@/lib/squad/store";
 import { getSeasonNames } from "@/lib/nexon/players";
+import { SITE_URL } from "@/lib/site";
 import SquadPitch, { type Coord, type FilledSlot } from "../SquadPitch";
 import SeasonMix from "../SeasonMix";
 
@@ -14,11 +15,21 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const squad = await getSquad(id).catch(() => null);
+  if (!squad) return { title: "스쿼드", description: "스쿼드 공유" };
+
+  const title = squad.name;
+  const description = `${squad.name} — ${getFormation(squad.formation).name} 스쿼드`;
+  // 카톡·디시·에펨 링크 붙여넣기 시 카드 썸네일이 뜨도록 절대 URL OG 이미지 연결
+  const image = `${SITE_URL}/api/card/squad/${id}`;
   return {
-    title: squad ? `${squad.name}` : "스쿼드",
-    description: squad
-      ? `${squad.name} — ${getFormation(squad.formation).name} 스쿼드`
-      : "스쿼드 공유",
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: image, width: 1200, height: 630 }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }
 

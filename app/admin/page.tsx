@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getAdmin } from '@/lib/supabase/admin';
 import { isAdminEmail } from '@/lib/admin-auth';
 import { formatRelativeKr } from '@/lib/format';
-import { ModerateButtons, NoticeForm, SeedForm } from './AdminActions';
+import { ModerateButtons, NoticeForm, SeedForm, PauseToggle } from './AdminActions';
 
 export const metadata: Metadata = {
   title: '운영',
@@ -47,6 +47,19 @@ export default async function AdminPage() {
 
   const db = getAdmin();
   if (!db) notFound();
+
+  // 넥슨 kill-switch 현재 상태
+  let nexonPaused = false;
+  try {
+    const { data: flag } = await db
+      .from('service_flags')
+      .select('enabled')
+      .eq('key', 'nexon_paused')
+      .maybeSingle();
+    nexonPaused = Boolean(flag?.enabled);
+  } catch {
+    // 플래그 테이블 미생성 등 — 정상(false)으로
+  }
 
   // 신고 집계 (대상별 그룹)
   let groups: TargetGroup[] = [];
@@ -133,8 +146,18 @@ export default async function AdminPage() {
       <h1 className="text-2xl font-bold">운영 콘솔</h1>
       <p className="mt-1 text-sm text-muted">{user.email} (관리자)</p>
 
-      {/* 공지 관리 */}
+      {/* 넥슨 kill-switch — 한도 소진/장애 시 즉시 정지 */}
       <section className="panel mt-6 p-5">
+        <h2 className="scoreboard text-sm font-bold tracking-[0.2em] text-muted">
+          넥슨 조회 스위치
+        </h2>
+        <div className="mt-3">
+          <PauseToggle paused={nexonPaused} />
+        </div>
+      </section>
+
+      {/* 공지 관리 */}
+      <section className="panel mt-4 p-5">
         <h2 className="scoreboard text-sm font-bold tracking-[0.2em] text-muted">
           공지 배너
         </h2>
