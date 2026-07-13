@@ -13,6 +13,8 @@ import SquadSection from "./SquadSection";
 import PlaystyleSection from "./PlaystyleSection";
 import ShareCardButton from "@/app/components/ShareCardButton";
 
+export const maxDuration = 60; // 콜드 조회: 매치 상세 최대 30건 순차 호출 대비
+
 export async function generateMetadata({
   params,
 }: {
@@ -200,9 +202,18 @@ async function MatchSection({
 
   const rec = aggregate(summaries);
   const recent10 = summaries.slice(0, 10);
+  // 부분 실패 투명화 — 일부 경기를 못 불러왔으면 "조용히 틀린 숫자" 대신 기준을 명시
+  const missing = matchIds.length - details.length;
 
   return (
     <>
+      {missing > 0 && (
+        <p className="mt-4 rounded-lg bg-gold/10 px-3 py-2 text-sm text-muted">
+          ⚠️ 최근 {matchIds.length}경기 중 {details.length}경기만 불러와{" "}
+          <b className="text-ink">{details.length}경기 기준</b>으로 계산했어요.
+          잠시 후 새로고침하면 나머지도 반영됩니다.
+        </p>
+      )}
       {/* 폼 전광판 */}
       <section className="panel mt-4 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-8 gap-y-4">

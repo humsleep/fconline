@@ -169,6 +169,10 @@ export async function renderCard(data: CardData): Promise<ImageResponse> {
     {
       width: W,
       height: H,
+      headers: {
+        // 공유 직후 반복 조회(크롤러·재공유)를 엣지 캐시로 흡수
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      },
       fonts: font
         ? [{ name: "NotoKR", data: font, weight: 700, style: "normal" }]
         : undefined,

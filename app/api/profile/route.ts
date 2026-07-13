@@ -41,6 +41,15 @@ export async function POST(request: Request) {
     .from('profiles')
     .upsert({ id: user.id, nickname }, { onConflict: 'id' });
 
+  // 약관 동의 시각 서버 기록 (최초 1회만 — 이미 있으면 유지)
+  if (!error) {
+    await supabase
+      .from('profiles')
+      .update({ consented_at: new Date().toISOString() })
+      .eq('id', user.id)
+      .is('consented_at', null);
+  }
+
   if (error) {
     // 유니크 위반(닉네임 중복)
     if (error.code === '23505')

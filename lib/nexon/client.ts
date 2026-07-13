@@ -30,6 +30,11 @@ export function isMaintenance(err: unknown): boolean {
   );
 }
 
+/** 넥슨 호출 한도 초과(429) — 재시도 유도 대신 "잠시 후" 안내가 맞는 상태 */
+export function isRateLimited(err: unknown): boolean {
+  return err instanceof NexonApiError && err.status === 429;
+}
+
 /** 캐시 정책: 초 단위 revalidate 또는 불변 데이터(match-detail)용 'immutable' */
 type CachePolicy = number | 'immutable';
 
@@ -56,12 +61,22 @@ export function nexonFetch<T>(
       if (v !== undefined) url.searchParams.set(k, String(v));
     }
 
-    const res = await fetch(url, {
-      headers: { 'x-nxopen-api-key': key },
-      ...(cachePolicy === 'immutable'
-        ? { cache: 'force-cache' as const }
-        : { next: { revalidate: cachePolicy } }),
-    });
+    // 행 걸린 소켓 하나가 인스턴스 큐 전체를 동결시키지 않도록 per-request 타임아웃
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: { 'x-nxopen-api-key': key },
+        signal: AbortSignal.timeout(8000),
+        ...(cachePolicy === 'immutable'
+          ? { cache: 'force-cache' as const }
+          : { next: { revalidate: cachePolicy } }),
+      });
+    } catch (err) {
+      if ((err as Error)?.name === 'TimeoutError' || (err as Error)?.name === 'AbortError') {
+        throw new NexonApiError('넥슨 API 응답 지연(8초 초과)', 504, 'TIMEOUT');
+      }
+      throw err;
+    }
 
     if (!res.ok) {
       let code = `HTTP${res.status}`;

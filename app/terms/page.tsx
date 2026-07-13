@@ -41,6 +41,10 @@ export default function TermsPage() {
           <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
             <li>커뮤니티 기능은 Google 계정 로그인 후 이용할 수 있습니다.</li>
             <li>
+              <b className="text-ink">만 14세 미만</b>은 회원 가입(로그인)할 수 없습니다.
+              전적 검색 등 로그인이 필요 없는 기능은 이용할 수 있습니다.
+            </li>
+            <li>
               구단주명 &quot;연동&quot;은 해당 구단주명이 게임에 존재함을 확인하는
               기능이며, 계정 소유를 증명하지 않습니다.
             </li>
