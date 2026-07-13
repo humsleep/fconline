@@ -13,6 +13,7 @@ import { rememberMySquad } from "@/app/components/MySquadPicker";
 import SeasonBadge from "@/app/components/SeasonBadge";
 import SquadPitch, { type Coord, type FilledSlot } from "./SquadPitch";
 import SeasonMix from "./SeasonMix";
+import RankerStatPanel from "./RankerStatPanel";
 
 interface SeasonVariant {
   spid: number;
@@ -172,7 +173,9 @@ export default function SquadBuilder() {
     const next = activeSlotId === slot.id ? null : slot.id;
     setActiveSlotId(next);
     if (!next) return;
-    // 포지션 선택 즉시 검색 가능 — 입력 포커스(+기존 검색어 전체선택), 모바일은 패널로 스크롤
+    // 채워진 자리 = 선수 확인(랭커 스탯 패널) — 검색으로 이동하지 않음
+    if (filled[slot.id]) return;
+    // 빈 자리 = 즉시 검색 — 입력 포커스(+기존 검색어 전체선택), 모바일은 패널로 스크롤
     if (isStacked()) {
       searchPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -296,7 +299,7 @@ export default function SquadBuilder() {
     <div className="mx-auto w-full max-w-5xl px-4 pb-24 pt-8 md:pb-16">
       <h1 className="text-2xl font-bold sm:text-3xl">스쿼드 빌더</h1>
       <p className="mt-1 text-sm text-muted">
-        자리를 탭하면 바로 검색, 선수를 끌면 위치까지 자유롭게. 리그·팀을 고르면 자동으로 채워집니다.
+        빈 자리를 탭하면 바로 검색, 배치한 선수를 탭하면 랭커 실전 스탯. 선수를 끌면 위치까지 자유롭게.
       </p>
 
       {/* 빠른 시작: 프리셋 + 내 스쿼드 불러오기 */}
@@ -420,23 +423,32 @@ export default function SquadBuilder() {
           )}
 
           {activeSlotId && filled[activeSlotId] && (
-            <div className="mx-auto mt-2 flex max-w-md items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
-              <span className="text-muted">
-                선택된 자리:{" "}
-                <b className="text-ink">
-                  {formation.slots.find((s) => s.id === activeSlotId)?.pos}
-                </b>
-              </span>
-              <button
-                onClick={() => {
-                  clearSlot(activeSlotId);
-                  setActiveSlotId(null);
-                }}
-                className="font-semibold text-lose"
-              >
-                비우기
-              </button>
-            </div>
+            <>
+              <div className="mx-auto mt-2 flex max-w-md items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
+                <span className="text-muted">
+                  선택된 자리:{" "}
+                  <b className="text-ink">
+                    {formation.slots.find((s) => s.id === activeSlotId)?.pos}
+                  </b>
+                </span>
+                <button
+                  onClick={() => {
+                    clearSlot(activeSlotId);
+                    setActiveSlotId(null);
+                  }}
+                  className="font-semibold text-lose"
+                >
+                  비우기
+                </button>
+              </div>
+              <RankerStatPanel
+                spid={filled[activeSlotId].spid}
+                pos={
+                  formation.slots.find((s) => s.id === activeSlotId)?.pos ?? "CM"
+                }
+                name={filled[activeSlotId].name}
+              />
+            </>
           )}
 
           <div className="mx-auto mt-3 flex max-w-md items-center gap-2">
