@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --require ./scripts/qa-shim.cjs --import tsx scripts/qa-unit-tests.ts",
+    "test:smoke": "bash scripts/qa-smoke.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -26,6 +28,7 @@
     "eslint-config-next": "16.2.10",
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.1",
     "typescript": "^5"
   }
 }
