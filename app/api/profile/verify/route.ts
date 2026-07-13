@@ -5,6 +5,7 @@ import {
   isUserNotFound,
   isNotConfigured,
   isMaintenance,
+  isPaused,
 } from '@/lib/nexon/client';
 
 /** FC Online 구단주명 연동 — 닉네임을 ouid로 해석해 프로필에 저장(존재 검증 수준). */
@@ -58,6 +59,11 @@ export async function POST(request: Request) {
     if (isMaintenance(err))
       return NextResponse.json(
         { error: '넥슨 API 점검 중입니다. 잠시 후 다시 시도하세요.' },
+        { status: 503 }
+      );
+    if (isPaused(err))
+      return NextResponse.json(
+        { error: '넥슨 조회를 잠시 멈췄어요. 곧 다시 열립니다.' },
         { status: 503 }
       );
     return NextResponse.json({ error: '연동에 실패했습니다.' }, { status: 502 });

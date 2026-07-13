@@ -134,6 +134,63 @@ export function SeedForm() {
   );
 }
 
+export function PauseToggle({ paused }: { paused: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [state, setState] = useState(paused);
+
+  const toggle = async () => {
+    if (busy) return;
+    const next = !state;
+    if (next && !window.confirm('넥슨 전적/랭커/라이브 조회를 모두 일시 중단할까요?')) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/service-flag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'nexon_paused', enabled: next }),
+      });
+      if (res.ok) {
+        setState(next);
+        router.refresh();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">
+          넥슨 조회 {state ? '중단됨' : '정상'}
+          <span
+            className={`ml-2 inline-block h-2.5 w-2.5 rounded-full ${
+              state ? 'bg-lose' : 'bg-win'
+            }`}
+          />
+        </p>
+        <p className="mt-0.5 text-[13px] text-muted">
+          {state
+            ? '전적·랭커·라이브 조회가 막혀 있어요. 사용자에겐 "잠시 멈췄어요" 안내가 표시됩니다.'
+            : '넥슨 한도 소진·장애 시 이 스위치로 팬아웃을 즉시 멈출 수 있어요(최대 30초 내 전 서버 반영).'}
+        </p>
+      </div>
+      <button
+        onClick={toggle}
+        disabled={busy}
+        className={`flex-none rounded-lg px-4 py-2 text-sm font-bold transition-colors disabled:opacity-50 ${
+          state
+            ? 'bg-win/15 text-win hover:bg-win/25'
+            : 'bg-lose/15 text-lose hover:bg-lose/25'
+        }`}
+      >
+        {state ? '다시 열기' : '조회 중단'}
+      </button>
+    </div>
+  );
+}
+
 export function NoticeForm({ current }: { current: string | null }) {
   const router = useRouter();
   const [text, setText] = useState('');

@@ -5,12 +5,15 @@ import {
   isUserNotFound,
   isNotConfigured,
   isMaintenance,
+  isPaused,
 } from "@/lib/nexon/client";
 import { aggregatePlayers } from "@/lib/nexon/player-stats";
 import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
 import { baseLabelOfCode } from "@/lib/squad/assign";
+import { limitNexonFanout } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // 콜드 조회: 매치 상세 최대 30건 순차 호출 대비
 
 const MATCH_TYPE = 50; // 공식경기 기준
 const MATCH_COUNT = 30;
@@ -18,6 +21,13 @@ const MIN_GAMES = 2;
 
 /** 구단주명 → 최근 경기에서 자주 쓴 라인업(최대 11명)을 포지션과 함께 반환. */
 export async function GET(req: Request) {
+  const rl = limitNexonFanout(req.headers, "from-user");
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "잠시 후 다시 시도해 주세요. 요청이 너무 많아요." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+
   const nickname = (new URL(req.url).searchParams.get("nickname") ?? "").trim();
   if (!nickname)
     return NextResponse.json({ error: "구단주명을 입력하세요." }, { status: 400 });
@@ -61,6 +71,11 @@ export async function GET(req: Request) {
     if (isMaintenance(err))
       return NextResponse.json(
         { error: "넥슨 API 점검 중입니다." },
+        { status: 503 }
+      );
+    if (isPaused(err))
+      return NextResponse.json(
+        { error: "전적 조회를 잠시 멈췄어요. 곧 다시 열립니다." },
         { status: 503 }
       );
     return NextResponse.json(

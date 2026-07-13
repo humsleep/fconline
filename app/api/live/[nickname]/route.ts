@@ -4,10 +4,12 @@ import {
   NexonApiError,
   isMaintenance,
   isNotConfigured,
+  isPaused,
   isUserNotFound,
 } from '@/lib/nexon/client';
 import { summarizeMatch, type MatchSummary } from '@/lib/nexon/summary';
 import { MATCH_TABS } from '@/lib/nexon/meta';
+import { limitNexonFanout } from '@/lib/security/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +20,13 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ nickname: string }> }
 ) {
+  const rl = limitNexonFanout(req.headers, 'live');
+  if (!rl.ok)
+    return Response.json(
+      { ok: false, reason: 'rate_limited' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    );
+
   const { nickname } = await params;
   const typeParam = Number(new URL(req.url).searchParams.get('type'));
   const matchType =
@@ -61,6 +70,9 @@ export async function GET(
     }
     if (isMaintenance(err)) {
       return Response.json({ ok: false, reason: 'maintenance' }, { status: 503 });
+    }
+    if (isPaused(err)) {
+      return Response.json({ ok: false, reason: 'paused' }, { status: 503 });
     }
     return Response.json({ ok: false, reason: 'error' }, { status: 500 });
   }
