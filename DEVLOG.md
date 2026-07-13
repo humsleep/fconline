@@ -1,5 +1,16 @@
 # DEVLOG
 
+## 2026-07-13 — 라이브 오픈 하드닝 (회의 5라운드 결과 구현)
+
+- **회의 5R**: R1 독립 5렌즈(UX 74/신뢰성 71/보안 67/리텐션 61/성능 58, 평균 66) → R2 근거검증·실용성·사각지대 교차검증 → R3 작업 확정 → R4 구현 레드팀 → R5 조건부 GO. 핵심 수렴: 넥슨 팬아웃(콜드 34호출)에 rate limit 부재 = 키 정지 시 전 서비스 즉사(비대칭 리스크). 진짜 성장변수 = 시딩 실행 + 공유 링크 썸네일
+- **넥슨 kill-switch(manual)**: `service_flags.nexon_paused` → `nexonFetch` 큐 진입 전 30초 캐시로 검사, **fail-open**(Supabase 순단이 넥슨을 안 막음). `/admin` "넥슨 조회 스위치" 토글(`/api/admin/service-flag`, invalidate). PAUSED 에러를 전적/from-user/live/verify에 정직 안내. 자동 429 백오프는 크론 자가치유 역회전 위험으로 제외(R4)
+- **비로그인 IP rate limit**: `lib/security/rate-limit.ts` in-memory 소프트(40/분/IP, CGNAT 감안), `x-real-ip` 신뢰헤더. `/api/squad/from-user`·`/api/live`에 429+Retry-After. `/user`는 서버컴포넌트라 kill-switch+ErrorState로 커버
+- **신뢰성 자가치유**: 랭커 tombstone은 성공 청크만 기록(순단 1회 하루열화 방지), 선수 인덱스는 실패 시 캐시 안 함+재시도(단 빈 인덱스는 graceful 반환해 정적 프리렌더 안 깨짐), `getUserBasic` try/catch(429/타임아웃/일시정지 분기, 재시도 연타 억제), MatchSection listOk(장애≠경기없음), middleware 이미지/카드 프록시 auth 제외
+- **커뮤니티 rate limit**: 0013 — INSERT WITH CHECK not-exists 시간창(글 30초·댓글 10초) + (author_id, created_at desc) 인덱스, API 사전체크 이중방어. 신규유저 첫 글 통과
+- **성장**: 스쿼드/매치 OG 이미지(기존 카드 라우트+절대 SITE_URL), 동적 sitemap(공개 스쿼드/글, hidden=false 명시필터, ISR)
+- 🔴 **배포 후**: 0013 실행 + `NEXT_PUBLIC_SITE_URL`(필수 승격, 미설정 시 프리뷰 도메인 썸네일) + kill-switch 동선 숙지. DEFER: 자동백오프·분산 rate limit·match_cache TTL·개인기록축적·사칭 정교대응
+- PR #16 squash merge, 타입·빌드·로컬 스모크 통과
+
 ## 2026-07-13 — 빌더 선수 랭커 실전 스탯 패널 (능력치 대체)
 
 - **판정**: 카드 오버롤·상세 능력치·고유 특성은 넥슨 공식 오픈 API 미제공(정적 메타 5종뿐 — spid/seasonid/spposition/matchtype/division). 팬사이트(인벤·fifaaddict 등)는 자체 수집 DB라 공식 경로 없음 → 공식 데이터 대체재로 **그 카드를 쓴 랭커들의 경기당 평균 실전 스탯** 표시
