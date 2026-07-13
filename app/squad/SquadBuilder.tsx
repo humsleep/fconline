@@ -595,7 +595,7 @@ export default function SquadBuilder() {
                             onClick={() =>
                               setExpanded((e) => (e === r.pid ? null : r.pid))
                             }
-                            className="flex-none rounded px-2 py-1 text-[13px] font-semibold text-muted transition-colors hover:text-accent"
+                            className="flex min-h-11 flex-none items-center rounded px-2.5 text-[13px] font-semibold text-muted transition-colors hover:text-accent"
                             aria-label="시즌 선택"
                           >
                             시즌 {r.seasons.length}
@@ -620,7 +620,7 @@ export default function SquadBuilder() {
                                 )
                               }
                               onClick={() => place(null, s.spid, r.name, s.season)}
-                              className={`scoreboard flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink ${
+                              className={`scoreboard flex min-h-11 items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-1.5 text-[13px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink ${
                                 custom ? "" : "cursor-grab active:cursor-grabbing"
                               }`}
                             >

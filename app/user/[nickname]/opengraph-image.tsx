@@ -3,8 +3,10 @@ import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/ne
 import { getMatchDetailCached } from "@/lib/nexon/cached";
 import { getDivisionName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
+import { SITE_HOST } from "@/lib/site";
 
 export const runtime = "nodejs";
+export const maxDuration = 60; // 콜드 조회(넥슨 순차 호출) 대비
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "FC Scope 전적 카드";
@@ -149,12 +151,16 @@ export default async function OgImage({
           ) : (
             <span style={{ fontSize: 28, color: "#8fa0b5" }}>FC온라인 전적 · 슛맵 리포트</span>
           )}
-          <span style={{ fontSize: 22, color: "#8fa0b5" }}>fconline-beryl.vercel.app</span>
+          <span style={{ fontSize: 22, color: "#8fa0b5" }}>{SITE_HOST}</span>
         </div>
       </div>
     ),
     {
       ...size,
+      headers: {
+        // 카톡/디스코드 크롤러 반복 조회 → 엣지 캐시로 흡수 (넥슨 호출 증폭 방지)
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      },
       fonts: font
         ? [{ name: "NotoKR", data: font, weight: 700 as const, style: "normal" as const }]
         : undefined,

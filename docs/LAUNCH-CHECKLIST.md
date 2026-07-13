@@ -83,3 +83,26 @@
 - 플레이스타일 아키타입 임계치(ANCHOR) 보정
 - 프리셋 한글 선수명 ↔ spid.json 매칭률
 - ranker-stats 응답의 matchCount 스케일 (픽 랭킹 표기)
+
+## 6) 운영 런북 — 자주 쓰는 SQL (Supabase SQL Editor)
+
+**구단주명 사칭 연동 해제** (신고 접수 시):
+```sql
+update profiles
+set verified_nickname = null, verified_ouid = null, verified_at = null
+where verified_nickname = '해당구단주명';
+```
+
+**특정 사용자의 모든 글/댓글 숨김** (긴급 대응):
+```sql
+update community_posts set hidden = true where author_id = '<사용자 uuid>';
+update community_comments set hidden = true where author_id = '<사용자 uuid>';
+```
+
+**신고 현황 요약**:
+```sql
+select target_type, target_id, count(*) as reports
+from reports group by 1, 2 order by reports desc limit 20;
+```
+
+⚠️ 마이그레이션 **0012_launch_hardening.sql** 실행 필요 (hidden 보호 + 숨김 읽기 차단 + 동의 기록 컬럼)

@@ -6,6 +6,7 @@ import MobileTabBar from "./components/MobileTabBar";
 import ThemeToggle from "./components/ThemeToggle";
 import AuthButton from "./components/AuthButton";
 import NoticeBanner from "./components/NoticeBanner";
+import { SITE_URL } from "@/lib/site";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
@@ -22,7 +23,7 @@ const plex = IBM_Plex_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://fconline-beryl.vercel.app"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "FC Scope — FC온라인 전적·스쿼드 진단 랩",
     template: "%s · FC Scope",

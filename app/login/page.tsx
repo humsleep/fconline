@@ -97,7 +97,7 @@ function LoginContent() {
               <Link href="/privacy" target="_blank" className="text-accent underline underline-offset-2">
                 개인정보처리방침
               </Link>
-              에 동의합니다.
+              에 동의하며, 만 14세 이상입니다.
             </span>
           </label>
           <button
