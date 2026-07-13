@@ -39,6 +39,8 @@ async function loadIndex(): Promise<PlayerIndex> {
   if (index) return index;
   if (loading) return loading;
 
+  // 실패 시 index를 캐시하지 않고, loading을 반드시 해제해 다음 호출이 재시도하도록 한다.
+  // (동시 요청은 이 단일 loading 프로미스를 공유 → 웨이브당 spid.json 1회만 fetch)
   loading = (async () => {
     const nameById = new Map<number, string>();
     const seasonById = new Map<number, string>();
@@ -68,10 +70,14 @@ async function loadIndex(): Promise<PlayerIndex> {
 
     // 실선수(pid)별 보유 시즌 spid 목록
     const spidsByPid = new Map<number, number[]>();
+    // spid.json은 2MB+ 라 Next 데이터 캐시 대신 revalidate로 인스턴스 간 공유·자동 재시도.
+    // 실패(비200/네트워크) 시 ok=false → 빈 인덱스를 반환하되 '캐시하지 않아' 다음 호출이 재시도.
+    // (throw하면 정적 프리렌더가 넥슨 차단 환경에서 빌드 실패하므로 graceful하게 처리)
+    let ok = false;
     try {
       const res = await fetch(
         'https://open.api.nexon.com/static/fconline/meta/spid.json',
-        { cache: 'no-store' }
+        { next: { revalidate: 3600 } }
       );
       if (res.ok) {
         const list = (await res.json()) as { id: number; name: string }[];
@@ -83,9 +89,10 @@ async function loadIndex(): Promise<PlayerIndex> {
           if (arr) arr.push(p.id);
           else spidsByPid.set(pid, [p.id]);
         }
+        ok = true;
       }
     } catch {
-      // spid 로드 실패
+      // 네트워크 실패 → ok=false 유지
     }
 
     const reps: PlayerHit[] = [];
@@ -105,12 +112,16 @@ async function loadIndex(): Promise<PlayerIndex> {
     }
 
     const built: PlayerIndex = { nameById, seasonById, reps };
-    index = built;
-    loading = null;
+    if (ok) index = built; // 성공(비지 않은 인덱스)일 때만 영구 캐시 → 실패는 다음에 재시도
     return built;
   })();
 
-  return loading;
+  // 성공/실패와 무관하게 loading 슬롯을 비워, 실패 시 rejected 프로미스가 고착되지 않게 한다.
+  try {
+    return await loading;
+  } finally {
+    loading = null;
+  }
 }
 
 export async function getPlayerName(spId: number): Promise<string> {

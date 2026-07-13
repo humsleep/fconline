@@ -72,13 +72,18 @@ export async function getRankerStatsCached(
   if (misses.length === 0) return out;
 
   const fresh: RankerStat[] = [];
+  // 성공적으로 응답받은 청크의 조합만 모음 — 이 안에서 응답에 없는 조합만 "진짜 데이터 없음"이다.
+  // 넥슨 장애/429로 throw한 청크는 여기 안 들어가므로 tombstone으로 오염되지 않는다.
+  const succeeded: { id: number; po: number }[] = [];
   for (let i = 0; i < misses.length; i += 20) {
     const chunk = misses.slice(i, i + 20);
     try {
       const stats = await getRankerStats(matchtype, chunk);
       fresh.push(...stats);
+      succeeded.push(...chunk);
     } catch {
-      // 조합에 랭커 데이터가 없을 수 있음(신규 카드 등) → 건너뜀
+      // 청크 실패(신규 카드로 데이터 없음일 수도, 넥슨 장애일 수도) → tombstone 없이 건너뜀.
+      // 다음 요청/크론이 재시도한다.
     }
   }
 
@@ -90,8 +95,9 @@ export async function getRankerStatsCached(
   }
 
   if (db) {
-    // 응답에 있는 조합은 실데이터, 요청했지만 없는 조합은 tombstone으로 저장
+    // 응답에 있는 조합은 실데이터로, 성공한 청크에서 응답에 없던 조합만 tombstone으로 저장
     // → 랭커 데이터 없는 선수가 매 요청마다 라이브 호출되는 것을 차단.
+    // (실패한 청크는 제외 — 넥슨 순단 1회가 하루 종일 "데이터 없음"으로 굳는 것을 방지)
     const rows = [
       ...fresh.map((stat) => ({
         match_type: matchtype,
@@ -100,7 +106,7 @@ export async function getRankerStatsCached(
         snapshot_date: today,
         payload: stat,
       })),
-      ...misses
+      ...succeeded
         .filter((m) => !foundKeys.has(rankerKey(m.id, m.po)))
         .map((m) => ({
           match_type: matchtype,

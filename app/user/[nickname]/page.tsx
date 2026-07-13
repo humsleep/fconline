@@ -5,7 +5,7 @@ import SearchForm from "@/app/components/SearchForm";
 import { DEMO_NICKNAME } from "@/lib/demo";
 import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
-import { NexonApiError, isMaintenance, isNotConfigured, isUserNotFound } from "@/lib/nexon/client";
+import { NexonApiError, isMaintenance, isNotConfigured, isPaused, isRateLimited, isTimeout, isUserNotFound } from "@/lib/nexon/client";
 import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
 import { formatAchievementDate, formatMatchDate } from "@/lib/format";
@@ -46,13 +46,16 @@ export default async function UserPage({
     view === "squad" ? "squad" : view === "style" ? "style" : "matches";
 
   let ouid: string;
+  let basic: Awaited<ReturnType<typeof getUserBasic>>;
   try {
     ouid = await getOuid(nickname);
+    // getUserBasic이 첫 '실제' 넥슨 호출인 경우가 많다(getOuid는 데이터 캐시 히트 가능).
+    // 여기서 보호하지 않으면 429/점검/타임아웃이 맞춤 ErrorState 대신 generic error로 추락.
+    basic = await getUserBasic(ouid);
   } catch (err) {
     return <ErrorState err={err} nickname={nickname} />;
   }
 
-  const basic = await getUserBasic(ouid);
   const divisions = await getMaxDivisions(ouid).catch(() => []);
   const divisionCards = await Promise.all(
     divisions.slice(0, 3).map(async (d) => ({
@@ -179,10 +182,12 @@ async function MatchSection({
   matchType: number;
 }) {
   let matchIds: string[] = [];
+  let listOk = true; // 목록 조회 성공 여부 — 실패를 '경기 없음'으로 위장하지 않기 위해
   try {
     matchIds = await getUserMatches(ouid, matchType, MATCH_COUNT);
   } catch (err) {
     if (!(err instanceof NexonApiError)) throw err;
+    listOk = false;
   }
 
   const details = await getMatchDetailsBatch(matchIds);
@@ -195,7 +200,9 @@ async function MatchSection({
   if (summaries.length === 0) {
     return (
       <div className="panel mt-4 px-6 py-14 text-center text-sm text-muted">
-        최근 경기 기록이 없습니다.
+        {listOk
+          ? "최근 경기 기록이 없습니다."
+          : "넥슨 조회가 일시적으로 원활하지 않아 경기 목록을 불러오지 못했어요. 잠시 후 새로고침해 주세요."}
       </div>
     );
   }
@@ -410,6 +417,21 @@ function ErrorState({ err, nickname }: { err: unknown; nickname: string }) {
   } else if (isMaintenance(err)) {
     title = "게임 점검 중이에요";
     desc = "점검이 끝나면 다시 조회할 수 있어요.";
+  } else if (isPaused(err)) {
+    title = "전적 조회를 잠시 멈췄어요";
+    desc =
+      "넥슨 API 상황에 따라 운영자가 조회를 일시적으로 중단했어요. 곧 다시 열립니다.";
+    retry = false;
+  } else if (isRateLimited(err)) {
+    // 429: 재시도 연타가 상황을 악화시키므로 '다시 시도' 버튼을 숨긴다.
+    title = "지금 조회 요청이 많아요";
+    desc =
+      "넥슨 조회 한도로 잠시 제한되고 있어요. 1~2분 후에 다시 검색해 주세요. (새로고침 연타는 오히려 느려져요)";
+    retry = false;
+  } else if (isTimeout(err)) {
+    title = "응답이 조금 느려요";
+    desc =
+      "넥슨 서버 응답이 지연되고 있어요. 잠시 후 다시 시도하면 대부분 정상적으로 조회됩니다.";
   }
 
   return (
