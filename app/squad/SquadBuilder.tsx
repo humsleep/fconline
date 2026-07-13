@@ -12,6 +12,7 @@ import { assignByPosition } from "@/lib/squad/assign";
 import { rememberMySquad } from "@/app/components/MySquadPicker";
 import SeasonBadge from "@/app/components/SeasonBadge";
 import SquadPitch, { type Coord, type FilledSlot } from "./SquadPitch";
+import SeasonMix from "./SeasonMix";
 
 interface SeasonVariant {
   spid: number;
@@ -28,52 +29,11 @@ interface PlayerHit {
 const LEAGUES = presetsByLeague();
 const LINE_GROUPS = formationsByLine();
 
-/** 배치된 카드의 시즌 분포 — 시즌 팀컬러 구성 참고용 */
-function SeasonMix({
-  filled,
-  validSlotIds,
-}: {
-  filled: Record<string, FilledSlot>;
-  validSlotIds: Set<string>;
-}) {
-  const counts = new Map<string, number>();
-  for (const [id, v] of Object.entries(filled)) {
-    if (!validSlotIds.has(id)) continue;
-    const key = v.season?.trim() || "기타";
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
-  if (sorted.length === 0) return null;
-  return (
-    <div className="mx-auto mt-2 max-w-md rounded-lg bg-surface-2/70 px-3 py-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="scoreboard text-[12px] font-bold tracking-[0.15em] text-muted">
-          시즌 구성
-        </span>
-        {sorted.map(([season, n]) => (
-          <span
-            key={season}
-            className={`scoreboard rounded px-1.5 py-0.5 text-[12px] font-bold ${
-              n >= 3 ? "bg-gold/20 text-gold" : "bg-surface px-1.5 text-muted"
-            }`}
-          >
-            {season} ×{n}
-          </span>
-        ))}
-      </div>
-      <p className="mt-1 text-[12px] text-muted">
-        같은 시즌 카드를 모으면 게임 내 시즌 팀컬러에 유리해요.
-      </p>
-    </div>
-  );
-}
-
 export default function SquadBuilder() {
   const router = useRouter();
   const [formationId, setFormationId] = useState("433");
   const [filled, setFilled] = useState<Record<string, FilledSlot>>({});
   const [coords, setCoords] = useState<Record<string, Coord>>({});
-  const [custom, setCustom] = useState(false);
   const [name, setName] = useState("내 스쿼드");
   const [teamTag, setTeamTag] = useState<string | null>(null);
 
@@ -190,15 +150,11 @@ export default function SquadBuilder() {
     setFilled(n);
     setNotice("");
 
-    if (slotId) {
-      // 드롭 배치: 대상이 명시적이므로 활성 해제
-      setActiveSlotId(null);
-      return;
-    }
-    // 클릭 배치: 다음 빈 자리를 자동 선택해 연속 배치. 다 차면 피치로 복귀.
-    const nextEmpty = formation.slots.find((s) => !n[s.id])?.id ?? null;
-    setActiveSlotId(nextEmpty);
-    if (!nextEmpty && isStacked()) {
+    // 배치 완료 → 선택 해제 + 시즌 패널 접기. 다음 포지션은 사용자가 직접 탭해서 고른다.
+    setActiveSlotId(null);
+    setExpanded(null);
+    if (!slotId && isStacked()) {
+      // 클릭 배치(모바일): 피치로 복귀해 바로 다음 자리를 탭할 수 있게
       pitchWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
@@ -215,11 +171,13 @@ export default function SquadBuilder() {
     // 채워진 슬롯을 다시 누르면 활성 토글, 비우기는 배지로
     const next = activeSlotId === slot.id ? null : slot.id;
     setActiveSlotId(next);
-    // 모바일: 자리 탭 → 검색 패널로 스크롤 + 입력 포커스 (왕복 스크롤 제거)
-    if (next && isStacked()) {
+    if (!next) return;
+    // 포지션 선택 즉시 검색 가능 — 입력 포커스(+기존 검색어 전체선택), 모바일은 패널로 스크롤
+    if (isStacked()) {
       searchPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      searchInputRef.current?.focus({ preventScroll: true });
     }
+    searchInputRef.current?.focus({ preventScroll: true });
+    searchInputRef.current?.select();
   }
 
   async function loadPreset(id: string) {
@@ -338,8 +296,7 @@ export default function SquadBuilder() {
     <div className="mx-auto w-full max-w-5xl px-4 pb-24 pt-8 md:pb-16">
       <h1 className="text-2xl font-bold sm:text-3xl">스쿼드 빌더</h1>
       <p className="mt-1 text-sm text-muted">
-        포메이션을 고르고 선수를 배치하세요. PC는 오른쪽에서 선수를 끌어다 놓고,
-        모바일은 자리를 탭한 뒤 선수를 선택하면 됩니다.
+        자리를 탭하면 바로 검색, 선수를 끌면 위치까지 자유롭게. 리그·팀을 고르면 자동으로 채워집니다.
       </p>
 
       {/* 빠른 시작: 프리셋 + 내 스쿼드 불러오기 */}
@@ -404,14 +361,9 @@ export default function SquadBuilder() {
               {pickerOpen ? "▲" : "▼"}
             </span>
           </button>
-          <button
-            onClick={() => setCustom((c) => !c)}
-            className={`scoreboard ml-auto rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
-              custom ? "bg-gold/20 text-gold" : "bg-surface-2 text-muted hover:text-ink"
-            }`}
-          >
-            {custom ? "✓ 자유 배치" : "자유 배치"}
-          </button>
+          <span className="scoreboard ml-auto rounded-lg bg-surface-2 px-3 py-1.5 text-sm font-semibold text-muted">
+            선수 드래그 = 자유 배치
+          </span>
         </div>
         {pickerOpen && (
           <div className="panel mt-2 space-y-2.5 p-3">
@@ -441,12 +393,6 @@ export default function SquadBuilder() {
           </div>
         )}
       </div>
-      {custom && (
-        <p className="mt-2 text-sm text-muted">
-          선수를 <b className="text-ink">드래그</b>해 원하는 위치로 옮기세요. 탭하면
-          선수 선택.
-        </p>
-      )}
 
       {/* 본문: 피치 + 검색 패널 */}
       <div className="mt-4 grid gap-4 md:grid-cols-[1fr_320px]">
@@ -458,23 +404,18 @@ export default function SquadBuilder() {
             coords={coords}
             activeSlotId={activeSlotId}
             onSlotClick={onSlotClick}
-            onMove={
-              custom
-                ? (slotId, x, y) => setCoords((c) => ({ ...c, [slotId]: { x, y } }))
-                : undefined
+            onMove={(slotId, x, y) =>
+              setCoords((c) => ({ ...c, [slotId]: { x, y } }))
             }
-            onDropPlayer={
-              custom
-                ? undefined
-                : (slotId, p) => place(slotId, p.spid, p.name, p.season)
-            }
+            onDropPlayer={(slotId, p) => place(slotId, p.spid, p.name, p.season)}
           />
 
           {/* 시즌 팀컬러 구성 — 같은 시즌 카드가 몇 장인지 실시간 표시 */}
           {filledCount > 0 && (
             <SeasonMix
-              filled={filled}
-              validSlotIds={validSlotIds}
+              seasons={Object.entries(filled)
+                .filter(([id]) => validSlotIds.has(id))
+                .map(([, v]) => v.season)}
             />
           )}
 
@@ -555,7 +496,7 @@ export default function SquadBuilder() {
                   {results.map((r) => (
                     <li key={r.pid}>
                       <div
-                        draggable={!custom}
+                        draggable
                         onDragStart={(e) =>
                           e.dataTransfer.setData(
                             "text/plain",
@@ -566,9 +507,7 @@ export default function SquadBuilder() {
                             })
                           )
                         }
-                        className={`flex items-center gap-2 rounded-lg px-2 py-2 ${
-                          custom ? "" : "cursor-grab active:cursor-grabbing"
-                        } hover:bg-surface-2`}
+                        className={`flex items-center gap-2 rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing hover:bg-surface-2`}
                       >
                         <img
                           src={`/api/player-image/${r.spid}`}
@@ -608,7 +547,7 @@ export default function SquadBuilder() {
                           {r.seasons.map((s) => (
                             <button
                               key={s.spid}
-                              draggable={!custom}
+                              draggable
                               onDragStart={(e) =>
                                 e.dataTransfer.setData(
                                   "text/plain",
@@ -620,9 +559,7 @@ export default function SquadBuilder() {
                                 )
                               }
                               onClick={() => place(null, s.spid, r.name, s.season)}
-                              className={`scoreboard flex min-h-11 items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-1.5 text-[13px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink ${
-                                custom ? "" : "cursor-grab active:cursor-grabbing"
-                              }`}
+                              className={`scoreboard flex min-h-11 items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-1.5 text-[13px] font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink cursor-grab active:cursor-grabbing`}
                             >
                               <SeasonBadge spid={s.spid} season={s.season} size="xs" />
                               {s.season || `S${Math.floor(s.spid / 1000000)}`}

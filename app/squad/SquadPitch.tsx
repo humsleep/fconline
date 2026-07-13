@@ -21,6 +21,9 @@ export interface DropPayload {
   season?: string;
 }
 
+// 탭과 드래그를 구분하는 이동 임계값(px) — 모바일 손떨림으로 탭이 드래그로 오인되지 않게
+const DRAG_THRESHOLD = 6;
+
 export default function SquadPitch({
   formationId,
   filled,
@@ -35,14 +38,21 @@ export default function SquadPitch({
   coords?: Record<string, Coord>;
   activeSlotId?: string | null;
   onSlotClick?: (slot: Slot) => void;
-  /** 커스텀 모드: 드래그로 좌표 변경 */
+  /** 슬롯 드래그로 좌표 변경 (자유 배치 — 상시 허용) */
   onMove?: (slotId: string, x: number, y: number) => void;
   /** 검색 패널에서 선수를 드롭했을 때 */
   onDropPlayer?: (slotId: string, payload: DropPayload) => void;
 }) {
   const formation = getFormation(formationId);
   const pitchRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ id: string; moved: boolean } | null>(null);
+  const dragRef = useRef<{
+    id: string;
+    moved: boolean;
+    startX: number;
+    startY: number;
+  } | null>(null);
+
+  const interactive = Boolean(onSlotClick || onMove || onDropPlayer);
 
   function posOf(slot: Slot): Coord {
     return coords?.[slot.id] ?? { x: slot.x, y: slot.y };
@@ -59,20 +69,30 @@ export default function SquadPitch({
 
   function onPointerDown(e: React.PointerEvent, slot: Slot) {
     if (!onMove) return;
-    dragRef.current = { id: slot.id, moved: false };
+    dragRef.current = {
+      id: slot.id,
+      moved: false,
+      startX: e.clientX,
+      startY: e.clientY,
+    };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
   function onPointerMove(e: React.PointerEvent) {
     const d = dragRef.current;
     if (!d || !onMove) return;
-    d.moved = true;
+    if (!d.moved) {
+      const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
+      if (dist < DRAG_THRESHOLD) return; // 아직 탭 범위
+      d.moved = true;
+    }
     const { x, y } = clientToPct(e.clientX, e.clientY);
     onMove(d.id, Math.round(x), Math.round(y));
   }
   function onPointerUp(slot: Slot) {
     const d = dragRef.current;
     dragRef.current = null;
-    if (d && !d.moved) onSlotClick?.(slot);
+    // 임계값 미만 이동 = 탭(선수 선택)
+    if (!d || !d.moved) onSlotClick?.(slot);
   }
 
   function handleDrop(e: React.DragEvent, slotId: string) {
@@ -95,7 +115,6 @@ export default function SquadPitch({
       style={{
         background:
           "linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--surface)) 0%, var(--surface) 60%)",
-        touchAction: onMove ? "none" : undefined,
       }}
     >
       <svg
@@ -162,32 +181,19 @@ export default function SquadPitch({
 
         const style = { left: `${x}%`, top: `${y}%` } as const;
 
-        // 커스텀 모드: 포인터 드래그로 위치 이동
-        if (onMove) {
-          return (
-            <button
-              key={slot.id}
-              type="button"
-              onPointerDown={(e) => onPointerDown(e, slot)}
-              onPointerMove={onPointerMove}
-              onPointerUp={() => onPointerUp(slot)}
-              className="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none active:cursor-grabbing"
-              style={style}
-            >
-              {content}
-            </button>
-          );
-        }
-
-        // 일반 모드: 클릭(활성화) + 선수 드롭 타깃
-        return onSlotClick || onDropPlayer ? (
+        // 인터랙티브: 탭=선택 · 드래그=자유 배치 · 드롭=선수 배치 (전부 상시)
+        return interactive ? (
           <button
             key={slot.id}
             type="button"
-            onClick={() => onSlotClick?.(slot)}
+            onPointerDown={(e) => onPointerDown(e, slot)}
+            onPointerMove={onPointerMove}
+            onPointerUp={() => onPointerUp(slot)}
             onDragOver={onDropPlayer ? (e) => e.preventDefault() : undefined}
             onDrop={onDropPlayer ? (e) => handleDrop(e, slot.id) : undefined}
-            className="absolute -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
+            className={`absolute -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110 ${
+              onMove ? "cursor-grab touch-none active:cursor-grabbing" : ""
+            }`}
             style={style}
           >
             {content}
