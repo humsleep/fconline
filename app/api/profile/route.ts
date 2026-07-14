@@ -14,7 +14,23 @@ export async function GET() {
     .select('id, nickname, verified_nickname, verified_ouid, verified_at')
     .eq('id', user.id)
     .maybeSingle();
-  return NextResponse.json({ profile: data ?? null });
+
+  // 마이페이지용 — 내 최근 커뮤니티 글(숨김 제외)
+  let posts: { id: string; type: string; title: string; created_at: string }[] = [];
+  try {
+    const { data: p } = await supabase
+      .from('community_posts')
+      .select('id, type, title, created_at')
+      .eq('author_id', user.id)
+      .eq('hidden', false)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    posts = p ?? [];
+  } catch {
+    // 테이블 미존재 등 — 빈 목록
+  }
+
+  return NextResponse.json({ profile: data ?? null, posts });
 }
 
 /** 닉네임 등록/변경 (upsert). */

@@ -164,6 +164,14 @@ export default function AuthButton() {
               ))}
             </div>
           )}
+          <Link
+            href="/me"
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm font-semibold hover:bg-surface-2"
+            onClick={() => setOpen(false)}
+          >
+            🏠 마이페이지
+          </Link>
           {fcNickname && (
             <Link
               href={`/user/${encodeURIComponent(fcNickname)}`}
