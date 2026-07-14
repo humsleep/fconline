@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useUser } from '@/lib/supabase/useUser';
-import MySquadPicker from '@/app/components/MySquadPicker';
+import MySquadPicker, { countMySquads } from '@/app/components/MySquadPicker';
 import {
   POST_TYPES,
   POST_TYPE_ORDER,
@@ -39,6 +39,7 @@ function NewPostForm() {
   const [contact, setContact] = useState('');
   const [squadId, setSquadId] = useState('');
   const [squadIdB, setSquadIdB] = useState('');
+  const [myCount, setMyCount] = useState(0);
   const [meta, setMeta] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,10 @@ function NewPostForm() {
       .then((d) => setHasNickname(Boolean(d.profile?.nickname)))
       .catch(() => setHasNickname(false));
   }, [user, loading, router, initialType]);
+
+  useEffect(() => {
+    setMyCount(countMySquads());
+  }, []);
 
   const togglePos = (p: string) =>
     setPositions((cur) =>
@@ -170,6 +175,29 @@ function NewPostForm() {
             className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
           />
         </Field>
+
+        {type === 'squad_battle' && (
+          <div className="mt-4 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-sm">
+            <p className="font-semibold">⚔️ 스쿼드 배틀은 A·B 두 스쿼드가 필요해요.</p>
+            <p className="mt-1 text-muted">
+              저장한 스쿼드에서 고르거나 공유코드를 붙여넣으세요.
+              {myCount < 2 && (
+                <>
+                  {' '}스쿼드가 부족하면{' '}
+                  <a
+                    href="/squad"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-accent underline underline-offset-2"
+                  >
+                    빌더에서 만들기(새 탭)
+                  </a>{' '}
+                  — 이 작성 화면은 그대로 유지돼요.
+                </>
+              )}
+            </p>
+          </div>
+        )}
 
         {fieldSet.has('squad') && (
           <Field
