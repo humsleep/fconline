@@ -13,6 +13,7 @@ import SquadSection from "./SquadSection";
 import PlaystyleSection from "./PlaystyleSection";
 import ReportSection from "./ReportSection";
 import VisitRecorder from "./VisitRecorder";
+import TradeSection from "./TradeSection";
 import ShareCardButton from "@/app/components/ShareCardButton";
 
 export const maxDuration = 60; // 콜드 조회: 매치 상세 최대 30건 순차 호출 대비
@@ -51,7 +52,9 @@ export default async function UserPage({
         ? "style"
         : view === "report"
           ? "report"
-          : "matches";
+          : view === "market"
+            ? "market"
+            : "matches";
 
   let ouid: string;
   let basic: Awaited<ReturnType<typeof getUserBasic>>;
@@ -142,6 +145,7 @@ export default async function UserPage({
             { view: "report", label: "분석" },
             { view: "squad", label: "선수 성적표" },
             { view: "style", label: "플레이스타일" },
+            { view: "market", label: "이적시장" },
           ] as const
         ).map((v) => {
           const href = `/user/${encodeURIComponent(basic.nickname)}?type=${matchType}${
@@ -175,6 +179,10 @@ export default async function UserPage({
       ) : activeView === "report" ? (
         <Suspense key={`rp-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
           <ReportSection ouid={ouid} matchType={matchType} />
+        </Suspense>
+      ) : activeView === "market" ? (
+        <Suspense key={`mk-${ouid}`} fallback={<SquadSkeleton />}>
+          <TradeSection ouid={ouid} />
         </Suspense>
       ) : (
         <Suspense key={`${ouid}-${matchType}`} fallback={<MatchSkeleton />}>
