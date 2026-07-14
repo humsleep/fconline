@@ -190,7 +190,10 @@ export default async function MetaPage() {
                 <ol className="mt-2 space-y-1.5">
                   {rows.map((r, i) => (
                     <li key={`${r.spId}:${r.position}`}>
-                      <div className="panel flex items-center gap-3 px-3 py-2.5">
+                      <Link
+                        href={`/player/${r.spId}`}
+                        className="panel flex items-center gap-3 px-3 py-2.5 transition-colors hover:border-accent"
+                      >
                         <span className="flex w-9 flex-none flex-col items-center">
                           <span
                             className={`scoreboard text-center text-sm font-bold ${
@@ -242,7 +245,7 @@ export default async function MetaPage() {
                           </p>
                           <p className="text-[12px] text-muted">랭커 경기</p>
                         </div>
-                      </div>
+                      </Link>
                     </li>
                   ))}
                 </ol>
