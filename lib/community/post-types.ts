@@ -6,7 +6,8 @@ export type PostType =
   | 'squad_make'
   | 'club_recruit'
   | 'club_match'
-  | 'tournament';
+  | 'tournament'
+  | 'squad_battle';
 
 /** 유형별로 노출/입력하는 필드 키. */
 export type PostField =
@@ -14,6 +15,7 @@ export type PostField =
   | 'positions'
   | 'contact'
   | 'squad'
+  | 'squad_b'
   | 'budget'
   | 'schedule'
   | 'date'
@@ -35,6 +37,7 @@ export interface PostTypeConfig {
 export const POST_TYPE_ORDER: PostType[] = [
   'squad_show',
   'squad_rate',
+  'squad_battle',
   'squad_make',
   'club_recruit',
   'club_match',
@@ -107,6 +110,16 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
     bodyPlaceholder: '대회 규칙, 상품(명예/뱃지), 진행 방식, 참가 신청 방법 등을 적어주세요.',
     template:
       '🏆 대회 이름:\n📅 일정:\n👥 모집 인원:\n📋 진행 방식:\n🎁 보상(명예/뱃지):\n📩 참가 신청:',
+  },
+  squad_battle: {
+    label: '스쿼드 배틀',
+    emoji: '⚔️',
+    blurb: '두 스쿼드를 올리고 어느 쪽이 나은지 투표받아요.',
+    accent: 'gold',
+    fields: ['squad', 'squad_b'],
+    bodyLabel: '배틀 설명',
+    bodyPlaceholder: 'A vs B — 어떤 점을 비교하고 싶은지, 각 스쿼드 컨셉을 적어주세요.',
+    template: '🅰️ A팀 컨셉:\n🅱️ B팀 컨셉:\n🤔 고민 포인트:',
   },
 };
 

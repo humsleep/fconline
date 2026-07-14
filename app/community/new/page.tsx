@@ -38,6 +38,7 @@ function NewPostForm() {
   const [positions, setPositions] = useState<string[]>([]);
   const [contact, setContact] = useState('');
   const [squadId, setSquadId] = useState('');
+  const [squadIdB, setSquadIdB] = useState('');
   const [meta, setMeta] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +78,10 @@ function NewPostForm() {
       setError('제목과 내용을 입력하세요.');
       return;
     }
+    if (type === 'squad_battle' && (!squadId.trim() || !squadIdB.trim())) {
+      setError('스쿼드 배틀은 A·B 두 스쿼드를 모두 첨부해야 해요.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const metaPayload: Record<string, string> = {};
@@ -95,6 +100,7 @@ function NewPostForm() {
           positions: fieldSet.has('positions') ? positions : [],
           contact: fieldSet.has('contact') ? contact.trim() || null : null,
           squad_id: fieldSet.has('squad') ? squadId.trim() || null : null,
+          squad_b: fieldSet.has('squad_b') ? squadIdB.trim() || null : null,
           ...metaPayload,
         }),
       });
@@ -166,8 +172,22 @@ function NewPostForm() {
         </Field>
 
         {fieldSet.has('squad') && (
-          <Field label="스쿼드 첨부 (선택)">
+          <Field
+            label={
+              fieldSet.has('squad_b') ? 'A팀 스쿼드' : '스쿼드 첨부 (선택)'
+            }
+          >
             <MySquadPicker value={squadId} onChange={setSquadId} />
+          </Field>
+        )}
+
+        {fieldSet.has('squad_b') && (
+          <Field label="B팀 스쿼드">
+            <MySquadPicker
+              value={squadIdB}
+              onChange={setSquadIdB}
+              placeholder="B팀 스쿼드 공유코드"
+            />
           </Field>
         )}
 

@@ -18,6 +18,7 @@ import { baseLabelOfCode, assignByPosition } from '../lib/squad/assign';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { squadCardTree } from '../lib/card/squad-card';
+import { POST_TYPES, isPostType } from '../lib/community/post-types';
 import type { Squad } from '../lib/squad/store';
 
 let pass = 0;
@@ -92,6 +93,15 @@ ok(cardTree.element != null, '스쿼드 카드 트리 생성');
 ok(cardTree.fontText.includes('보엠 스쿼드'), '카드 폰트텍스트에 스쿼드명 포함');
 ok(cardTree.fontText.includes('4-3-3'), '카드 폰트텍스트에 포메이션명 포함');
 ok(cardTree.fontText.includes('홀란') || cardTree.fontText.includes('엘링'), '카드 폰트텍스트에 선수명 포함');
+
+// post-types: 스쿼드 배틀 유형
+ok(isPostType('squad_battle'), 'squad_battle는 유효한 유형');
+ok(!isPostType('nope'), '알 수 없는 유형 거부');
+ok(
+  POST_TYPES.squad_battle.fields.includes('squad') &&
+    POST_TYPES.squad_battle.fields.includes('squad_b'),
+  'squad_battle은 A·B 스쿼드 필드를 가짐'
+);
 
 // ── formations ───────────────────────────────────────────────
 section('formations');

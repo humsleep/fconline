@@ -10,6 +10,7 @@ import PostActions from './PostActions';
 import Comments, { type CommentView } from './Comments';
 import ReportButton from '@/app/components/ReportButton';
 import AttachedSquad from './AttachedSquad';
+import BattleVote from './BattleVote';
 
 export async function generateMetadata({
   params,
@@ -141,10 +142,10 @@ export default async function PostDetail({
           </div>
         )}
 
-        {/* 유형별 메타 */}
-        {Object.keys(post.meta).length > 0 && (
+        {/* 유형별 메타 (squad_b는 배틀 전용 내부 값이라 제외) */}
+        {Object.keys(post.meta).filter((k) => k !== "squad_b").length > 0 && (
           <dl className="mt-4 grid gap-2 sm:grid-cols-2">
-            {Object.entries(post.meta).map(([k, v]) => (
+            {Object.entries(post.meta).filter(([k]) => k !== "squad_b").map(([k, v]) => (
               <div key={k} className="rounded-lg bg-surface-2 px-3 py-2">
                 <dt className="text-[13px] text-muted">
                   {META_FIELD_LABELS[k] ?? k}
@@ -159,8 +160,25 @@ export default async function PostDetail({
           {post.body}
         </p>
 
-        {/* 첨부 스쿼드 — 본문과 함께 자동으로 펼쳐서 표시 */}
-        {post.squad_id && <AttachedSquad squadId={post.squad_id} />}
+        {/* 스쿼드 배틀 — A/B 스쿼드 + 투표 */}
+        {post.type === "squad_battle" && post.squad_id && typeof post.meta.squad_b === "string" ? (
+          <div className="mt-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="scoreboard mb-1 text-sm font-bold text-accent">🅰️ A팀</p>
+                <AttachedSquad squadId={post.squad_id} />
+              </div>
+              <div>
+                <p className="scoreboard mb-1 text-sm font-bold text-lose">🅱️ B팀</p>
+                <AttachedSquad squadId={post.meta.squad_b} />
+              </div>
+            </div>
+            <BattleVote postId={post.id} />
+          </div>
+        ) : (
+          /* 일반 첨부 스쿼드 — 본문과 함께 자동으로 펼쳐서 표시 */
+          post.squad_id && <AttachedSquad squadId={post.squad_id} />
+        )}
 
         {post.contact && (
           <p className="mt-4 text-sm">
