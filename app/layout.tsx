@@ -117,13 +117,13 @@ export default function RootLayout({
               게임 데이터의 저작권은 NEXON·EA에 있습니다.
             </p>
             <p className="mt-2 flex flex-wrap gap-x-4">
-              <Link href="/terms" className="inline-block py-2 hover:text-ink">
+              <Link href="/terms" className="inline-block py-3 hover:text-ink">
                 이용약관
               </Link>
-              <Link href="/privacy" className="inline-block py-2 font-semibold hover:text-ink">
+              <Link href="/privacy" className="inline-block py-3 font-semibold hover:text-ink">
                 개인정보처리방침
               </Link>
-              <a href="mailto:boheme88@naver.com" className="inline-block py-2 hover:text-ink">
+              <a href="mailto:boheme88@naver.com" className="inline-block py-3 hover:text-ink">
                 문의
               </a>
             </p>

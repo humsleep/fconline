@@ -1,20 +1,21 @@
 import Link from "next/link";
 import SearchForm from "./components/SearchForm";
 import FocusSearchCard from "./components/FocusSearchCard";
+import HomeReturningStrip from "./components/HomeReturningStrip";
 import { DEMO_NICKNAME } from "@/lib/demo";
 
 const FEATURES = [
   {
-    tag: "매치 리포트",
+    tag: "매치 리포트 · 분석",
     title: "슛맵으로 왜 졌는지 본다",
-    desc: "경기별 슛 좌표·선수 평점·POTM까지. 점유율 말고 진짜 원인을 짚어줍니다.",
+    desc: "경기별 슛 좌표·선수 평점부터 시간대별 득실·최근 7일 폼 추세·자동 코칭까지. 점유율 말고 진짜 원인을 짚어줍니다.",
     hint: "내 구단주명 검색하고 시작 →",
     href: "/?focus=1",
   },
   {
-    tag: "선수 성적표",
+    tag: "선수 성적표 · 도감",
     title: "내 카드, 랭커 대비 몇 점?",
-    desc: "내 스쿼드 선수별 실사용 평점을 랭커 평균과 나란히. 능력치가 아니라 실전 데이터로.",
+    desc: "내 선수별 실사용 평점을 랭커 평균과 나란히. 선수를 누르면 랭커가 그 카드를 실제 어떻게 쓰는지 '선수 도감'으로.",
     hint: "내 구단주명 검색하고 시작 →",
     href: "/?focus=1",
   },
@@ -33,16 +34,16 @@ const FEATURES = [
     href: "/squad",
   },
   {
-    tag: "랭커 픽 랭킹",
+    tag: "랭커 픽 랭킹 · 도감",
     title: "지금 랭커는 누굴 쓸까",
-    desc: "상위 랭커가 실제 경기에서 가장 많이 쓴 카드를 포지션별로. 매일 갱신되는 메타 랭킹.",
+    desc: "상위 랭커가 실제로 가장 많이 쓴 카드를 포지션별로, 매일 갱신. 선수 이름으로 검색해 도감(실사용 스탯)도 바로.",
     hint: "바로가기 →",
     href: "/meta",
   },
   {
-    tag: "커뮤니티",
+    tag: "커뮤니티 · 배틀",
     title: "자랑하고, 모으고, 겨룬다",
-    desc: "스쿼드 자랑·평가 요청, 클럽원 모집, 클럽전·대회까지. 구단주명 연동 시 전적 카드가 자동으로 붙습니다.",
+    desc: "스쿼드 자랑·평가, 클럽원 모집, 대회까지. 두 스쿼드를 올려 투표받는 '스쿼드 배틀'도. 구단주명 연동 시 전적 카드 자동 첨부.",
     hint: "바로가기 →",
     href: "/community",
   },
@@ -101,6 +102,9 @@ export default function Home() {
           </Link>
         )}
       </section>
+
+      {/* 재방문/로그인 개인화 스트립 (비로그인이면 렌더 안 함) */}
+      <HomeReturningStrip />
 
       {/* 기능 */}
       <section className="pb-24 md:pb-16">
