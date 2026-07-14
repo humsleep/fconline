@@ -9,7 +9,7 @@ import type { MatchDetail } from '../lib/nexon/types';
 import { pickKeyPlayers, topSeason } from '../lib/squad/card-badges';
 import { getFormation, formationsByLine } from '../lib/squad/formations';
 import { aggregateReport, reportInsights } from '../lib/nexon/report';
-import { summarizeMatch, aggregate } from '../lib/nexon/summary';
+import { summarizeMatch, aggregate, topRivals } from '../lib/nexon/summary';
 import { verdictFromRating, verdictFromMatch } from '../lib/verdict';
 import { rateLimit, clientIp } from '../lib/security/rate-limit';
 import { hashIp, clientIpFrom } from '../lib/security/ip-hash';
@@ -141,6 +141,17 @@ eq(agg.win, 1, 'aggregate 승수');
 eq(agg.lose, 1, 'aggregate 패수');
 eq(agg.winRate, 50, 'aggregate 승률');
 eq(aggregate([]).winRate, 0, '빈 집계 승률 0(0나눗셈 방어)');
+
+// topRivals: 2회 이상 만난 상대만, H2H 집계
+const rivalMatches = [
+  summarizeMatch(mkMatch('r1', 3, 1), 'ME')!, // vs opp 승
+  summarizeMatch(mkMatch('r2', 0, 2), 'ME')!, // vs opp 패
+  summarizeMatch(mkMatch('r3', 1, 1), 'ME')!, // vs opp 무
+];
+const rivals = topRivals(rivalMatches);
+eq(rivals.length, 1, 'topRivals: opp 1명(3회 만남)');
+eq([rivals[0].win, rivals[0].draw, rivals[0].lose], [1, 1, 1], 'topRivals H2H 승무패');
+eq(topRivals([summarizeMatch(mkMatch('r4', 1, 0), 'ME')!]).length, 0, 'topRivals: 1회만 만난 상대는 제외');
 
 // ── verdict ──────────────────────────────────────────────────
 section('verdict');
