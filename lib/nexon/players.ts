@@ -175,3 +175,22 @@ export async function resolvePlayer(name: string): Promise<PlayerHit | null> {
   const hits = await searchPlayers(name, 1);
   return hits[0] ?? null;
 }
+
+/** spid로 선수 정보(이름 + 보유 시즌 전체) 조회 — 선수 도감용. */
+export async function getPlayerBySpid(spid: number): Promise<PlayerHit | null> {
+  const idx = await loadIndex();
+  const pid = spid % 1_000_000;
+  // 같은 실선수(pid)의 대표 카드에서 시즌 변형 목록을 얻는다.
+  const rep = idx.reps.find((r) => r.pid === pid);
+  if (rep) return rep;
+  // 인덱스에 없으면(로드 실패 등) 최소 정보라도 구성
+  const name = idx.nameById.get(spid);
+  if (!name) return null;
+  return {
+    spid,
+    pid,
+    name,
+    season: idx.seasonById.get(spid) ?? '',
+    seasons: [{ spid, season: idx.seasonById.get(spid) ?? '' }],
+  };
+}

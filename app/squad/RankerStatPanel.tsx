@@ -120,6 +120,12 @@ export default function RankerStatPanel({
           </p>
         </>
       )}
+      <a
+        href={`/player/${spid}`}
+        className="mt-1.5 inline-block text-[12px] font-semibold text-accent underline underline-offset-2"
+      >
+        선수 도감 →
+      </a>
     </div>
   );
 }
