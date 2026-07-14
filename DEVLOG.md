@@ -1,5 +1,11 @@
 # DEVLOG
 
+## 2026-07-13 — 신규 기능 ③ 마이페이지 /me
+
+- `/api/profile` GET에 내 최근 커뮤니티 글 포함. `app/me/page.tsx`: 연동 구단주 바로가기(전적·진단)+내 저장 스쿼드(기기 N/10)+최근 검색+내 글. 비로그인도 기기 스쿼드/검색 노출 + 로그인 CTA
+- AuthButton 메뉴 🏠 마이페이지 추가, MySquadPicker `loadMySquads` export
+- PR #24. (신규 기능 요청 중 3번, 단위 68/68)
+
 ## 2026-07-13 — 신규 기능 ② 라이벌 H2H 패널
 
 - `lib/nexon/summary.ts` `topRivals()`: 2회 이상 만난 상대를 H2H 승/무/패+득실로 집계(순수·단위테스트 +3)
