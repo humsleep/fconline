@@ -37,6 +37,7 @@ export async function saveSquad(input: {
   slots: SquadSlot[];
   teamTag?: string | null;
   ipHash?: string | null;
+  userId?: string | null; // 로그인 시 계정 귀속(크로스기기)
 }): Promise<string | null | 'rate_limited'> {
   const db = getAdmin();
   if (!db) return null;
@@ -65,6 +66,7 @@ export async function saveSquad(input: {
       slots: input.slots,
       team_tag: input.teamTag ?? null,
       ip_hash: input.ipHash ?? null,
+      user_id: input.userId ?? null,
     });
     if (error) return null;
     return id;
@@ -93,6 +95,31 @@ export async function getSquad(id: string): Promise<Squad | null> {
     };
   } catch {
     return null;
+  }
+}
+
+/** 로그인 계정에 귀속된 내 스쿼드 목록(최신순) — /me 크로스기기 표시용. */
+export async function listUserSquads(
+  userId: string,
+  limit = 12
+): Promise<{ id: string; name: string; formation: string; createdAt?: string }[]> {
+  const db = getAdmin();
+  if (!db) return [];
+  try {
+    const { data } = await db
+      .from('squads')
+      .select('id, name, formation, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    return (data ?? []).map((s) => ({
+      id: s.id as string,
+      name: s.name as string,
+      formation: s.formation as string,
+      createdAt: s.created_at as string,
+    }));
+  } catch {
+    return [];
   }
 }
 

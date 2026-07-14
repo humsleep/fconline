@@ -1,6 +1,7 @@
 import { saveSquad, type SquadSlot } from "@/lib/squad/store";
 import { getFormation, FORMATIONS } from "@/lib/squad/formations";
 import { clientIpFrom, hashIp } from "@/lib/security/ip-hash";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,18 @@ export async function POST(req: Request) {
       : null;
 
   const ipHash = hashIp(clientIpFrom(req.headers));
-  const id = await saveSquad({ name, formation: formationId, slots, teamTag, ipHash });
+  // 로그인 상태면 계정에 귀속(크로스기기·lock-in). 미로그인은 익명 저장 유지.
+  let userId: string | null = null;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+  } catch {
+    // Supabase 미설정 등 — 익명 저장
+  }
+  const id = await saveSquad({ name, formation: formationId, slots, teamTag, ipHash, userId });
   if (id === "rate_limited") {
     return Response.json(
       { error: "오늘 저장 한도에 도달했어요. 내일 다시 시도해 주세요." },

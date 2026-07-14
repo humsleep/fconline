@@ -30,7 +30,52 @@ export async function GET() {
     // 테이블 미존재 등 — 빈 목록
   }
 
-  return NextResponse.json({ profile: data ?? null, posts });
+  // 계정에 귀속된 내 스쿼드(크로스기기)
+  let squads: { id: string; name: string; formation: string }[] = [];
+  try {
+    const { data: sq } = await supabase
+      .from('squads')
+      .select('id, name, formation, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(12);
+    squads = (sq ?? []).map((s) => ({ id: s.id, name: s.name, formation: s.formation }));
+  } catch {
+    // 미존재 — 빈 목록
+  }
+
+  // 지난 방문 대비 delta — 최근 2개 스냅샷(RLS로 본인 것만)
+  let snapshot: {
+    winRate: number;
+    avgRating: number;
+    played: number;
+    deltaWinRate: number | null;
+    deltaRating: number | null;
+    prevDate: string | null;
+  } | null = null;
+  try {
+    const { data: snaps } = await supabase
+      .from('user_snapshots')
+      .select('snapshot_date, win_rate, avg_rating, played')
+      .order('snapshot_date', { ascending: false })
+      .limit(2);
+    if (snaps && snaps.length > 0) {
+      const cur = snaps[0];
+      const prev = snaps[1] ?? null;
+      snapshot = {
+        winRate: cur.win_rate,
+        avgRating: Number(cur.avg_rating),
+        played: cur.played,
+        deltaWinRate: prev ? cur.win_rate - prev.win_rate : null,
+        deltaRating: prev ? Math.round((Number(cur.avg_rating) - Number(prev.avg_rating)) * 100) / 100 : null,
+        prevDate: prev ? (prev.snapshot_date as string) : null,
+      };
+    }
+  } catch {
+    // 테이블 미존재 — null
+  }
+
+  return NextResponse.json({ profile: data ?? null, posts, squads, snapshot });
 }
 
 /** 닉네임 등록/변경 (upsert). */

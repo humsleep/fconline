@@ -18,6 +18,8 @@
 - 0009 comment_count ✅ (실행 완료)
 - 0010 reports / 0011 notices / 0012 launch_hardening ✅ (실행 완료)
 - **0013 rate_limit_and_flags** ⬜ **추가 필요** — 커뮤니티 작성 간격 제한(글 30초·댓글 10초) RLS + 넥슨 kill-switch 플래그(service_flags). 오픈 게이트
+- **0014 squad_battle** ⬜ — 스쿼드 배틀 유형 CHECK 추가
+- **0015 user_snapshots_and_squad_owner** ⬜ — 개인 전적 스냅샷(지난 방문 대비 delta) + 스쿼드 로그인 계정 귀속(squads.user_id)
 
 ## 2.5) 정식 오픈 요건 (A안)
 
