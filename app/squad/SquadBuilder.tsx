@@ -352,7 +352,7 @@ export default function SquadBuilder() {
             defaultValue=""
             onChange={(e) => loadPreset(e.target.value)}
             disabled={presetLoading}
-            className="input-search h-10 min-w-0 flex-1 px-3 text-sm"
+            className="input-search h-11 min-w-0 flex-1 px-3 text-sm"
             aria-label="리그·팀 프리셋"
           >
             <option value="">리그 · 팀 선택</option>
@@ -373,13 +373,13 @@ export default function SquadBuilder() {
             onChange={(e) => setMineNick(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && loadMySquad()}
             placeholder="구단주명 → 내 스쿼드 불러오기"
-            className="input-search h-10 min-w-0 flex-1 px-3 text-sm"
+            className="input-search h-11 min-w-0 flex-1 px-3 text-sm"
             aria-label="구단주명"
           />
           <button
             onClick={loadMySquad}
             disabled={mineLoading || !mineNick.trim()}
-            className="scoreboard h-10 flex-none rounded-lg bg-surface-2 px-3 text-sm font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-40"
+            className="scoreboard h-11 flex-none rounded-lg bg-surface-2 px-3 text-sm font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-40"
           >
             {mineLoading ? "불러오는 중…" : "불러오기"}
           </button>

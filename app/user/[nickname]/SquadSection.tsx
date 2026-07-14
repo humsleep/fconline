@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { getUserMatches } from "@/lib/nexon/api";
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { NexonApiError } from "@/lib/nexon/client";
@@ -142,7 +143,10 @@ function PlayerCard({
   });
 
   return (
-    <div className="panel p-3">
+    <Link
+      href={`/player/${p.spId}`}
+      className="panel block p-3 transition-colors hover:border-accent/50"
+    >
       <div className="flex items-center gap-3">
         <Image
           src={`/api/player-image/${p.spId}`}
@@ -159,6 +163,7 @@ function PlayerCard({
             <span className="ml-1.5 text-sm font-medium text-muted">
               {getPositionLabel(p.mainPosition)}
             </span>
+            <span className="ml-1.5 text-[12px] font-semibold text-accent">도감 →</span>
           </p>
           <div className="mt-1">
             <VerdictStamp verdict={verdict} />
@@ -188,6 +193,6 @@ function PlayerCard({
       <p className="scoreboard mt-2 text-sm text-muted">
         {p.games}경기 · ⚽{p.goals} A{p.assists} · 패스 {p.passRate}%
       </p>
-    </div>
+    </Link>
   );
 }
