@@ -75,7 +75,7 @@ export default function Home() {
           <circle cx="200" cy="120" r="3" fill="var(--accent)" stroke="none" />
         </svg>
 
-        <p className="rise scoreboard relative text-xs font-semibold tracking-[0.3em] text-accent">
+        <p className="rise scoreboard relative hidden text-xs font-semibold tracking-[0.3em] text-accent sm:block">
           EA SPORTS FC ONLINE DATA LAB
         </p>
         <h1 className="rise rise-1 relative mt-5 text-4xl font-bold leading-tight sm:text-5xl">
