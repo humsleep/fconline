@@ -1,5 +1,13 @@
 # DEVLOG
 
+## 2026-07-13 — 신규 기능 ⑤ 스쿼드 배틀 투표 (5개 요청 완료)
+
+- 새 커뮤니티 유형 `squad_battle` — 두 스쿼드(A/B) 첨부 + 독자 투표. **migration 0014**(type CHECK에 추가), post-types 설정(squad+squad_b), 작성 폼 B팀 피커(meta.squad_b, A·B 필수), 상세에서 A/B 인라인 렌더 + `BattleVote`
+- 투표는 기존 `vs_votes` 재활용(익명 voter, service_role, `vs_key=battle:{postId}`) — 새 테이블 불필요. `/api/community/battle` GET 집계 / POST 투표
+- PR #26. 단위 78/78, 스모크 21/21
+- 🔴 배포 후: **0014_squad_battle.sql 실행** 필요
+- ※ 5개 신규 기능(도감·H2H·마이페이지·주간폼·배틀) 전부 완료
+
 ## 2026-07-13 — 신규 기능 ④ 주간 폼 추적
 
 - `lib/nexon/report.ts` `computeWeekly()`: 최근 7일 vs 직전 7일 승률 비교(기준=최신 경기 시각, now 비의존·재현 가능). `MatchReport.weekly`
