@@ -26,6 +26,15 @@ export interface FormGame {
   label: string; // 툴팁
 }
 
+export interface WeeklyForm {
+  recentGames: number;
+  recentWin: number;
+  recentWinRate: number; // 0~100
+  prevGames: number;
+  prevWinRate: number | null; // 비교 대상 없으면 null
+  deltaWinRate: number | null; // recent - prev (%p)
+}
+
 export interface MatchReport {
   played: number;
   goalsFor: number;
@@ -34,6 +43,7 @@ export interface MatchReport {
   timeBands: TimeBand[];
   shotTypes: ShotTypeStat[]; // 내 결정력
   form: FormGame[]; // 최신 → 과거
+  weekly: WeeklyForm | null; // 최근 7일 vs 직전 7일
 }
 
 function goalsOf(entry: MatchInfoEntry): number {
@@ -80,6 +90,7 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
   const shotAgg = new Map<string, { tries: number; goals: number }>();
   for (const t of SHOT_TYPES) shotAgg.set(t.key, { tries: 0, goals: 0 });
   const form: FormGame[] = [];
+  const dated: { time: number; result: FormGame['result'] }[] = [];
 
   let goalsFor = 0;
   let goalsAgainst = 0;
@@ -109,6 +120,8 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
           summary.opponent ? ` vs ${summary.opponent.nickname}` : ''
         }`.trim(),
       });
+      const t = Date.parse(d.matchDate.endsWith('Z') || d.matchDate.includes('+') ? d.matchDate : `${d.matchDate}Z`);
+      if (!Number.isNaN(t)) dated.push({ time: t, result: summary.result });
     }
 
     // 시간대별 득실 — 각 경기별로 골 코드 판별 후 골 이벤트 시간 버킷팅
@@ -142,7 +155,10 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
     goals: shotAgg.get(t.key)!.goals,
   })).filter((s) => s.tries > 0);
 
+  const weekly = computeWeekly(dated);
+
   return {
+    weekly,
     played,
     goalsFor,
     goalsAgainst,
@@ -150,6 +166,35 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
     timeBands: bands,
     shotTypes,
     form,
+  };
+}
+
+const WEEK_MS = 7 * 24 * 3600 * 1000;
+
+/** 최근 7일 vs 직전 7일 승률 비교 — 기준 시각은 데이터의 최신 경기(now 비의존, 재현성↑). */
+export function computeWeekly(
+  dated: { time: number; result: '승' | '무' | '패' | '?' }[]
+): WeeklyForm | null {
+  if (dated.length === 0) return null;
+  const latest = Math.max(...dated.map((d) => d.time));
+  const recent = dated.filter((d) => d.time > latest - WEEK_MS);
+  const prev = dated.filter((d) => d.time <= latest - WEEK_MS && d.time > latest - 2 * WEEK_MS);
+  if (recent.length === 0) return null;
+
+  const winRate = (arr: typeof dated) => {
+    const w = arr.filter((d) => d.result === '승').length;
+    return Math.round((w / arr.length) * 100);
+  };
+  const recentWin = recent.filter((d) => d.result === '승').length;
+  const recentWinRate = winRate(recent);
+  const prevWinRate = prev.length > 0 ? winRate(prev) : null;
+  return {
+    recentGames: recent.length,
+    recentWin,
+    recentWinRate,
+    prevGames: prev.length,
+    prevWinRate,
+    deltaWinRate: prevWinRate === null ? null : recentWinRate - prevWinRate,
   };
 }
 
