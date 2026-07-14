@@ -54,6 +54,39 @@ export interface RecordSummary {
   avgPossession: number;
 }
 
+export interface Rival {
+  nickname: string;
+  win: number;
+  draw: number;
+  lose: number;
+  games: number;
+  goalsFor: number;
+  goalsAgainst: number;
+}
+
+/** 자주 만난 상대(라이벌) H2H 집계 — 2회 이상 만난 상대를 횟수순으로 최대 limit명. */
+export function topRivals(summaries: MatchSummary[], limit = 6): Rival[] {
+  const map = new Map<string, Rival>();
+  for (const m of summaries) {
+    const nick = m.opponent?.nickname;
+    if (!nick) continue;
+    const r =
+      map.get(nick) ??
+      { nickname: nick, win: 0, draw: 0, lose: 0, games: 0, goalsFor: 0, goalsAgainst: 0 };
+    if (m.result === '승') r.win++;
+    else if (m.result === '패') r.lose++;
+    else if (m.result === '무') r.draw++;
+    r.games++;
+    r.goalsFor += m.me.goals;
+    r.goalsAgainst += m.opponent?.goals ?? 0;
+    map.set(nick, r);
+  }
+  return [...map.values()]
+    .filter((r) => r.games >= 2)
+    .sort((a, b) => b.games - a.games || b.win - a.win)
+    .slice(0, limit);
+}
+
 export function aggregate(matches: MatchSummary[]): RecordSummary {
   const played = matches.length;
   let win = 0;

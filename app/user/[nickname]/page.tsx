@@ -7,7 +7,7 @@ import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/ne
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { NexonApiError, isMaintenance, isNotConfigured, isPaused, isRateLimited, isTimeout, isUserNotFound } from "@/lib/nexon/client";
 import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta";
-import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
+import { aggregate, summarizeMatch, topRivals, type MatchSummary, type Rival } from "@/lib/nexon/summary";
 import { formatAchievementDate, formatMatchDate } from "@/lib/format";
 import SquadSection from "./SquadSection";
 import PlaystyleSection from "./PlaystyleSection";
@@ -221,6 +221,7 @@ async function MatchSection({
 
   const rec = aggregate(summaries);
   const recent10 = summaries.slice(0, 10);
+  const rivals = topRivals(summaries);
   // 부분 실패 투명화 — 일부 경기를 못 불러왔으면 "조용히 틀린 숫자" 대신 기준을 명시
   const missing = matchIds.length - details.length;
 
@@ -277,6 +278,9 @@ async function MatchSection({
         <StatTile label="평균 점유율" value={`${rec.avgPossession}%`} />
       </section>
 
+      {/* 라이벌 — 자주 만난 상대 H2H */}
+      {rivals.length > 0 && <RivalsPanel rivals={rivals} />}
+
       {/* 경기 리스트 — 카드 개봉처럼 순차 리빌 */}
       <ul className="mt-4 space-y-1.5">
         {summaries.map((m, i) => (
@@ -290,6 +294,44 @@ async function MatchSection({
         ))}
       </ul>
     </>
+  );
+}
+
+function RivalsPanel({ rivals }: { rivals: Rival[] }) {
+  return (
+    <section className="panel mt-2 p-4">
+      <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
+        자주 만난 상대 (라이벌)
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {rivals.map((r) => {
+          const edge =
+            r.win > r.lose ? "text-win" : r.win < r.lose ? "text-lose" : "text-muted";
+          return (
+            <li key={r.nickname}>
+              <Link
+                href={`/user/${encodeURIComponent(r.nickname)}`}
+                className="flex items-center gap-3 rounded-lg bg-surface-2 px-3 py-2 transition-colors hover:bg-line"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                  {r.nickname}
+                </span>
+                <span className={`scoreboard text-sm font-bold ${edge}`}>
+                  {r.win}승 {r.draw}무 {r.lose}패
+                </span>
+                <span className="scoreboard flex-none text-[13px] text-muted">
+                  {r.goalsFor}:{r.goalsAgainst}
+                </span>
+                <span className="scoreboard flex-none text-xs text-accent">전적 →</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-[12px] text-muted">
+        최근 불러온 경기 기준 · 2회 이상 만난 상대만 · 탭하면 그 구단주 전적으로 이동
+      </p>
+    </section>
   );
 }
 
