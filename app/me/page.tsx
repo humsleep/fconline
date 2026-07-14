@@ -18,11 +18,26 @@ interface MyPost {
   title: string;
   created_at: string;
 }
+interface ServerSquad {
+  id: string;
+  name: string;
+  formation: string;
+}
+interface Snapshot {
+  winRate: number;
+  avgRating: number;
+  played: number;
+  deltaWinRate: number | null;
+  deltaRating: number | null;
+  prevDate: string | null;
+}
 
 export default function MyPage() {
   const { user, loading, configured } = useUser();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<MyPost[]>([]);
+  const [serverSquads, setServerSquads] = useState<ServerSquad[]>([]);
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [squads, setSquads] = useState<MySquad[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   const [fetched, setFetched] = useState(false);
@@ -44,10 +59,20 @@ export default function MyPage() {
       .then((d) => {
         setProfile(d.profile ?? null);
         setPosts(Array.isArray(d.posts) ? d.posts : []);
+        setServerSquads(Array.isArray(d.squads) ? d.squads : []);
+        setSnapshot(d.snapshot ?? null);
       })
       .catch(() => {})
       .finally(() => setFetched(true));
   }, [user]);
+
+  // 서버(계정 귀속, 크로스기기) 우선 + 이 기기 로컬 스쿼드 중 서버에 없는 것 추가
+  const mergedSquads: { id: string; name: string; formation: string }[] = [
+    ...serverSquads,
+    ...squads
+      .filter((ls) => !serverSquads.some((sv) => sv.id === ls.id))
+      .map((s) => ({ id: s.id, name: s.name, formation: s.formation })),
+  ];
 
   if (loading) {
     return (
@@ -107,6 +132,58 @@ export default function MyPage() {
         )}
       </section>
 
+      {/* 지난 방문 대비 변화 — 재방문 훅 */}
+      {snapshot && (
+        <section className="panel mt-3 p-5">
+          <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
+            지난 방문 대비
+          </p>
+          <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-2">
+            <div>
+              <p className="text-[13px] text-muted">최근 {snapshot.played}경기 승률</p>
+              <p className="scoreboard text-2xl font-bold">
+                <span className="text-accent">{snapshot.winRate}%</span>
+                {snapshot.deltaWinRate !== null && (
+                  <span
+                    className={`ml-2 text-base ${
+                      snapshot.deltaWinRate > 0
+                        ? "text-win"
+                        : snapshot.deltaWinRate < 0
+                          ? "text-lose"
+                          : "text-muted"
+                    }`}
+                  >
+                    {snapshot.deltaWinRate > 0
+                      ? `▲${snapshot.deltaWinRate}%p`
+                      : snapshot.deltaWinRate < 0
+                        ? `▼${-snapshot.deltaWinRate}%p`
+                        : "±0"}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div>
+              <p className="text-[13px] text-muted">평균 평점</p>
+              <p className="scoreboard text-2xl font-bold text-gold">
+                {snapshot.avgRating.toFixed(2)}
+                {snapshot.deltaRating !== null && snapshot.deltaRating !== 0 && (
+                  <span
+                    className={`ml-2 text-base ${snapshot.deltaRating > 0 ? "text-win" : "text-lose"}`}
+                  >
+                    {snapshot.deltaRating > 0 ? `▲${snapshot.deltaRating}` : `▼${-snapshot.deltaRating}`}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          <p className="mt-1.5 text-[12px] text-muted">
+            {snapshot.deltaWinRate === null
+              ? "내일 다시 방문하면 지난 방문과 비교해 변화를 보여드려요."
+              : `${snapshot.prevDate} 방문 대비`}
+          </p>
+        </section>
+      )}
+
       {/* 내 스쿼드 */}
       <section className="panel mt-3 p-5">
         <div className="flex items-baseline justify-between">
@@ -114,10 +191,11 @@ export default function MyPage() {
             내 스쿼드
           </p>
           <span className="scoreboard text-[13px] text-muted">
-            {squads.length}/{MAX_MY_SQUADS}
+            {mergedSquads.length}
+            {!user && `/${MAX_MY_SQUADS}`}
           </span>
         </div>
-        {squads.length === 0 ? (
+        {mergedSquads.length === 0 ? (
           <p className="mt-3 text-sm text-muted">
             아직 저장한 스쿼드가 없어요.{" "}
             <Link href="/squad" className="text-accent underline underline-offset-2">
@@ -126,7 +204,7 @@ export default function MyPage() {
           </p>
         ) : (
           <ul className="mt-2 space-y-1.5">
-            {squads.map((s) => (
+            {mergedSquads.map((s) => (
               <li key={s.id}>
                 <Link
                   href={`/squad/${encodeURIComponent(s.id)}`}

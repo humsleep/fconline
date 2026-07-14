@@ -12,6 +12,7 @@ import { formatAchievementDate, formatMatchDate } from "@/lib/format";
 import SquadSection from "./SquadSection";
 import PlaystyleSection from "./PlaystyleSection";
 import ReportSection from "./ReportSection";
+import VisitRecorder from "./VisitRecorder";
 import ShareCardButton from "@/app/components/ShareCardButton";
 
 export const maxDuration = 60; // 콜드 조회: 매치 상세 최대 30건 순차 호출 대비
@@ -177,7 +178,7 @@ export default async function UserPage({
         </Suspense>
       ) : (
         <Suspense key={`${ouid}-${matchType}`} fallback={<MatchSkeleton />}>
-          <MatchSection ouid={ouid} matchType={matchType} />
+          <MatchSection ouid={ouid} matchType={matchType} nickname={basic.nickname} />
         </Suspense>
       )}
     </div>
@@ -189,9 +190,11 @@ const MATCH_COUNT = 30;
 async function MatchSection({
   ouid,
   matchType,
+  nickname,
 }: {
   ouid: string;
   matchType: number;
+  nickname: string;
 }) {
   let matchIds: string[] = [];
   let listOk = true; // 목록 조회 성공 여부 — 실패를 '경기 없음'으로 위장하지 않기 위해
@@ -222,11 +225,23 @@ async function MatchSection({
   const rec = aggregate(summaries);
   const recent10 = summaries.slice(0, 10);
   const rivals = topRivals(summaries);
+  // 본인 방문 스냅샷 기록용 평균 평점 (0 제외)
+  const ratings = summaries.map((m) => m.me.rating).filter((r) => r > 0);
+  const avgRating = ratings.length
+    ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+    : 0;
   // 부분 실패 투명화 — 일부 경기를 못 불러왔으면 "조용히 틀린 숫자" 대신 기준을 명시
   const missing = matchIds.length - details.length;
 
   return (
     <>
+      {/* 본인 방문 시 하루 1스냅샷 기록 (지난 방문 대비 delta 재료) */}
+      <VisitRecorder
+        nickname={nickname}
+        winRate={rec.winRate}
+        avgRating={avgRating}
+        played={rec.played}
+      />
       {missing > 0 && (
         <p className="mt-4 rounded-lg bg-gold/10 px-3 py-2 text-sm text-muted">
           ⚠️ 최근 {matchIds.length}경기 중 {details.length}경기만 불러와{" "}
