@@ -38,7 +38,7 @@ export default function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
-      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-ink"
+      className="flex h-11 w-11 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-ink"
     >
       <svg
         viewBox="0 0 24 24"

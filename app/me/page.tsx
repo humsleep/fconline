@@ -71,7 +71,7 @@ export default function MyPage() {
             </p>
             <Link
               href="/login"
-              className="scoreboard flex-none rounded-lg bg-accent px-4 py-2 text-sm font-bold text-accent-ink"
+              className="scoreboard flex-none rounded-lg bg-accent px-4 py-3 text-sm font-bold text-accent-ink"
             >
               Google 로그인
             </Link>
@@ -91,14 +91,14 @@ export default function MyPage() {
             {profile?.verified_nickname ? (
               <Link
                 href={`/user/${encodeURIComponent(profile.verified_nickname)}`}
-                className="scoreboard flex-none rounded-lg bg-accent px-4 py-2 text-sm font-bold text-accent-ink"
+                className="scoreboard flex-none rounded-lg bg-accent px-4 py-3 text-sm font-bold text-accent-ink"
               >
                 내 전적·진단
               </Link>
             ) : (
               <Link
                 href="/profile/setup"
-                className="scoreboard flex-none rounded-lg bg-surface-2 px-4 py-2 text-sm font-bold text-ink transition-colors hover:bg-line"
+                className="scoreboard flex-none rounded-lg bg-surface-2 px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-line"
               >
                 {profile?.nickname ? "구단주 연동" : "닉네임 등록"}
               </Link>

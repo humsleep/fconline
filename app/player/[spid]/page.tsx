@@ -149,13 +149,13 @@ export default async function PlayerPage({
       <div className="mt-6 flex flex-wrap gap-2">
         <Link
           href="/squad"
-          className="scoreboard rounded-lg bg-accent px-4 py-2 text-sm font-bold text-accent-ink"
+          className="scoreboard rounded-lg bg-accent px-4 py-3 text-sm font-bold text-accent-ink"
         >
           스쿼드 빌더에서 배치
         </Link>
         <Link
           href="/meta"
-          className="scoreboard rounded-lg bg-surface-2 px-4 py-2 text-sm font-bold text-ink transition-colors hover:bg-line"
+          className="scoreboard rounded-lg bg-surface-2 px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-line"
         >
           랭커 픽 랭킹
         </Link>

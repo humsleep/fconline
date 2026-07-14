@@ -6,6 +6,7 @@ import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
 import { getPositionLabel } from "@/lib/nexon/meta";
 import { baseLabelOfCode, posLineOf } from "@/lib/squad/assign";
 import SeasonBadge from "@/app/components/SeasonBadge";
+import PlayerSearch from "./PlayerSearch";
 import type { RankerStat } from "@/lib/nexon/types";
 
 export const revalidate = 3600; // 스냅샷은 일 단위 — 1시간 캐시면 충분
@@ -161,6 +162,9 @@ export default async function MetaPage() {
         {date && <span className="ml-1">({date} 스냅샷 기준)</span>}
       </p>
 
+      {/* 선수 이름으로 도감 바로 검색 */}
+      <PlayerSearch />
+
       {!hasData ? (
         <div className="panel mt-6 px-6 py-16 text-center text-sm text-muted">
           <p className="text-base font-semibold text-ink">
@@ -172,7 +176,7 @@ export default async function MetaPage() {
           </p>
           <Link
             href="/?focus=1"
-            className="mt-4 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink"
+            className="mt-4 inline-block rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-accent-ink"
           >
             내 전적 검색하기
           </Link>
