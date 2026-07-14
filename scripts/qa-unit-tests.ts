@@ -8,7 +8,7 @@ process.env.IP_HASH_SALT = process.env.IP_HASH_SALT ?? 'qa-salt-1234567890abcdef
 import type { MatchDetail } from '../lib/nexon/types';
 import { pickKeyPlayers, topSeason } from '../lib/squad/card-badges';
 import { getFormation, formationsByLine } from '../lib/squad/formations';
-import { aggregateReport, reportInsights } from '../lib/nexon/report';
+import { aggregateReport, reportInsights, computeWeekly } from '../lib/nexon/report';
 import { summarizeMatch, aggregate, topRivals } from '../lib/nexon/summary';
 import { verdictFromRating, verdictFromMatch } from '../lib/verdict';
 import { rateLimit, clientIp } from '../lib/security/rate-limit';
@@ -127,6 +127,24 @@ ok(reportInsights(calm).every((i) => !i.text.includes('후반 막판')), '실점
 // 잘못된 데이터 방어: matchInfo 없는 항목 스킵
 const rptBad = aggregateReport([{ matchId: 'z', matchDate: '', matchType: 50, matchInfo: [] } as MatchDetail, ...rptDetails], 'ME');
 eq(rptBad.played, 3, '빈 matchInfo는 집계에서 제외');
+
+// computeWeekly: 최근 7일 vs 직전 7일 (기준=최신 경기 시각)
+const DAY = 86400_000;
+const base = 1_700_000_000_000; // 고정 기준(재현성)
+const weekly = computeWeekly([
+  { time: base, result: '승' },
+  { time: base - 2 * DAY, result: '승' },
+  { time: base - 3 * DAY, result: '패' }, // recent: 2승1패 → 67%
+  { time: base - 9 * DAY, result: '패' },
+  { time: base - 10 * DAY, result: '패' }, // prev: 0승2패 → 0%
+]);
+ok(weekly !== null, 'computeWeekly 결과 존재');
+eq(weekly!.recentGames, 3, 'weekly 최근 7일 경기수');
+eq(weekly!.recentWinRate, 67, 'weekly 최근 승률');
+eq(weekly!.prevWinRate, 0, 'weekly 직전주 승률');
+eq(weekly!.deltaWinRate, 67, 'weekly 승률 변화(+67%p)');
+eq(computeWeekly([]), null, 'weekly 빈 입력 null');
+ok(computeWeekly([{ time: base, result: '승' }])!.prevWinRate === null, 'weekly 직전주 없으면 null');
 
 // ── summary ──────────────────────────────────────────────────
 section('summary');

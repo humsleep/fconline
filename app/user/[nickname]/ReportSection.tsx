@@ -84,6 +84,37 @@ export default async function ReportSection({
             </p>
           </div>
         </div>
+
+        {/* 최근 7일 폼 추적 */}
+        {report.weekly && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-surface-2/70 px-3 py-2.5">
+            <span className="scoreboard text-[12px] font-bold tracking-[0.15em] text-muted">
+              최근 7일
+            </span>
+            <span className="scoreboard text-sm font-bold">
+              {report.weekly.recentGames}경기 · 승률{" "}
+              <span className="text-accent">{report.weekly.recentWinRate}%</span>
+            </span>
+            {report.weekly.deltaWinRate !== null && (
+              <span
+                className={`scoreboard text-sm font-bold ${
+                  report.weekly.deltaWinRate > 0
+                    ? "text-win"
+                    : report.weekly.deltaWinRate < 0
+                      ? "text-lose"
+                      : "text-muted"
+                }`}
+              >
+                {report.weekly.deltaWinRate > 0
+                  ? `▲${report.weekly.deltaWinRate}%p`
+                  : report.weekly.deltaWinRate < 0
+                    ? `▼${-report.weekly.deltaWinRate}%p`
+                    : "±0"}
+                <span className="ml-1 font-normal text-muted">지난주 대비</span>
+              </span>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 자동 인사이트 (처방) */}
