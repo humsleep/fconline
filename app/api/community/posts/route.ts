@@ -101,6 +101,20 @@ export async function POST(request: Request) {
     }
   }
 
+  // 스쿼드 배틀 B팀 — meta.squad_b(공유코드 형식만)
+  if (allowed.has('squad_b') && payload.squad_b) {
+    const b = String(payload.squad_b).trim().slice(0, 32);
+    if (/^[a-zA-Z0-9]{1,32}$/.test(b)) meta.squad_b = b;
+  }
+
+  // 스쿼드 배틀은 A·B 둘 다 필요
+  if (type === 'squad_battle' && (!squad_id || !meta.squad_b)) {
+    return NextResponse.json(
+      { error: '스쿼드 배틀은 A·B 두 스쿼드가 필요합니다.' },
+      { status: 400 }
+    );
+  }
+
   const id = shortId();
   const { error } = await supabase.from('community_posts').insert({
     id,

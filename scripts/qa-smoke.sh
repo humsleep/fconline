@@ -90,6 +90,11 @@ post_code "/api/community/posts" 401 "글 작성 비로그인 차단"
 post_code "/api/profile" 401 "프로필 저장 비로그인 차단"
 post_code "/api/admin/service-flag" 403 "kill-switch 비관리자 차단"
 
+# 신규 라우트 graceful
+code "/player/25000001" 200 "선수 도감 페이지"
+code "/me" 200 "마이페이지"
+code_in "/api/community/battle?postId=nope123" "200 400 503" "배틀 투표 GET graceful"
+
 echo ""
 echo "스모크: $pass PASS, $fail FAIL"
 [ "$fail" -eq 0 ] && echo "✓ 전부 통과" || exit 1
