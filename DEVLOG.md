@@ -1,5 +1,12 @@
 # DEVLOG
 
+## 2026-07-13 — 신규 기능 ① 선수 메타 도감 /player/[spid]
+
+- 매일 수집하는 `ranker_stats_snapshot`만으로(넥슨 추가 호출 0) "랭커가 이 카드를 실제로 어느 포지션에서 어떻게 쓰는지" 표시하는 새 콘텐츠 축
+- `lib/nexon/player-meta.ts` `getPlayerRankerMeta(spid)`: 최신 스냅샷 포지션별 평균(경기수/평점/골/패스%/드리블%/태클·인터셉트). `players.ts` `getPlayerBySpid()`: pid로 이름+시즌 변형
+- `app/player/[spid]/page.tsx`: 히어로(사진·시즌·다른 시즌 카드)+포지션별 스탯 카드+빈 상태, ISR 1h. `/meta` 행·빌더 RankerStatPanel에서 도감 링크
+- PR #22. (5개 신규 기능 요청 중 1번)
+
 ## 2026-07-13 — 스쿼드 빌더 UX 6종 + 커뮤니티 첨부 스쿼드 자동 펼침
 
 - **드래그 스왑**: 선수를 다른 자리 위에 놓으면 교환(빈 자리면 이동), 빈 피치면 자유 배치 유지. `SquadPitch` `onSwap` + 최근접 슬롯 스냅(13% 임계, 드래그 종료 좌표 기준)
