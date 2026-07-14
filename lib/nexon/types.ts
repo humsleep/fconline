@@ -144,3 +144,12 @@ export interface MatchDetail {
   matchType: number;
   matchInfo: MatchInfoEntry[];
 }
+
+/** 이적시장 거래 기록 (user/trade) — tradetype buy(영입)/sell(방출) */
+export interface TradeRecord {
+  tradeDate: string; // 'YYYY-MM-DDTHH:MM:SS'
+  saleSn: string; // 거래 고유번호
+  spid: number; // 선수(카드) 식별자
+  grade: number; // 강화 등급
+  value: number; // 거래 가격(BP)
+}
