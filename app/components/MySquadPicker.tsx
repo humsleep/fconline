@@ -14,7 +14,7 @@ export interface MySquad {
   at: number;
 }
 
-function loadMySquads(): MySquad[] {
+export function loadMySquads(): MySquad[] {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? '[]');
     return Array.isArray(raw)
