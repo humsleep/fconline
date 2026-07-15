@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@/lib/supabase/useUser";
-import { loadMySquads, MAX_MY_SQUADS, type MySquad } from "@/app/components/MySquadPicker";
+import { forgetMySquad, loadMySquads, MAX_MY_SQUADS, type MySquad } from "@/app/components/MySquadPicker";
 import { POST_TYPES } from "@/lib/community/post-types";
 
 const RECENT_KEY = "fcscope-recent-searches";
@@ -67,12 +67,41 @@ export default function MyPage() {
   }, [user]);
 
   // 서버(계정 귀속, 크로스기기) 우선 + 이 기기 로컬 스쿼드 중 서버에 없는 것 추가
-  const mergedSquads: { id: string; name: string; formation: string }[] = [
-    ...serverSquads,
+  const mergedSquads: { id: string; name: string; formation: string; isServer: boolean }[] = [
+    ...serverSquads.map((s) => ({ ...s, isServer: true })),
     ...squads
       .filter((ls) => !serverSquads.some((sv) => sv.id === ls.id))
-      .map((s) => ({ id: s.id, name: s.name, formation: s.formation })),
+      .map((s) => ({ id: s.id, name: s.name, formation: s.formation, isServer: false })),
   ];
+
+  const [deleting, setDeleting] = useState<string | null>(null);
+  async function deleteSquad(id: string, isServer: boolean) {
+    const ok = window.confirm(
+      isServer
+        ? "이 스쿼드를 완전히 삭제할까요? 공유 링크도 열리지 않게 됩니다."
+        : "이 스쿼드를 목록에서 제거할까요?"
+    );
+    if (!ok) return;
+    setDeleting(id);
+    try {
+      if (isServer) {
+        const res = await fetch(`/api/squad/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => null);
+          throw new Error(d?.error ?? "삭제하지 못했어요.");
+        }
+        setServerSquads((l) => l.filter((s) => s.id !== id));
+      }
+      forgetMySquad(id);
+      setSquads(loadMySquads());
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "삭제하지 못했어요.");
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -205,15 +234,29 @@ export default function MyPage() {
         ) : (
           <ul className="mt-2 space-y-1.5">
             {mergedSquads.map((s) => (
-              <li key={s.id}>
+              <li key={s.id} className="flex items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-1.5">
                 <Link
                   href={`/squad/${encodeURIComponent(s.id)}`}
-                  className="flex items-center gap-3 rounded-lg bg-surface-2 px-3 py-2 transition-colors hover:bg-line"
+                  className="flex min-h-11 min-w-0 flex-1 items-center gap-3"
                 >
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.name}</span>
                   <span className="scoreboard flex-none text-[13px] text-muted">{s.formation}</span>
-                  <span className="scoreboard flex-none text-xs text-accent">열기 →</span>
                 </Link>
+                <Link
+                  href={`/squad?load=${encodeURIComponent(s.id)}`}
+                  className="scoreboard flex min-h-11 flex-none items-center rounded px-2 text-[13px] font-semibold text-accent transition-colors hover:bg-line"
+                  aria-label={`${s.name} 수정`}
+                >
+                  수정
+                </Link>
+                <button
+                  onClick={() => deleteSquad(s.id, s.isServer)}
+                  disabled={deleting === s.id}
+                  className="scoreboard flex min-h-11 flex-none items-center rounded px-2 text-[13px] font-semibold text-lose transition-colors hover:bg-line disabled:opacity-50"
+                  aria-label={`${s.name} 삭제`}
+                >
+                  {deleting === s.id ? "삭제 중…" : "삭제"}
+                </button>
               </li>
             ))}
           </ul>
