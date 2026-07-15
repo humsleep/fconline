@@ -107,8 +107,9 @@ export default async function UserPage({
                     key={d.matchTypeName}
                     className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-muted"
                   >
-                    {d.iconUrl && <DivisionIcon src={d.iconUrl} size={20} />}
                     <span className="whitespace-nowrap">{d.matchTypeName}</span>
+                    {/* 등급 아이콘은 등급명 바로 왼쪽 (인게임 표기와 동일) */}
+                    {d.iconUrl && <DivisionIcon src={d.iconUrl} size={20} />}
                     <span className="whitespace-nowrap font-bold text-gold">
                       {d.divisionName}
                     </span>
