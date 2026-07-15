@@ -7,19 +7,28 @@ import {
   isMaintenance,
   isPaused,
 } from "@/lib/nexon/client";
-import { aggregatePlayers } from "@/lib/nexon/player-stats";
+import type { MatchPlayer } from "@/lib/nexon/types";
 import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
-import { baseLabelOfCode } from "@/lib/squad/assign";
+import { baseLabelOfCode, bestFormationId } from "@/lib/squad/assign";
 import { limitNexonFanout } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // 콜드 조회: 매치 상세 최대 30건 순차 호출 대비
+export const maxDuration = 60;
 
 const MATCH_TYPE = 50; // 공식경기 기준
-const MATCH_COUNT = 30;
-const MIN_GAMES = 2;
+const MATCH_COUNT = 5; // 최신 경기에 선발 데이터가 없을 때를 대비한 후보 수
 
-/** 구단주명 → 최근 경기에서 자주 쓴 라인업(최대 11명)을 포지션과 함께 반환. */
+/** SUB(28) 제외 = 킥오프 시점 선발 라인업 */
+const SUB_POSITION = 28;
+
+function startersOf(players: MatchPlayer[]): MatchPlayer[] {
+  return players
+    .filter((p) => p.spPosition >= 0 && p.spPosition < SUB_POSITION)
+    .sort((a, b) => a.spPosition - b.spPosition)
+    .slice(0, 11);
+}
+
+/** 구단주명 → 가장 최근 공식경기에서 실제 사용한 선발 11명 + 포메이션 반환. */
 export async function GET(req: Request) {
   const rl = limitNexonFanout(req.headers, "from-user");
   if (!rl.ok)
@@ -36,27 +45,44 @@ export async function GET(req: Request) {
     const ouid = await getOuid(nickname);
     const matchIds = await getUserMatches(ouid, MATCH_TYPE, MATCH_COUNT);
     const details = await getMatchDetailsBatch(matchIds);
-    const agg = aggregatePlayers(details, ouid)
-      .filter((p) => p.games >= MIN_GAMES)
-      .slice(0, 11);
 
-    if (agg.length === 0)
+    // 최신 경기부터: 선발 11명이 온전히 잡힌 첫 경기를 채택, 없으면 가장 많이 잡힌 경기
+    let lineup: MatchPlayer[] = [];
+    let matchDate: string | null = null;
+    for (const detail of details) {
+      const entry = detail.matchInfo?.find((e) => e.ouid === ouid);
+      if (!entry) continue;
+      const starters = startersOf(entry.player ?? []);
+      if (starters.length === 11) {
+        lineup = starters;
+        matchDate = detail.matchDate ?? null;
+        break;
+      }
+      if (starters.length > lineup.length) {
+        lineup = starters;
+        matchDate = detail.matchDate ?? null;
+      }
+    }
+
+    if (lineup.length === 0)
       return NextResponse.json(
         { error: "최근 경기에서 스쿼드를 찾지 못했어요." },
         { status: 404 }
       );
 
-    const names = await getPlayerNames(agg.map((p) => p.spId));
-    const seasons = await getSeasonNames(agg.map((p) => p.spId));
+    const names = await getPlayerNames(lineup.map((p) => p.spId));
+    const seasons = await getSeasonNames(lineup.map((p) => p.spId));
 
-    const players = agg.map((p) => ({
+    const players = lineup.map((p) => ({
       spid: p.spId,
       name: names.get(p.spId) ?? `선수 ${p.spId}`,
-      pos: baseLabelOfCode(p.mainPosition),
+      pos: baseLabelOfCode(p.spPosition),
       season: seasons.get(p.spId) ?? "",
     }));
 
-    return NextResponse.json({ nickname, players });
+    const formation = bestFormationId(players.map((p) => p.pos));
+
+    return NextResponse.json({ nickname, formation, matchDate, players });
   } catch (err) {
     if (isUserNotFound(err))
       return NextResponse.json(
