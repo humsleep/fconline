@@ -67,7 +67,7 @@ export default function TradeList({
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="input-search ml-auto h-9 flex-none px-2 text-[13px]"
+            className="input-search ml-auto h-11 flex-none px-2 text-[13px]"
             aria-label={`${title} 정렬`}
           >
             {SORTS.map((s) => (

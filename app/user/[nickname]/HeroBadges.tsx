@@ -39,13 +39,14 @@ export default async function HeroBadges({
   if (!marketType && !matchType) return null;
 
   const enc = encodeURIComponent(nickname);
+  // 세로 스택 — 히어로 우측 공백을 활용해 한 칸에 하나씩
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
+    <div className="flex flex-col items-end gap-1.5">
       {matchType && (
         <Link
           href={`/user/${enc}?type=50&view=report`}
           title={matchType.desc}
-          className={`scoreboard rounded-lg px-3 py-1.5 text-sm font-bold transition-opacity hover:opacity-80 ${TONE_BG[matchType.tone]} ${TONE_TEXT[matchType.tone]}`}
+          className={`scoreboard whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-bold transition-opacity hover:opacity-80 sm:px-3 sm:text-sm ${TONE_BG[matchType.tone]} ${TONE_TEXT[matchType.tone]}`}
         >
           ⚽ {matchType.title}
         </Link>
@@ -54,7 +55,7 @@ export default async function HeroBadges({
         <Link
           href={`/market/${enc}`}
           title={marketType.desc}
-          className={`scoreboard rounded-lg px-3 py-1.5 text-sm font-bold transition-opacity hover:opacity-80 ${TONE_BG[marketType.tone]} ${TONE_TEXT[marketType.tone]}`}
+          className={`scoreboard whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-bold transition-opacity hover:opacity-80 sm:px-3 sm:text-sm ${TONE_BG[marketType.tone]} ${TONE_TEXT[marketType.tone]}`}
         >
           💰 {marketType.title}
         </Link>
