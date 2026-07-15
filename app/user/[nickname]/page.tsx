@@ -14,6 +14,8 @@ import PlaystyleSection from "./PlaystyleSection";
 import ReportSection from "./ReportSection";
 import VisitRecorder from "./VisitRecorder";
 import HeroBadges from "./HeroBadges";
+import DivisionIcon from "@/app/components/DivisionIcon";
+import { divisionIconUrl } from "@/lib/nexon/division-icon";
 import ShareCardButton from "@/app/components/ShareCardButton";
 import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import { computeMatchPerfStats, diagnoseMatchPerf } from "@/lib/match/diagnosis";
@@ -76,6 +78,7 @@ export default async function UserPage({
       matchTypeName: await getMatchTypeName(d.matchType),
       divisionName: await getDivisionName(d.division),
       date: formatAchievementDate(d.achievementDate),
+      iconUrl: divisionIconUrl(d.division),
     }))
   );
 
@@ -88,44 +91,56 @@ export default async function UserPage({
           className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full"
           style={{ background: "radial-gradient(closest-side, rgba(200,245,66,0.14), transparent)" }}
         />
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-          <h1 className="text-3xl font-bold sm:text-4xl">{basic.nickname}</h1>
-          <p className="scoreboard mb-1 text-sm font-semibold text-muted">
-            LV.<span className="text-accent">{basic.level}</span>
-          </p>
-          {/* 성향 배지 — 공식경기 유형 + 이적시장 유형 (스트리밍) */}
-          <div className="mb-0.5 ml-auto">
+        {/* 좌: 닉네임·레벨·등급 / 우: 성향 배지 세로 스택 — 모바일 공백 최소화 */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+              <h1 className="text-2xl font-bold sm:text-4xl">{basic.nickname}</h1>
+              <p className="scoreboard mb-0.5 text-sm font-semibold text-muted">
+                LV.<span className="text-accent">{basic.level}</span>
+              </p>
+            </div>
+            {divisionCards.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {divisionCards.map((d) => (
+                  <p
+                    key={d.matchTypeName}
+                    className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-muted"
+                  >
+                    {d.iconUrl && <DivisionIcon src={d.iconUrl} size={20} />}
+                    <span className="whitespace-nowrap">{d.matchTypeName}</span>
+                    <span className="whitespace-nowrap font-bold text-gold">
+                      {d.divisionName}
+                    </span>
+                    {/* 달성일은 모바일에서 숨겨 공간 확보 */}
+                    <span className="hidden whitespace-nowrap sm:inline">({d.date})</span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* 성향 배지 — 공식경기 유형 + 이적시장 유형 (스트리밍, 우측 세로 2줄) */}
+          <div className="flex-none">
             <Suspense
               fallback={
-                <span className="skeleton inline-block h-8 w-44 rounded-lg" aria-hidden />
+                <span className="skeleton inline-block h-16 w-36 rounded-lg" aria-hidden />
               }
             >
               <HeroBadges ouid={ouid} nickname={basic.nickname} />
             </Suspense>
           </div>
         </div>
-        {divisionCards.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
-            {divisionCards.map((d) => (
-              <p key={d.matchTypeName} className="text-[13px] text-muted">
-                {d.matchTypeName}{" "}
-                <span className="font-bold text-gold">{d.divisionName}</span>
-                <span className="ml-1 text-[13px]">({d.date})</span>
-              </p>
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* 매치 종류 탭 + 이적시장 진입 */}
-      <nav className="rise rise-1 mt-6 flex flex-wrap items-center gap-1.5">
+      {/* 매치 종류 탭 + 이적시장 진입 — 모바일에서도 한 줄 유지(넘치면 가로 스크롤) */}
+      <nav className="scrollbar-hide rise rise-1 mt-6 flex flex-nowrap items-center gap-1.5 overflow-x-auto">
         {MATCH_TABS.map((t) => (
           <Link
             key={t.type}
             href={`/user/${encodeURIComponent(basic.nickname)}?type=${t.type}${
               activeView === "matches" ? "" : `&view=${activeView}`
             }`}
-            className={`scoreboard rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+            className={`scoreboard flex-none whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors sm:px-3.5 sm:text-sm ${
               t.type === matchType
                 ? "bg-accent text-accent-ink"
                 : "bg-surface-2 text-muted hover:text-ink"
@@ -136,7 +151,7 @@ export default async function UserPage({
         ))}
         <Link
           href={`/market/${encodeURIComponent(basic.nickname)}`}
-          className="scoreboard ml-auto rounded-lg bg-gold/15 px-3.5 py-1.5 text-sm font-bold text-gold transition-colors hover:bg-gold/25"
+          className="scoreboard ml-auto flex-none whitespace-nowrap rounded-lg bg-gold/15 px-2.5 py-1.5 text-[13px] font-bold text-gold transition-colors hover:bg-gold/25 sm:px-3.5 sm:text-sm"
         >
           💰 이적시장
         </Link>

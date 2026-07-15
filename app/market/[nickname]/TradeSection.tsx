@@ -244,9 +244,11 @@ export function TradeFlowChart({ days }: { days: DayFlow[] }) {
         </span>
       </div>
 
+      {/* 모바일: 축소 대신 가로 스크롤로 라벨 가독성 유지 */}
+      <div className="mt-2 overflow-x-auto">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="mt-2 w-full"
+        className="w-full min-w-[520px]"
         role="img"
         aria-label="최근 14일 일별 영입 지출과 방출 수입"
       >
@@ -293,6 +295,7 @@ export function TradeFlowChart({ days }: { days: DayFlow[] }) {
           );
         })}
       </svg>
+      </div>
       <p className="mt-1 text-[12px] text-muted">
         마지막 거래일 기준 최근 {FLOW_DAYS}일 · 그 이전 거래는 아래 목록에서
       </p>
