@@ -55,9 +55,9 @@ export default function TradeList({
 
   return (
     <section className="panel p-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
         <p
-          className={`scoreboard text-[13px] font-bold tracking-[0.15em] ${
+          className={`scoreboard flex-none whitespace-nowrap text-[13px] font-bold tracking-[0.15em] ${
             tone === "win" ? "text-win" : "text-lose"
           }`}
         >
@@ -67,7 +67,8 @@ export default function TradeList({
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="input-search ml-auto h-11 flex-none px-2 text-[13px]"
+            // .input-search는 width:100%라 제목을 밀어냄 — 자체 스타일로 폭 고정
+            className="h-11 flex-none rounded-lg border border-line bg-surface-2 px-2 text-[13px] font-medium text-ink outline-none"
             aria-label={`${title} 정렬`}
           >
             {SORTS.map((s) => (
