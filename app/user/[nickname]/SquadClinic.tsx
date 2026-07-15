@@ -44,9 +44,6 @@ export default function SquadClinic({
         <span className="scoreboard text-[13px] font-bold tracking-[0.2em] text-accent">
           SQUAD CLINIC
         </span>
-        <span className="rounded bg-gold/15 px-2 py-0.5 text-[13px] font-bold text-gold">
-          BETA
-        </span>
       </div>
 
       {/* 종합 점수 + 라인별 바 */}

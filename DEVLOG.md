@@ -1,5 +1,9 @@
 # DEVLOG
 
+## 2026-07-15 — 정식 오픈: BETA 배지 제거
+
+- 로고 옆·스쿼드 클리닉·플레이스타일 3곳의 "BETA" 배지 제거 (정식 서비스 오픈). PR #40
+
 ## 2026-07-15 — 오픈 전 보안 하드닝 (감사 지적 4건)
 
 - **넥슨 팬아웃 IP rate limit 확대**: 기존 from-user만 → `/user` SSR(user-page)·`/market` SSR(market-page)·`/api/card/user`(card)·OG 이미지(og, 분당 60 관대 + 한도 초과 시 닉네임 폴백 카드로 썸네일 깨짐 방지)·`/api/players/ranker-stat`·`/api/profile/verify` 전부 적용. 페이지는 "지금 조회 요청이 많아요" 안내 렌더, API는 429+Retry-After
