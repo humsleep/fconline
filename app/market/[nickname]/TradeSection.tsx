@@ -1,13 +1,31 @@
-import Image from "next/image";
-import Link from "next/link";
 import { getUserTrades } from "@/lib/nexon/api";
 import { NexonApiError } from "@/lib/nexon/client";
 import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
-import { formatKoreanBP, formatKoreanBPShort, formatRelativeKr } from "@/lib/format";
-import SeasonBadge from "@/app/components/SeasonBadge";
+import { formatKoreanBP, formatKoreanBPShort } from "@/lib/format";
+import { computeMarketStats, diagnoseMarket, type RuleTone } from "@/lib/market/diagnosis";
+import TradeList, { type TradeRow } from "./TradeList";
 import type { TradeRecord } from "@/lib/nexon/types";
 
 const LIMIT = 40;
+
+const TONE_TEXT: Record<RuleTone, string> = {
+  win: "text-win",
+  lose: "text-lose",
+  gold: "text-gold",
+  info: "text-accent",
+};
+const TONE_BG: Record<RuleTone, string> = {
+  win: "bg-win/15",
+  lose: "bg-lose/15",
+  gold: "bg-gold/15",
+  info: "bg-accent/15",
+};
+const TONE_DOT: Record<RuleTone, string> = {
+  win: "bg-win",
+  lose: "bg-lose",
+  gold: "bg-gold",
+  info: "bg-accent",
+};
 
 async function loadTrades(
   ouid: string,
@@ -48,6 +66,18 @@ export default async function TradeSection({ ouid }: { ouid: string }) {
   const totalSell = sell.rows.reduce((a, t) => a + (t.value || 0), 0);
   const net = totalSell - totalBuy;
   const days = buildDailyFlow(buy.rows, sell.rows);
+  const diag = diagnoseMarket(computeMarketStats(buy.rows, sell.rows));
+
+  const toRows = (rows: TradeRecord[]): TradeRow[] =>
+    rows.map((t) => ({
+      saleSn: String(t.saleSn),
+      spid: t.spid,
+      grade: t.grade || 1,
+      value: t.value || 0,
+      tradeDate: t.tradeDate,
+      name: names.get(t.spid) ?? `선수 ${t.spid}`,
+      season: seasons.get(t.spid) ?? "",
+    }));
 
   return (
     <div className="mt-4 space-y-3">
@@ -86,24 +116,48 @@ export default async function TradeSection({ ouid }: { ouid: string }) {
         </div>
       </section>
 
+      {/* 이적 성향 진단 — 사전 셋팅 룰 100+개 중 매칭 결과 */}
+      {diag.type && (
+        <section className="panel p-4">
+          <p className="scoreboard text-[13px] font-bold tracking-[0.15em] text-muted">
+            이적 성향 진단
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span
+              className={`scoreboard rounded-lg px-3 py-1.5 text-sm font-bold ${TONE_BG[diag.type.tone]} ${TONE_TEXT[diag.type.tone]}`}
+            >
+              {diag.type.title}
+            </span>
+            <p className="text-sm text-muted">{diag.type.desc}</p>
+          </div>
+          {diag.notes.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {diag.notes.map((n) => (
+                <li key={n.id} className="flex items-start gap-2 text-sm">
+                  <span
+                    className={`mt-1.5 inline-block h-1.5 w-1.5 flex-none rounded-full ${TONE_DOT[n.tone]}`}
+                    aria-hidden
+                  />
+                  <span>
+                    <b className={TONE_TEXT[n.tone]}>{n.title}</b>
+                    <span className="ml-1.5 text-muted">{n.desc}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-[12px] text-muted">
+            최근 영입 {buy.rows.length}건 · 방출 {sell.rows.length}건 기준 룰베이스 진단
+          </p>
+        </section>
+      )}
+
       {/* 일별 거래 흐름 — 위(방출 수입)/아래(영입 지출) 미러 차트 */}
       {days.some((d) => d.buy > 0 || d.sell > 0) && <TradeFlowChart days={days} />}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <TradeList
-          title="영입 (구매)"
-          tone="lose"
-          rows={buy.rows}
-          names={names}
-          seasons={seasons}
-        />
-        <TradeList
-          title="방출 (판매)"
-          tone="win"
-          rows={sell.rows}
-          names={names}
-          seasons={seasons}
-        />
+        <TradeList title="영입 (구매)" tone="lose" rows={toRows(buy.rows)} />
+        <TradeList title="방출 (판매)" tone="win" rows={toRows(sell.rows)} />
       </div>
 
       <p className="text-[13px] leading-relaxed text-muted">
@@ -264,66 +318,3 @@ export function TradeFlowChart({ days }: { days: DayFlow[] }) {
   );
 }
 
-function TradeList({
-  title,
-  tone,
-  rows,
-  names,
-  seasons,
-}: {
-  title: string;
-  tone: "win" | "lose";
-  rows: TradeRecord[];
-  names: Map<number, string>;
-  seasons: Map<number, string>;
-}) {
-  return (
-    <section className="panel p-4">
-      <p className={`scoreboard text-[13px] font-bold tracking-[0.15em] ${tone === "win" ? "text-win" : "text-lose"}`}>
-        {title} · {rows.length}
-      </p>
-      {rows.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">최근 기록이 없어요.</p>
-      ) : (
-        <ul className="mt-2 space-y-1.5">
-          {rows.slice(0, 20).map((t) => (
-            <li key={t.saleSn}>
-              <Link
-                href={`/player/${t.spid}`}
-                className="flex items-center gap-2.5 rounded-lg bg-surface-2 px-2.5 py-2 transition-colors hover:bg-line"
-              >
-                <Image
-                  src={`/api/player-image/${t.spid}`}
-                  alt=""
-                  width={34}
-                  height={34}
-                  unoptimized
-                  className="h-[34px] w-[34px] flex-none rounded-md bg-surface object-cover"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
-                    <span className="truncate">{names.get(t.spid) ?? `선수 ${t.spid}`}</span>
-                    <SeasonBadge spid={t.spid} season={seasons.get(t.spid)} size="xs" className="flex-none" />
-                    {t.grade > 1 && (
-                      <span className="scoreboard flex-none text-[12px] font-bold text-gold">+{t.grade}</span>
-                    )}
-                  </p>
-                  <p className="scoreboard text-[12px] text-muted">
-                    {formatRelativeKr(t.tradeDate)}
-                  </p>
-                </div>
-                <span
-                  className={`scoreboard flex-none text-sm font-bold ${tone === "win" ? "text-win" : "text-lose"}`}
-                  title={`${tone === "win" ? "+" : "-"}${(t.value || 0).toLocaleString()} BP`}
-                >
-                  {tone === "win" ? "+" : "-"}
-                  {formatKoreanBPShort(t.value || 0)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}

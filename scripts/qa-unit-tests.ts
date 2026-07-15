@@ -16,6 +16,8 @@ import { hashIp, clientIpFrom } from '../lib/security/ip-hash';
 import { getPositionLabel } from '../lib/nexon/meta';
 import { baseLabelOfCode, assignByPosition, bestFormationId } from '../lib/squad/assign';
 import { formatKoreanBP, formatKoreanBPShort } from '../lib/format';
+import { MARKET_RULES, computeMarketStats, diagnoseMarket } from '../lib/market/diagnosis';
+import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { squadCardTree } from '../lib/card/squad-card';
@@ -273,6 +275,50 @@ eq(formatKoreanBPShort(475_000_000), '4.75억', '축약 소수 2자리');
 eq(formatKoreanBPShort(12_300_000_000), '123억', '축약 100 이상 정수');
 eq(formatKoreanBPShort(45_600_000_000), '456억', '축약 정수');
 eq(formatKoreanBPShort(2_000_000_000_000), '2조', '축약 후행 0 제거');
+
+// ── 이적시장 진단 (사전 셋팅 룰) ─────────────────────────────
+section('market-diagnosis');
+ok(MARKET_RULES.length >= 100, `진단 룰 100개 이상 (현재 ${MARKET_RULES.length}개)`);
+eq(new Set(MARKET_RULES.map((r) => r.id)).size, MARKET_RULES.length, '룰 id 중복 없음');
+ok(MARKET_RULES.every((r) => r.title.length > 0 && r.desc.length > 0), '모든 룰에 제목·설명 존재');
+ok(MARKET_RULES.some((r) => r.kind === 'type') && MARKET_RULES.some((r) => r.kind === 'note'), 'type/note 룰 모두 존재');
+
+const NOW = Date.parse('2026-07-15T12:00:00Z');
+const trade = (daysAgo: number, value: number, grade = 1, spid = 251000001): TradeRecord =>
+  ({ tradeDate: new Date(NOW - daysAgo * 86400000).toISOString(), saleSn: `${daysAgo}-${value}-${spid}`, spid, grade, value }) as TradeRecord;
+
+// 큰손 흑자: 1조 지출 + 그 이상 수입
+const whale = computeMarketStats(
+  [trade(1, 1.2e12, 8), trade(2, 3e11, 9)],
+  [trade(0, 2e12), trade(3, 5e11)],
+  NOW
+);
+eq(diagnoseMarket(whale).type?.id, 't-whale-surplus', '큰손 흑자 유형 판정');
+ok(diagnoseMarket(whale).notes.length > 0 && diagnoseMarket(whale).notes.length <= 4, '코멘트 1~4개');
+
+// 빈 데이터 → 진단 없음
+eq(diagnoseMarket(computeMarketStats([], [], NOW)).type, null, '거래 없으면 진단 없음');
+
+// 어떤 조합에도 type 폴백 매칭 (fallback 룰 존재)
+const tiny = computeMarketStats([trade(0, 5000)], [], NOW);
+ok(diagnoseMarket(tiny).type !== null, '소액 1건도 유형 폴백 매칭');
+
+// 지표 계산 검증
+eq(whale.totalBuy, 1.5e12, 'totalBuy 합산');
+eq(whale.net, 1e12, 'net 계산');
+eq(whale.highGradeBuys, 2, '8강 이상 영입 수');
+eq(tiny.daysSinceLast, 0, 'daysSinceLast 오늘 = 0');
+
+// 모든 룰의 when이 대표 스탯 3종에서 예외 없이 실행됨
+for (const st of [whale, tiny, computeMarketStats([], [], NOW)]) {
+  let threw = false;
+  try {
+    for (const r of MARKET_RULES) r.when(st);
+  } catch {
+    threw = true;
+  }
+  ok(!threw, '룰 평가 중 예외 없음');
+}
 
 // ── 결과 ─────────────────────────────────────────────────────
 console.log(`\n단위 테스트: ${pass} PASS, ${fails.length} FAIL`);
