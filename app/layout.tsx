@@ -7,7 +7,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import AuthButton from "./components/AuthButton";
 import NoticeBanner from "./components/NoticeBanner";
 import { SITE_URL } from "@/lib/site";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const chakra = Chakra_Petch({
