@@ -47,7 +47,7 @@ export default function HomeReturningStrip() {
     <section className="panel rise mt-2 p-4">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <p className="text-base font-bold">
-          다시 오셨네요, <span className="text-accent">{profile.nickname}</span>님 👋
+          반가워요, <span className="text-accent">{profile.nickname}</span>님 👋
         </p>
         {snap && snap.deltaWinRate !== null && (
           <span
