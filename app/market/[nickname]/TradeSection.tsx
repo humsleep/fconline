@@ -2,30 +2,12 @@ import { getUserTrades } from "@/lib/nexon/api";
 import { NexonApiError } from "@/lib/nexon/client";
 import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
 import { formatKoreanBP, formatKoreanBPShort } from "@/lib/format";
-import { computeMarketStats, diagnoseMarket, type RuleTone } from "@/lib/market/diagnosis";
+import { computeMarketStats, diagnoseMarket } from "@/lib/market/diagnosis";
+import { TONE_BG, TONE_DOT, TONE_TEXT } from "@/lib/diagnosis/tone";
 import TradeList, { type TradeRow } from "./TradeList";
 import type { TradeRecord } from "@/lib/nexon/types";
 
 const LIMIT = 40;
-
-const TONE_TEXT: Record<RuleTone, string> = {
-  win: "text-win",
-  lose: "text-lose",
-  gold: "text-gold",
-  info: "text-accent",
-};
-const TONE_BG: Record<RuleTone, string> = {
-  win: "bg-win/15",
-  lose: "bg-lose/15",
-  gold: "bg-gold/15",
-  info: "bg-accent/15",
-};
-const TONE_DOT: Record<RuleTone, string> = {
-  win: "bg-win",
-  lose: "bg-lose",
-  gold: "bg-gold",
-  info: "bg-accent",
-};
 
 async function loadTrades(
   ouid: string,

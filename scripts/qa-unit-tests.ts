@@ -17,6 +17,8 @@ import { getPositionLabel } from '../lib/nexon/meta';
 import { baseLabelOfCode, assignByPosition, bestFormationId } from '../lib/squad/assign';
 import { formatKoreanBP, formatKoreanBPShort } from '../lib/format';
 import { MARKET_RULES, computeMarketStats, diagnoseMarket } from '../lib/market/diagnosis';
+import { MATCH_RULES, computeMatchPerfStats, diagnoseMatchPerf } from '../lib/match/diagnosis';
+import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
@@ -318,6 +320,53 @@ for (const st of [whale, tiny, computeMarketStats([], [], NOW)]) {
     threw = true;
   }
   ok(!threw, '룰 평가 중 예외 없음');
+}
+
+// ── 공식경기 성향 진단 (사전 셋팅 룰) ────────────────────────
+section('match-diagnosis');
+ok(MATCH_RULES.length >= 100, `경기 진단 룰 100개 이상 (현재 ${MATCH_RULES.length}개)`);
+eq(new Set(MATCH_RULES.map((r) => r.id)).size, MATCH_RULES.length, '경기 룰 id 중복 없음');
+ok(MATCH_RULES.every((r) => r.title.length > 0 && r.desc.length > 0), '경기 룰 제목·설명 존재');
+
+let sumSeq = 0;
+const sum = (result: '승' | '무' | '패', gf: number, ga: number, rating = 7, poss = 50): MatchSummary =>
+  ({
+    matchId: `m-${sumSeq++}`,
+    matchDate: '2026-07-15T00:00:00',
+    matchType: 50,
+    result,
+    forfeit: false,
+    me: { nickname: 'ME', goals: gf, possession: poss, rating },
+    opponent: { nickname: 'OP', goals: ga },
+  }) as MatchSummary;
+
+// 10연승 고승률 → 폼 미쳤다
+const hot = computeMatchPerfStats(Array.from({ length: 12 }, () => sum('승', 3, 0, 8)));
+eq(diagnoseMatchPerf(hot).type?.id, 't-champ', '고승률 연승 유형 판정');
+eq(hot.currentStreak, 12, '연승 계산');
+eq(hot.cleanSheets, 12, '클린시트 계산');
+
+// 저승률 → 리빌딩
+const cold = computeMatchPerfStats([
+  ...Array.from({ length: 3 }, () => sum('승', 1, 0)),
+  ...Array.from({ length: 9 }, () => sum('패', 0, 2)),
+]);
+eq(diagnoseMatchPerf(cold).type?.id, 't-rebuilding', '저승률 유형 판정');
+
+// 빈 표본 → 진단 없음, 1경기 → 폴백 유형
+eq(diagnoseMatchPerf(computeMatchPerfStats([])).type, null, '경기 없으면 진단 없음');
+ok(diagnoseMatchPerf(computeMatchPerfStats([sum('무', 1, 1)])).type !== null, '1경기도 유형 폴백');
+ok(diagnoseMatchPerf(hot).notes.length >= 1 && diagnoseMatchPerf(hot).notes.length <= 4, '경기 코멘트 1~4개');
+
+// 모든 경기 룰 예외 없이 평가
+for (const st of [hot, cold, computeMatchPerfStats([])]) {
+  let threw = false;
+  try {
+    for (const r of MATCH_RULES) r.when(st);
+  } catch {
+    threw = true;
+  }
+  ok(!threw, '경기 룰 평가 중 예외 없음');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
