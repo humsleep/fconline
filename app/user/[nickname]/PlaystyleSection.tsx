@@ -82,9 +82,6 @@ export default async function PlaystyleSection({
           <span className="rounded bg-surface-2 px-2 py-0.5 text-[13px] font-semibold text-muted">
             {CONF_LABEL[result.confidence]}
           </span>
-          <span className="rounded bg-gold/15 px-2 py-0.5 text-[13px] font-bold text-gold">
-            BETA
-          </span>
           {result.controller !== "unknown" && (
             <span className="rounded bg-surface-2 px-2 py-0.5 text-[13px] text-muted">
               {result.controller === "keyboard" ? "⌨ 키보드" : result.controller === "pad" ? "🎮 패드" : result.controller}

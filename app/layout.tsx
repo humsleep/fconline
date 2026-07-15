@@ -72,9 +72,6 @@ export default function RootLayout({
             >
               <span className="text-accent">FC</span>
               <span className="text-ink">SCOPE</span>
-              <span className="mb-0.5 hidden rounded bg-surface-2 px-1.5 py-0.5 text-sm font-semibold text-muted sm:inline">
-                BETA
-              </span>
             </Link>
             <nav className="ml-auto hidden items-center gap-4 md:flex">
               <Link
