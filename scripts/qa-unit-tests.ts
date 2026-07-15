@@ -16,6 +16,10 @@ import { hashIp, clientIpFrom } from '../lib/security/ip-hash';
 import { getPositionLabel } from '../lib/nexon/meta';
 import { baseLabelOfCode, assignByPosition, bestFormationId } from '../lib/squad/assign';
 import { formatKoreanBP, formatKoreanBPShort } from '../lib/format';
+import { MARKET_RULES, computeMarketStats, diagnoseMarket } from '../lib/market/diagnosis';
+import { MATCH_RULES, computeMatchPerfStats, diagnoseMatchPerf } from '../lib/match/diagnosis';
+import type { MatchSummary } from '../lib/nexon/summary';
+import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { squadCardTree } from '../lib/card/squad-card';
@@ -273,6 +277,97 @@ eq(formatKoreanBPShort(475_000_000), '4.75억', '축약 소수 2자리');
 eq(formatKoreanBPShort(12_300_000_000), '123억', '축약 100 이상 정수');
 eq(formatKoreanBPShort(45_600_000_000), '456억', '축약 정수');
 eq(formatKoreanBPShort(2_000_000_000_000), '2조', '축약 후행 0 제거');
+
+// ── 이적시장 진단 (사전 셋팅 룰) ─────────────────────────────
+section('market-diagnosis');
+ok(MARKET_RULES.length >= 100, `진단 룰 100개 이상 (현재 ${MARKET_RULES.length}개)`);
+eq(new Set(MARKET_RULES.map((r) => r.id)).size, MARKET_RULES.length, '룰 id 중복 없음');
+ok(MARKET_RULES.every((r) => r.title.length > 0 && r.desc.length > 0), '모든 룰에 제목·설명 존재');
+ok(MARKET_RULES.some((r) => r.kind === 'type') && MARKET_RULES.some((r) => r.kind === 'note'), 'type/note 룰 모두 존재');
+
+const NOW = Date.parse('2026-07-15T12:00:00Z');
+const trade = (daysAgo: number, value: number, grade = 1, spid = 251000001): TradeRecord =>
+  ({ tradeDate: new Date(NOW - daysAgo * 86400000).toISOString(), saleSn: `${daysAgo}-${value}-${spid}`, spid, grade, value }) as TradeRecord;
+
+// 큰손 흑자: 1조 지출 + 그 이상 수입
+const whale = computeMarketStats(
+  [trade(1, 1.2e12, 8), trade(2, 3e11, 9)],
+  [trade(0, 2e12), trade(3, 5e11)],
+  NOW
+);
+eq(diagnoseMarket(whale).type?.id, 't-whale-surplus', '큰손 흑자 유형 판정');
+ok(diagnoseMarket(whale).notes.length > 0 && diagnoseMarket(whale).notes.length <= 4, '코멘트 1~4개');
+
+// 빈 데이터 → 진단 없음
+eq(diagnoseMarket(computeMarketStats([], [], NOW)).type, null, '거래 없으면 진단 없음');
+
+// 어떤 조합에도 type 폴백 매칭 (fallback 룰 존재)
+const tiny = computeMarketStats([trade(0, 5000)], [], NOW);
+ok(diagnoseMarket(tiny).type !== null, '소액 1건도 유형 폴백 매칭');
+
+// 지표 계산 검증
+eq(whale.totalBuy, 1.5e12, 'totalBuy 합산');
+eq(whale.net, 1e12, 'net 계산');
+eq(whale.highGradeBuys, 2, '8강 이상 영입 수');
+eq(tiny.daysSinceLast, 0, 'daysSinceLast 오늘 = 0');
+
+// 모든 룰의 when이 대표 스탯 3종에서 예외 없이 실행됨
+for (const st of [whale, tiny, computeMarketStats([], [], NOW)]) {
+  let threw = false;
+  try {
+    for (const r of MARKET_RULES) r.when(st);
+  } catch {
+    threw = true;
+  }
+  ok(!threw, '룰 평가 중 예외 없음');
+}
+
+// ── 공식경기 성향 진단 (사전 셋팅 룰) ────────────────────────
+section('match-diagnosis');
+ok(MATCH_RULES.length >= 100, `경기 진단 룰 100개 이상 (현재 ${MATCH_RULES.length}개)`);
+eq(new Set(MATCH_RULES.map((r) => r.id)).size, MATCH_RULES.length, '경기 룰 id 중복 없음');
+ok(MATCH_RULES.every((r) => r.title.length > 0 && r.desc.length > 0), '경기 룰 제목·설명 존재');
+
+let sumSeq = 0;
+const sum = (result: '승' | '무' | '패', gf: number, ga: number, rating = 7, poss = 50): MatchSummary =>
+  ({
+    matchId: `m-${sumSeq++}`,
+    matchDate: '2026-07-15T00:00:00',
+    matchType: 50,
+    result,
+    forfeit: false,
+    me: { nickname: 'ME', goals: gf, possession: poss, rating },
+    opponent: { nickname: 'OP', goals: ga },
+  }) as MatchSummary;
+
+// 10연승 고승률 → 폼 미쳤다
+const hot = computeMatchPerfStats(Array.from({ length: 12 }, () => sum('승', 3, 0, 8)));
+eq(diagnoseMatchPerf(hot).type?.id, 't-champ', '고승률 연승 유형 판정');
+eq(hot.currentStreak, 12, '연승 계산');
+eq(hot.cleanSheets, 12, '클린시트 계산');
+
+// 저승률 → 리빌딩
+const cold = computeMatchPerfStats([
+  ...Array.from({ length: 3 }, () => sum('승', 1, 0)),
+  ...Array.from({ length: 9 }, () => sum('패', 0, 2)),
+]);
+eq(diagnoseMatchPerf(cold).type?.id, 't-rebuilding', '저승률 유형 판정');
+
+// 빈 표본 → 진단 없음, 1경기 → 폴백 유형
+eq(diagnoseMatchPerf(computeMatchPerfStats([])).type, null, '경기 없으면 진단 없음');
+ok(diagnoseMatchPerf(computeMatchPerfStats([sum('무', 1, 1)])).type !== null, '1경기도 유형 폴백');
+ok(diagnoseMatchPerf(hot).notes.length >= 1 && diagnoseMatchPerf(hot).notes.length <= 4, '경기 코멘트 1~4개');
+
+// 모든 경기 룰 예외 없이 평가
+for (const st of [hot, cold, computeMatchPerfStats([])]) {
+  let threw = false;
+  try {
+    for (const r of MATCH_RULES) r.when(st);
+  } catch {
+    threw = true;
+  }
+  ok(!threw, '경기 룰 평가 중 예외 없음');
+}
 
 // ── 결과 ─────────────────────────────────────────────────────
 console.log(`\n단위 테스트: ${pass} PASS, ${fails.length} FAIL`);

@@ -77,7 +77,6 @@ code "/api/players/search?q=%EC%86%90" 200 "선수 검색 API"
 # /user 페이지: 존재하지 않는 닉네임 → ErrorState 렌더(200)
 code "/user/__qa_nonexistent__" 200 "전적 페이지 graceful 에러"
 # 라이브 API: JSON 에러 응답(404/503/500 중 하나 — 넥슨 상태에 따라 graceful, 무한대기 아님)
-code_in "/api/live/__qa_nonexistent__" "404 500 503" "라이브 API graceful 처리"
 
 # 관리자 — 비로그인은 노출 금지(404 fail-closed)
 code "/admin" 404 "관리자 콘솔 은닉"

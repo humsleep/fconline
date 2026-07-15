@@ -1,7 +1,6 @@
 import Link from "next/link";
 import SearchForm from "./components/SearchForm";
 import FocusSearchCard from "./components/FocusSearchCard";
-import HomeReturningStrip from "./components/HomeReturningStrip";
 import { DEMO_NICKNAME } from "@/lib/demo";
 
 const FEATURES = [
@@ -86,9 +85,6 @@ export default function Home() {
           </Link>
         )}
       </section>
-
-      {/* 재방문/로그인 개인화 스트립 (비로그인이면 렌더 안 함) */}
-      <HomeReturningStrip />
 
       {/* 기능 */}
       <section className="pb-24 md:pb-16">
