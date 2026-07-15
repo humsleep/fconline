@@ -14,7 +14,8 @@ import { verdictFromRating, verdictFromMatch } from '../lib/verdict';
 import { rateLimit, clientIp } from '../lib/security/rate-limit';
 import { hashIp, clientIpFrom } from '../lib/security/ip-hash';
 import { getPositionLabel } from '../lib/nexon/meta';
-import { baseLabelOfCode, assignByPosition } from '../lib/squad/assign';
+import { baseLabelOfCode, assignByPosition, bestFormationId } from '../lib/squad/assign';
+import { formatKoreanBP, formatKoreanBPShort } from '../lib/format';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { squadCardTree } from '../lib/card/squad-card';
@@ -240,6 +241,38 @@ const ps = analyzePlaystyle(aggregatePlaystyle(psDetails, 'ME'));
 ok(typeof ps.confidence === 'string', 'playstyle confidence 반환');
 ok(Array.isArray(ps.axes) && ps.axes.length > 0, 'playstyle 축 배열');
 ok(analyzePlaystyle(aggregatePlaystyle([], 'ME')).confidence === 'hold', '경기 없으면 hold');
+
+// ── bestFormationId (선발 라벨 → 포메이션) ───────────────────
+section('bestFormationId');
+eq(
+  bestFormationId([0, 7, 5, 4, 3, 13, 14, 15, 27, 25, 23].map(baseLabelOfCode)),
+  '433',
+  '4-3-3 판별'
+);
+eq(
+  bestFormationId([0, 7, 5, 4, 3, 9, 11, 19, 18, 17, 25].map(baseLabelOfCode)),
+  '4231',
+  '4-2-3-1 판별'
+);
+eq(
+  bestFormationId([0, 4, 5, 6, 8, 13, 14, 15, 2, 24, 26].map(baseLabelOfCode)),
+  '352',
+  '3-5-2 판별'
+);
+ok(bestFormationId([]).length > 0, '빈 입력도 폴백 포메이션 반환');
+
+// ── formatKoreanBP (억/조/경 단위) ───────────────────────────
+section('formatKoreanBP');
+eq(formatKoreanBP(0), '0', '0');
+eq(formatKoreanBP(9_999), '9,999', '만 미만은 그대로');
+eq(formatKoreanBP(475_000_000), '4억 7,500만', '억+만 조합');
+eq(formatKoreanBP(200_000_000), '2억', '나머지 0이면 단일 단위');
+eq(formatKoreanBP(1_234_000_000_000), '1조 2,340억', '조+억 조합');
+eq(formatKoreanBP(30_000_000_000_000_000), '3경', '경 단위');
+eq(formatKoreanBPShort(475_000_000), '4.75억', '축약 소수 2자리');
+eq(formatKoreanBPShort(12_300_000_000), '123억', '축약 100 이상 정수');
+eq(formatKoreanBPShort(45_600_000_000), '456억', '축약 정수');
+eq(formatKoreanBPShort(2_000_000_000_000), '2조', '축약 후행 0 제거');
 
 // ── 결과 ─────────────────────────────────────────────────────
 console.log(`\n단위 테스트: ${pass} PASS, ${fails.length} FAIL`);
