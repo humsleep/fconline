@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { headers } from "next/headers";
+import { rateLimit, clientIp } from "@/lib/security/rate-limit";
 import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
 import { getMatchDetailCached } from "@/lib/nexon/cached";
 import { getDivisionName } from "@/lib/nexon/meta";
@@ -42,7 +44,12 @@ export default async function OgImage({
   let rec: ReturnType<typeof aggregate> | null = null;
   let form: MatchSummary[] = [];
 
+  // 넥슨 팬아웃 유발 — 공유 크롤러(카톡 등) 정상 트래픽은 넉넉히 허용(분당 60).
+  // 한도 초과 시 넥슨 조회만 건너뛰고 닉네임만 담긴 기본 카드를 렌더(썸네일 깨짐 방지).
+  const overLimit = !rateLimit(`og:${clientIp(await headers())}`, 60, 60_000).ok;
+
   try {
+    if (overLimit) throw new Error("og rate limited");
     const ouid = await getOuid(nickname);
     const basic = await getUserBasic(ouid);
     level = basic.level;

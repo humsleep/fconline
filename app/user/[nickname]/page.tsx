@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { limitNexonFanout } from "@/lib/security/rate-limit";
 import SearchForm from "@/app/components/SearchForm";
 import { DEMO_NICKNAME } from "@/lib/demo";
 import { getMaxDivisions, getOuid, getUserBasic } from "@/lib/nexon/api";
@@ -50,6 +52,10 @@ export default async function UserPage({
   const nickname = decodeURIComponent(raw);
   // 이적시장은 매치 종류와 무관 → 독립 페이지로 이동 (기존 링크 호환)
   if (view === "market") redirect(`/market/${encodeURIComponent(nickname)}`);
+
+  // 넥슨 팬아웃(매치 30건 + 배지 + 등급)을 유발하는 SSR — IP rate limit 선차단
+  const rl = limitNexonFanout(await headers(), "user-page");
+  if (!rl.ok) return <TooManyRequests nickname={nickname} />;
   const matchType =
     MATCH_TABS.find((t) => t.type === Number(type))?.type ?? MATCH_TABS[0].type;
   const activeView =
@@ -563,6 +569,24 @@ function SquadSkeleton() {
       <p className="pt-2 text-center text-xs text-muted">
         선수별 기록과 랭커 평균을 계산하는 중…
       </p>
+    </div>
+  );
+}
+
+function TooManyRequests({ nickname }: { nickname: string }) {
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-24 text-center">
+      <h1 className="text-xl font-bold">지금 조회 요청이 많아요</h1>
+      <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
+        같은 네트워크에서 요청이 몰리고 있어요. 1~2분 후에 다시 검색해 주세요.
+        (새로고침 연타는 오히려 느려져요)
+      </p>
+      <Link
+        href={`/user/${encodeURIComponent(nickname)}`}
+        className="mt-6 text-sm text-muted underline underline-offset-2"
+      >
+        잠시 후 다시 시도
+      </Link>
     </div>
   );
 }

@@ -21,9 +21,15 @@ export function hashIp(ip: string): string | null {
   return createHash('sha256').update(`${s}:${ip}`).digest('hex');
 }
 
-/** 프록시 뒤 실제 클라이언트 IP (Vercel: x-forwarded-for 첫 항목) */
+/**
+ * 프록시 뒤 실제 클라이언트 IP.
+ * x-real-ip(Vercel 주입, 위조 불가) 우선 — x-forwarded-for 첫 항목은 클라이언트가
+ * 위조할 수 있어 폴백으로만 사용(rate-limit.ts의 clientIp와 동일 정책).
+ */
 export function clientIpFrom(headers: Headers): string {
+  const real = headers.get('x-real-ip');
+  if (real) return real.trim();
   const xff = headers.get('x-forwarded-for');
   if (xff) return xff.split(',')[0].trim();
-  return headers.get('x-real-ip') ?? '';
+  return '';
 }
