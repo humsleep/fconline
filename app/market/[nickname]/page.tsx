@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Suspense } from "react";
 import { getOuid } from "@/lib/nexon/api";
 import { isUserNotFound } from "@/lib/nexon/client";
+import { limitNexonFanout } from "@/lib/security/rate-limit";
 import TradeSection from "./TradeSection";
 
 export const maxDuration = 60;
@@ -28,6 +30,22 @@ export default async function MarketPage({
 }) {
   const { nickname: raw } = await params;
   const nickname = decodeURIComponent(raw);
+
+  // 넥슨 팬아웃(거래 buy/sell) SSR — IP rate limit 선차단
+  const rl = limitNexonFanout(await headers(), "market-page");
+  if (!rl.ok) {
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-24 text-center">
+        <h1 className="text-xl font-bold">지금 조회 요청이 많아요</h1>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
+          1~2분 후에 다시 시도해 주세요.
+        </p>
+        <Link href="/" className="mt-6 text-sm text-muted underline underline-offset-2">
+          홈으로
+        </Link>
+      </div>
+    );
+  }
 
   let ouid: string;
   try {

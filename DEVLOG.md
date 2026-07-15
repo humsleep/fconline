@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-15 — 오픈 전 보안 하드닝 (감사 지적 4건)
+
+- **넥슨 팬아웃 IP rate limit 확대**: 기존 from-user만 → `/user` SSR(user-page)·`/market` SSR(market-page)·`/api/card/user`(card)·OG 이미지(og, 분당 60 관대 + 한도 초과 시 닉네임 폴백 카드로 썸네일 깨짐 방지)·`/api/players/ranker-stat`·`/api/profile/verify` 전부 적용. 페이지는 "지금 조회 요청이 많아요" 안내 렌더, API는 429+Retry-After
+- **배틀 투표 조작 방지**: voter를 서버 파생으로 변경 — 로그인=계정 해시(1인 1표), 익명=IP해시+기기id 해시(기기id 갈아끼우기 무력화) + IP당 분당 15회. 클라이언트 변경 불필요("로그인 불필요" 유지)
+- **보안 헤더 5종**(next.config.ts): HSTS/X-Frame-Options(SAMEORIGIN)/CT-Options/Referrer/Permissions
+- **XFF 위조 방지**: `clientIpFrom`을 x-real-ip 우선으로 통일(스쿼드 일일 저장 한도 우회 차단)
+- dev 실측: 헤더 5종 응답 확인, /user 41번째 요청부터 차단 확인. 단위 **121 PASS**. PR #39
+- 감사 결과 요약: 치명/높음 코드 이슈는 위 rate limit이 유일했고 시크릿/인가/injection/SSRF는 이상 없음. 남은 낮음(조용한 실패 6건, global-error 부재)은 오픈 후 처리
+
 ## 2026-07-15 — 탭바 검색 진입 + 스쿼드 저장 게이팅 + 마이페이지 스쿼드 관리
 
 - **모바일 탭바**: 내 정보 제거(AuthButton 메뉴로 충분), 맨 왼쪽에 **전적 검색** 탭(/?focus=1 → 히어로 검색 자동 포커스, SearchForm 기존 지원 활용)

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getRankerStatsCached, rankerKey } from '@/lib/nexon/ranker';
+import { limitNexonFanout } from '@/lib/security/rate-limit';
 import type { RankerStat } from '@/lib/nexon/types';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,14 @@ const POSITION_CANDIDATES: Record<string, number[]> = {
 const MATCH_TYPE = 50; // 공식경기
 
 export async function GET(request: Request) {
+  // 캐시 미스 시 넥슨 ranker-stats 호출 유발 — IP rate limit
+  const rl = limitNexonFanout(request.headers, 'ranker-stat');
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: '잠시 후 다시 시도해 주세요.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    );
+
   const { searchParams } = new URL(request.url);
   const spid = Number(searchParams.get('spid'));
   const pos = (searchParams.get('pos') ?? '').toUpperCase();

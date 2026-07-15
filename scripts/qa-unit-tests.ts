@@ -222,6 +222,11 @@ ok(h1 !== null && h1 !== '203.0.113.5', 'hashIp는 평문 IP를 반환하지 않
 ok(hashIp('203.0.113.6') !== h1, '다른 IP는 다른 해시');
 eq(hashIp(''), null, '빈 IP는 null');
 eq(clientIpFrom(new Headers({ 'x-forwarded-for': '10.0.0.1, 10.0.0.2' })), '10.0.0.1', 'clientIpFrom xff 첫 항목');
+eq(
+  clientIpFrom(new Headers({ 'x-real-ip': '1.2.3.4', 'x-forwarded-for': '9.9.9.9' })),
+  '1.2.3.4',
+  'clientIpFrom x-real-ip 우선 (XFF 위조 방지)'
+);
 
 // ── meta / assign / presets ──────────────────────────────────
 section('meta/assign/presets');

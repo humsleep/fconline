@@ -7,9 +7,18 @@ import {
   isMaintenance,
   isPaused,
 } from '@/lib/nexon/client';
+import { limitNexonFanout } from '@/lib/security/rate-limit';
 
 /** FC Online 구단주명 연동 — 닉네임을 ouid로 해석해 프로필에 저장(존재 검증 수준). */
 export async function POST(request: Request) {
+  // getOuid(넥슨 호출) 유발 — 로그인 게이트에 IP rate limit 이중 방어
+  const rl = limitNexonFanout(request.headers, 'verify');
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: '잠시 후 다시 시도해 주세요.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    );
+
   const supabase = await createClient();
   const {
     data: { user },

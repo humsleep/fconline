@@ -3,6 +3,7 @@ import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { getDivisionName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
 import { renderCard } from "@/lib/card/render";
+import { limitNexonFanout } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -10,6 +11,14 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ nickname: string }> }
 ) {
+  // 매치 20건 팬아웃 유발 — IP rate limit (미들웨어 제외 경로라 여기서 직접)
+  const rl = limitNexonFanout(req.headers, "card");
+  if (!rl.ok)
+    return new Response("rate limited", {
+      status: 429,
+      headers: { "Retry-After": String(rl.retryAfter) },
+    });
+
   const { nickname } = await params;
   let decoded: string;
   try {
