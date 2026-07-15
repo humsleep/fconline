@@ -3,15 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// 홈은 상단 로고로 충분 — 탭은 목적지 4개만
 const TABS = [
-  {
-    href: "/",
-    label: "홈",
-    match: (p: string) => p === "/",
-    icon: (
-      <path d="M3 10.5 12 3l9 7.5M5 9.5V20h5v-5h4v5h5V9.5" />
-    ),
-  },
   {
     href: "/squad",
     label: "스쿼드",

@@ -1,4 +1,4 @@
-import type { Slot } from "./formations";
+import { FORMATIONS, type Slot } from "./formations";
 
 type PosLine = "GK" | "DEF" | "MID" | "ATT";
 
@@ -26,6 +26,53 @@ const CODE_BASE: Record<number, string> = {
 
 export function baseLabelOfCode(code: number): string {
   return CODE_BASE[code] ?? "CM";
+}
+
+/**
+ * 라인업(포지션 라벨 11개)에 가장 근접한 포메이션 id.
+ * 점수 = 정확 포지션 일치 ×2 + 잔여 인원의 같은 라인 일치. 동점이면 목록 앞(4-3-3 계열) 우선.
+ */
+export function bestFormationId(labels: string[]): string {
+  const playerCounts = new Map<string, number>();
+  for (const l of labels) playerCounts.set(l, (playerCounts.get(l) ?? 0) + 1);
+
+  let bestId = FORMATIONS[0].id;
+  let bestScore = -1;
+
+  for (const f of FORMATIONS) {
+    const slotCounts = new Map<string, number>();
+    for (const s of f.slots) slotCounts.set(s.pos, (slotCounts.get(s.pos) ?? 0) + 1);
+
+    let exact = 0;
+    const restByLine = new Map<PosLine, number>();
+    for (const [label, n] of playerCounts) {
+      const m = Math.min(n, slotCounts.get(label) ?? 0);
+      exact += m;
+      if (m > 0) slotCounts.set(label, (slotCounts.get(label) ?? 0) - m);
+      const rest = n - m;
+      if (rest > 0) {
+        const line = posLineOf(label);
+        restByLine.set(line, (restByLine.get(line) ?? 0) + rest);
+      }
+    }
+
+    const slotRestByLine = new Map<PosLine, number>();
+    for (const [pos, n] of slotCounts) {
+      if (n <= 0) continue;
+      const line = posLineOf(pos);
+      slotRestByLine.set(line, (slotRestByLine.get(line) ?? 0) + n);
+    }
+    let lineScore = 0;
+    for (const [line, n] of restByLine)
+      lineScore += Math.min(n, slotRestByLine.get(line) ?? 0);
+
+    const score = exact * 2 + lineScore;
+    if (score > bestScore) {
+      bestScore = score;
+      bestId = f.id;
+    }
+  }
+  return bestId;
 }
 
 export interface AssignInput {

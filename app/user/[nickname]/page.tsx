@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import SearchForm from "@/app/components/SearchForm";
 import { DEMO_NICKNAME } from "@/lib/demo";
@@ -13,7 +14,6 @@ import SquadSection from "./SquadSection";
 import PlaystyleSection from "./PlaystyleSection";
 import ReportSection from "./ReportSection";
 import VisitRecorder from "./VisitRecorder";
-import TradeSection from "./TradeSection";
 import ShareCardButton from "@/app/components/ShareCardButton";
 
 export const maxDuration = 60; // 콜드 조회: 매치 상세 최대 30건 순차 호출 대비
@@ -43,6 +43,8 @@ export default async function UserPage({
     searchParams,
   ]);
   const nickname = decodeURIComponent(raw);
+  // 이적시장은 매치 종류와 무관 → 독립 페이지로 이동 (기존 링크 호환)
+  if (view === "market") redirect(`/market/${encodeURIComponent(nickname)}`);
   const matchType =
     MATCH_TABS.find((t) => t.type === Number(type))?.type ?? MATCH_TABS[0].type;
   const activeView =
@@ -52,9 +54,7 @@ export default async function UserPage({
         ? "style"
         : view === "report"
           ? "report"
-          : view === "market"
-            ? "market"
-            : "matches";
+          : "matches";
 
   let ouid: string;
   let basic: Awaited<ReturnType<typeof getUserBasic>>;
@@ -90,13 +90,21 @@ export default async function UserPage({
           <p className="scoreboard mb-1 text-sm font-semibold text-muted">
             LV.<span className="text-accent">{basic.level}</span>
           </p>
-          <Link
-            href={`/live/${encodeURIComponent(basic.nickname)}`}
-            className="scoreboard mb-0.5 ml-auto inline-flex items-center gap-1.5 rounded-lg bg-lose/15 px-3 py-1.5 text-sm font-bold text-lose transition-colors hover:bg-lose/25"
-          >
-            <span className="live-dot inline-block h-2 w-2 rounded-full bg-lose" />
-            라이브 세션
-          </Link>
+          <div className="mb-0.5 ml-auto flex items-center gap-1.5">
+            <Link
+              href={`/market/${encodeURIComponent(basic.nickname)}`}
+              className="scoreboard inline-flex items-center gap-1.5 rounded-lg bg-gold/15 px-3 py-1.5 text-sm font-bold text-gold transition-colors hover:bg-gold/25"
+            >
+              💰 이적시장
+            </Link>
+            <Link
+              href={`/live/${encodeURIComponent(basic.nickname)}`}
+              className="scoreboard inline-flex items-center gap-1.5 rounded-lg bg-lose/15 px-3 py-1.5 text-sm font-bold text-lose transition-colors hover:bg-lose/25"
+            >
+              <span className="live-dot inline-block h-2 w-2 rounded-full bg-lose" />
+              라이브 세션
+            </Link>
+          </div>
         </div>
         {divisionCards.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
@@ -145,7 +153,6 @@ export default async function UserPage({
             { view: "report", label: "분석" },
             { view: "squad", label: "선수 성적표" },
             { view: "style", label: "플레이스타일" },
-            { view: "market", label: "이적시장" },
           ] as const
         ).map((v) => {
           const href = `/user/${encodeURIComponent(basic.nickname)}?type=${matchType}${
@@ -179,10 +186,6 @@ export default async function UserPage({
       ) : activeView === "report" ? (
         <Suspense key={`rp-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
           <ReportSection ouid={ouid} matchType={matchType} />
-        </Suspense>
-      ) : activeView === "market" ? (
-        <Suspense key={`mk-${ouid}`} fallback={<SquadSkeleton />}>
-          <TradeSection ouid={ouid} />
         </Suspense>
       ) : (
         <Suspense key={`${ouid}-${matchType}`} fallback={<MatchSkeleton />}>

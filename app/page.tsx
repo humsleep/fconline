@@ -6,44 +6,30 @@ import { DEMO_NICKNAME } from "@/lib/demo";
 
 const FEATURES = [
   {
-    tag: "매치 리포트 · 분석",
-    title: "슛맵으로 왜 졌는지 본다",
-    desc: "경기별 슛 좌표·선수 평점부터 시간대별 득실·최근 7일 폼 추세·자동 코칭까지. 점유율 말고 진짜 원인을 짚어줍니다.",
-    hint: "내 구단주명 검색하고 시작 →",
-    href: "/?focus=1",
-  },
-  {
-    tag: "선수 성적표 · 도감",
-    title: "내 카드, 랭커 대비 몇 점?",
-    desc: "내 선수별 실사용 평점을 랭커 평균과 나란히. 선수를 누르면 랭커가 그 카드를 실제 어떻게 쓰는지 '선수 도감'으로.",
-    hint: "내 구단주명 검색하고 시작 →",
-    href: "/?focus=1",
-  },
-  {
-    tag: "스쿼드 클리닉",
-    title: "내 스쿼드 종합 진단",
-    desc: "라인별 강약·약한 고리·과의존까지 룰베이스로 진단. 어디를 바꿔야 할지 짚어줍니다.",
-    hint: "내 구단주명 검색하고 시작 →",
+    tag: "전적 · 분석 리포트",
+    title: "슛맵부터 스쿼드 진단까지",
+    desc: "경기별 슛맵, 선수 성적표, 플레이스타일, 이적시장 내역을 한 번에.",
+    hint: "내 전적 검색 →",
     href: "/?focus=1",
   },
   {
     tag: "스쿼드 빌더",
-    title: "리그·팀 스쿼드 만들고 공유",
-    desc: "포메이션에 선수를 배치해 나만의 스쿼드를. 프리미어리그 아스날처럼 팀을 고르면 자동으로 채워집니다.",
+    title: "스쿼드 만들고 공유",
+    desc: "포메이션에 선수 배치, 리그·팀 프리셋, 최근 경기 선발 그대로 불러오기.",
     hint: "바로가기 →",
     href: "/squad",
   },
   {
-    tag: "랭커 픽 랭킹 · 도감",
+    tag: "랭커 픽 랭킹",
     title: "지금 랭커는 누굴 쓸까",
-    desc: "상위 랭커가 실제로 가장 많이 쓴 카드를 포지션별로, 매일 갱신. 선수 이름으로 검색해 도감(실사용 스탯)도 바로.",
+    desc: "상위 랭커가 실제로 가장 많이 쓴 카드를 포지션별로, 매일 갱신.",
     hint: "바로가기 →",
     href: "/meta",
   },
   {
     tag: "커뮤니티 · 배틀",
     title: "자랑하고, 모으고, 겨룬다",
-    desc: "스쿼드 자랑·평가, 클럽원 모집, 대회까지. 두 스쿼드를 올려 투표받는 '스쿼드 배틀'도. 구단주명 연동 시 전적 카드 자동 첨부.",
+    desc: "스쿼드 자랑과 평가, 클럽원 모집, 투표로 겨루는 스쿼드 배틀.",
     hint: "바로가기 →",
     href: "/community",
   },
@@ -75,7 +61,7 @@ export default function Home() {
           <circle cx="200" cy="120" r="3" fill="var(--accent)" stroke="none" />
         </svg>
 
-        <p className="rise scoreboard relative text-xs font-semibold tracking-[0.3em] text-accent">
+        <p className="rise scoreboard relative hidden text-xs font-semibold tracking-[0.3em] text-accent sm:block">
           EA SPORTS FC ONLINE DATA LAB
         </p>
         <h1 className="rise rise-1 relative mt-5 text-4xl font-bold leading-tight sm:text-5xl">
@@ -83,9 +69,7 @@ export default function Home() {
           <br className="sm:hidden" /> <span className="text-accent">데이터</span>로.
         </h1>
         <p className="rise rise-2 relative mt-4 max-w-md text-sm leading-relaxed text-muted sm:text-base">
-          전적 조회를 넘어 진단까지. 구단주명을 검색하면{" "}
-          <br className="hidden sm:block" />
-          최근 경기 기록과 통계를 바로 보여드립니다.
+          전적 조회를 넘어 진단까지 — FC온라인 데이터 도구 모음
         </p>
 
         <div className="rise rise-3 relative mt-8 w-full max-w-md">
@@ -98,7 +82,7 @@ export default function Home() {
             href={`/user/${encodeURIComponent(DEMO_NICKNAME)}`}
             className="rise rise-3 relative mt-4 inline-flex items-center gap-1.5 rounded-full border border-line px-4 py-2 text-sm font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
           >
-            👀 검색할 닉네임이 없다면? 예시 리포트 구경하기 →
+            👀 예시 리포트 먼저 구경하기 →
           </Link>
         )}
       </section>

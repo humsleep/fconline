@@ -270,8 +270,13 @@ export default function SquadBuilder() {
         pos: string;
         season: string;
       }[];
+      // 서버가 최근 경기 라인업으로 판별한 포메이션까지 함께 적용
+      const target =
+        typeof data.formation === "string"
+          ? getFormation(data.formation)
+          : formation;
       const placed = assignByPosition(
-        formation.slots,
+        target.slots,
         players.map((p) => ({
           pos: p.pos,
           name: p.name,
@@ -282,12 +287,16 @@ export default function SquadBuilder() {
       const next: Record<string, FilledSlot> = {};
       for (const [slotId, v] of Object.entries(placed))
         next[slotId] = { spid: v.spid!, name: v.name, season: v.season };
+      setFormationId(target.id);
+      setPickerOpen(false);
       setFilled(next);
       setCoords({});
       setTeamTag(null);
       setName(`${nick} 스쿼드`);
       setActiveSlotId(null);
-      setNotice(`${players.length}명을 최근 라인업 기준으로 배치했어요.`);
+      setNotice(
+        `가장 최근 경기의 선발 ${players.length}명을 ${target.name} 포메이션으로 불러왔어요.`
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "불러오기 실패");
     } finally {
