@@ -44,6 +44,18 @@ export function rememberMySquad(s: Omit<MySquad, 'at'>) {
   }
 }
 
+/** 이 기기 "내 스쿼드" 목록에서 제거 (마이페이지 삭제용) */
+export function forgetMySquad(id: string) {
+  try {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(loadMySquads().filter((x) => x.id !== id))
+    );
+  } catch {
+    // storage 불가 환경 무시
+  }
+}
+
 /**
  * 스쿼드 첨부 피커 — 내가 저장한 스쿼드를 선택(공유코드 복붙 제거).
  * 목록이 없거나 다른 기기라면 수동 코드 입력으로 폴백.

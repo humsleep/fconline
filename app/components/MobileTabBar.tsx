@@ -3,8 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// 홈은 상단 로고로 충분 — 탭은 목적지 4개만
+// 탭 4개: 검색(홈 히어로 포커스) · 스쿼드 · 커뮤니티 · 픽 랭킹
 const TABS = [
+  {
+    href: "/?focus=1",
+    label: "전적 검색",
+    match: (p: string) => p === "/",
+    icon: (
+      <>
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="M20 20l-4.5-4.5" />
+      </>
+    ),
+  },
   {
     href: "/squad",
     label: "스쿼드",
@@ -35,17 +46,6 @@ const TABS = [
     icon: (
       <>
         <path d="M5 20V10M12 20V4M19 20v-7" />
-      </>
-    ),
-  },
-  {
-    href: "/me",
-    label: "내 정보",
-    match: (p: string) => p === "/me",
-    icon: (
-      <>
-        <circle cx="12" cy="8" r="3.2" />
-        <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
       </>
     ),
   },

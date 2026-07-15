@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   formationsByLine,
   getFormation,
@@ -32,6 +32,7 @@ const LINE_GROUPS = formationsByLine();
 
 export default function SquadBuilder() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formationId, setFormationId] = useState("433");
   const [filled, setFilled] = useState<Record<string, FilledSlot>>({});
   const [coords, setCoords] = useState<Record<string, Coord>>({});
@@ -55,6 +56,41 @@ export default function SquadBuilder() {
   const searchPanelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pitchWrapRef = useRef<HTMLDivElement>(null);
+
+  // ?load={id} — 저장된 스쿼드를 불러와 수정 (마이페이지 "수정" 진입점)
+  const loadedRef = useRef(false);
+  useEffect(() => {
+    const id = searchParams.get("load");
+    if (!id || loadedRef.current) return;
+    loadedRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/squad/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error();
+        const data = (await res.json()) as {
+          name?: string;
+          formation?: string;
+          teamTag?: string | null;
+          slots?: { slotId: string; spid: number; name: string; season?: string; x?: number; y?: number }[];
+        };
+        setFormationId(getFormation(data.formation ?? "433").id);
+        setName(data.name ?? "내 스쿼드");
+        setTeamTag(data.teamTag ?? null);
+        const next: Record<string, FilledSlot> = {};
+        const nextCoords: Record<string, Coord> = {};
+        for (const s of data.slots ?? []) {
+          next[s.slotId] = { spid: s.spid, name: s.name, season: s.season };
+          if (typeof s.x === "number" && typeof s.y === "number")
+            nextCoords[s.slotId] = { x: s.x, y: s.y };
+        }
+        setFilled(next);
+        setCoords(nextCoords);
+        setNotice("스쿼드를 불러왔어요 — 수정 후 저장하면 새 스쿼드로 저장돼요.");
+      } catch {
+        setError("스쿼드를 불러오지 못했어요.");
+      }
+    })();
+  }, [searchParams]);
 
   // 모바일(검색 패널이 피치 아래에 쌓이는 폭) 여부
   const isStacked = () =>
@@ -305,7 +341,8 @@ export default function SquadBuilder() {
   }
 
   async function save() {
-    if (filledCount === 0 || saving) return;
+    // 모든 포지션(11명)을 채워야 저장 가능
+    if (filledCount < formation.slots.length || saving) return;
     // 개인당 최대 10개 — 내 스쿼드 목록(이 기기)이 꽉 차면 저장 차단
     if (countMySquads() >= MAX_MY_SQUADS) {
       setError(
@@ -515,15 +552,15 @@ export default function SquadBuilder() {
             />
             <button
               onClick={save}
-              disabled={filledCount === 0 || saving}
+              disabled={filledCount < formation.slots.length || saving}
               className="scoreboard h-11 flex-none rounded-lg bg-accent px-5 text-sm font-bold text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
             >
-              {saving ? "저장 중…" : `저장 (${filledCount}/11)`}
+              {saving ? "저장 중…" : "저장"}
             </button>
           </div>
-          {filledCount === 0 && !error && (
+          {filledCount < formation.slots.length && !error && (
             <p className="mt-2 text-center text-[13px] text-muted">
-              선수를 1명 이상 배치하면 저장할 수 있어요.
+              모든 포지션(11명)을 채우면 저장할 수 있어요.
             </p>
           )}
           {error && <p className="mt-2 text-center text-sm text-lose">{error}</p>}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import SquadBuilder from "./SquadBuilder";
 
 export const metadata: Metadata = {
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function SquadPage() {
-  return <SquadBuilder />;
+  // SquadBuilder가 useSearchParams(?load=) 사용 → Suspense 필수 (정적 prerender 호환)
+  return (
+    <Suspense fallback={null}>
+      <SquadBuilder />
+    </Suspense>
+  );
 }
