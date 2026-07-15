@@ -186,6 +186,7 @@ export default async function MetaPage() {
           {LINE_ORDER.map((line) => {
             const rows = (byLine.get(line) ?? []).slice(0, 10);
             if (rows.length === 0) return null;
+            const maxCount = rows[0]?.matchCount || 1;
             return (
               <section key={line}>
                 <h2 className="scoreboard text-sm font-bold tracking-[0.2em] text-muted">
@@ -243,11 +244,21 @@ export default async function MetaPage() {
                             </span>
                           </p>
                         </div>
-                        <div className="flex-none text-right">
+                        <div className="w-20 flex-none text-right">
                           <p className="scoreboard text-lg font-bold text-ink">
                             {r.matchCount.toLocaleString()}
                           </p>
                           <p className="text-[12px] text-muted">랭커 경기</p>
+                          {/* 라인 1위 대비 사용량 비례 바 */}
+                          <div
+                            className="ml-auto mt-1 h-1 w-full overflow-hidden rounded-full bg-surface-2"
+                            aria-hidden
+                          >
+                            <div
+                              className="h-full rounded-full bg-accent"
+                              style={{ width: `${Math.max(4, Math.round((r.matchCount / maxCount) * 100))}%` }}
+                            />
+                          </div>
                         </div>
                       </Link>
                     </li>

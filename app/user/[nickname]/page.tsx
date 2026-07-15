@@ -90,21 +90,6 @@ export default async function UserPage({
           <p className="scoreboard mb-1 text-sm font-semibold text-muted">
             LV.<span className="text-accent">{basic.level}</span>
           </p>
-          <div className="mb-0.5 ml-auto flex items-center gap-1.5">
-            <Link
-              href={`/market/${encodeURIComponent(basic.nickname)}`}
-              className="scoreboard inline-flex items-center gap-1.5 rounded-lg bg-gold/15 px-3 py-1.5 text-sm font-bold text-gold transition-colors hover:bg-gold/25"
-            >
-              💰 이적시장
-            </Link>
-            <Link
-              href={`/live/${encodeURIComponent(basic.nickname)}`}
-              className="scoreboard inline-flex items-center gap-1.5 rounded-lg bg-lose/15 px-3 py-1.5 text-sm font-bold text-lose transition-colors hover:bg-lose/25"
-            >
-              <span className="live-dot inline-block h-2 w-2 rounded-full bg-lose" />
-              라이브 세션
-            </Link>
-          </div>
         </div>
         {divisionCards.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
@@ -117,17 +102,10 @@ export default async function UserPage({
             ))}
           </div>
         )}
-        <div className="mt-4">
-          <ShareCardButton
-            url={`/api/card/user/${encodeURIComponent(basic.nickname)}`}
-            filename={`fcscope-${basic.nickname}.png`}
-            label="전적 카드 저장 · 공유"
-          />
-        </div>
       </section>
 
-      {/* 매치 종류 탭 */}
-      <nav className="rise rise-1 mt-6 flex gap-1.5">
+      {/* 매치 종류 탭 + 이적시장 진입 */}
+      <nav className="rise rise-1 mt-6 flex flex-wrap items-center gap-1.5">
         {MATCH_TABS.map((t) => (
           <Link
             key={t.type}
@@ -143,6 +121,12 @@ export default async function UserPage({
             {t.label}
           </Link>
         ))}
+        <Link
+          href={`/market/${encodeURIComponent(basic.nickname)}`}
+          className="scoreboard ml-auto rounded-lg bg-gold/15 px-3.5 py-1.5 text-sm font-bold text-gold transition-colors hover:bg-gold/25"
+        >
+          💰 이적시장
+        </Link>
       </nav>
 
       {/* 뷰 서브탭 */}
@@ -192,6 +176,15 @@ export default async function UserPage({
           <MatchSection ouid={ouid} matchType={matchType} nickname={basic.nickname} />
         </Suspense>
       )}
+
+      {/* 전적 카드 저장·공유 — 콘텐츠를 다 본 뒤 공유하는 흐름이라 하단 배치 */}
+      <div className="mt-8 flex justify-center">
+        <ShareCardButton
+          url={`/api/card/user/${encodeURIComponent(basic.nickname)}`}
+          filename={`fcscope-${basic.nickname}.png`}
+          label="전적 카드 저장 · 공유"
+        />
+      </div>
     </div>
   );
 }
@@ -299,7 +292,30 @@ async function MatchSection({
 
       {/* 스탯 타일 */}
       <section className="mt-2 grid grid-cols-3 gap-2">
-        <StatTile label="득점 / 실점" value={`${rec.goalsFor} / ${rec.goalsAgainst}`} />
+        <div className="panel px-3 py-2.5">
+          <p className="text-[13px] font-medium text-muted">득점 / 실점</p>
+          <p className="scoreboard mt-0.5 text-lg font-bold">
+            <span className="text-win">{rec.goalsFor}</span>
+            <span className="mx-1 text-sm font-normal text-muted">/</span>
+            <span className="text-lose">{rec.goalsAgainst}</span>
+          </p>
+          {rec.goalsFor + rec.goalsAgainst > 0 && (
+            <div
+              className="mt-1.5 flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full"
+              role="img"
+              aria-label={`득점 ${rec.goalsFor}, 실점 ${rec.goalsAgainst}`}
+            >
+              <div
+                className="rounded-full bg-win"
+                style={{ flexGrow: rec.goalsFor }}
+              />
+              <div
+                className="rounded-full bg-lose"
+                style={{ flexGrow: rec.goalsAgainst }}
+              />
+            </div>
+          )}
+        </div>
         <StatTile label="경기당 득점" value={(rec.goalsFor / rec.played).toFixed(1)} />
         <StatTile label="평균 점유율" value={`${rec.avgPossession}%`} />
       </section>
@@ -337,18 +353,26 @@ function RivalsPanel({ rivals }: { rivals: Rival[] }) {
             <li key={r.nickname}>
               <Link
                 href={`/user/${encodeURIComponent(r.nickname)}`}
-                className="flex items-center gap-3 rounded-lg bg-surface-2 px-3 py-2 transition-colors hover:bg-line"
+                className="block rounded-lg bg-surface-2 px-3 py-2 transition-colors hover:bg-line"
               >
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                  {r.nickname}
+                <span className="flex items-center gap-3">
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                    {r.nickname}
+                  </span>
+                  <span className={`scoreboard text-sm font-bold ${edge}`}>
+                    {r.win}승 {r.draw}무 {r.lose}패
+                  </span>
+                  <span className="scoreboard flex-none text-[13px] text-muted">
+                    {r.goalsFor}:{r.goalsAgainst}
+                  </span>
+                  <span className="scoreboard flex-none text-xs text-accent">전적 →</span>
                 </span>
-                <span className={`scoreboard text-sm font-bold ${edge}`}>
-                  {r.win}승 {r.draw}무 {r.lose}패
+                {/* 승(왼)/무/패(오) 비율 바 — 순서로도 구분 */}
+                <span className="mt-1.5 flex h-1 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+                  {r.win > 0 && <span className="rounded-full bg-win" style={{ flexGrow: r.win }} />}
+                  {r.draw > 0 && <span className="rounded-full bg-draw" style={{ flexGrow: r.draw }} />}
+                  {r.lose > 0 && <span className="rounded-full bg-lose" style={{ flexGrow: r.lose }} />}
                 </span>
-                <span className="scoreboard flex-none text-[13px] text-muted">
-                  {r.goalsFor}:{r.goalsAgainst}
-                </span>
-                <span className="scoreboard flex-none text-xs text-accent">전적 →</span>
               </Link>
             </li>
           );
