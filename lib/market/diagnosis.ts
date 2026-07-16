@@ -8,8 +8,10 @@ import type { TradeRecord } from "../nexon/types";
  * - kind "note": 세부 코멘트 — 매칭 순서대로 최대 4개
  */
 
+// 요즘 FC온라인 시세 반영 — 상위 카드 단건이 수십~수백조라 총액은 경 단위까지 감.
 const EOK = 1e8; // 억
 const JO = 1e12; // 조
+const GYEONG = 1e16; // 경 (= 10,000조)
 const DAY_MS = 86_400_000;
 
 export interface MarketStats {
@@ -128,66 +130,66 @@ const S = (
 
 export const MARKET_RULES: MarketRule[] = [
   // ═══════════ 구단주 유형 (우선순위 순 — 첫 매칭 1개) ═══════════
-  S("t-whale-surplus", "type", "gold", "흑자 큰손", "조 단위를 굴리면서도 순수지가 흑자 — 시장을 지배하는 트레이더입니다.", (s) => s.totalBuy >= 1 * JO && s.net > 0),
-  S("t-whale-deficit", "type", "gold", "화끈한 큰손", "조 단위 지출을 아끼지 않는 승부사. 스쿼드가 답을 줄 차례입니다.", (s) => s.totalBuy >= 1 * JO && s.net <= 0),
-  S("t-oneshot", "type", "gold", "한 방 승부사", "거래는 적지만 한 건 한 건이 초고가 — 확신이 설 때만 지릅니다.", (s) => s.buyCount > 0 && s.buyCount <= 8 && s.avgBuy >= 500 * EOK),
+  S("t-whale-surplus", "type", "gold", "흑자 큰손", "경 단위를 굴리면서도 순수지가 흑자 — 시장을 지배하는 트레이더입니다.", (s) => s.totalBuy >= 1 * GYEONG && s.net > 0),
+  S("t-whale-deficit", "type", "gold", "화끈한 큰손", "경 단위 지출을 아끼지 않는 승부사. 스쿼드가 답을 줄 차례입니다.", (s) => s.totalBuy >= 1 * GYEONG && s.net <= 0),
+  S("t-oneshot", "type", "gold", "한 방 승부사", "거래는 적지만 한 건 한 건이 초고가 — 확신이 설 때만 지릅니다.", (s) => s.buyCount > 0 && s.buyCount <= 8 && s.avgBuy >= 100 * JO),
   S("t-flipper", "type", "win", "정리의 달인", "방출이 영입을 압도 — 선수단을 팔아 곳간을 채우는 중입니다.", (s) => s.sellCount >= 15 && s.sellCount >= s.buyCount * 2),
   S("t-collector", "type", "info", "수집가", "사기만 하고 팔지 않는 타입 — 창고에 잠든 카드가 늘고 있어요.", (s) => s.buyCount >= 15 && s.sellCount <= Math.max(2, s.buyCount * 0.2)),
   S("t-daytrader", "type", "info", "마켓 단타러", "짧은 기간에 사고팔기를 반복 — 이적시장이 곧 콘텐츠인 유형.", (s) => s.buyCount + s.sellCount >= 40 && s.spanDays <= 14),
   S("t-grinder", "type", "win", "꾸준한 강화러", "고강 카드 위주로 영입 — 강화 시장의 큰손입니다.", (s) => s.highGradeBuys >= 10),
-  S("t-thrifty-surplus", "type", "win", "알뜰 흑자 상인", "적게 쓰고 더 벌었습니다 — BP 관리 교과서.", (s) => s.net > 0 && s.totalBuy < 100 * EOK && s.sellCount > 0),
-  S("t-bigdeficit", "type", "lose", "과감한 투자자", "수입 대비 지출이 큽니다 — 스쿼드 업그레이드에 올인한 시즌.", (s) => s.net < 0 && s.totalBuy >= s.totalSell * 3 && s.totalBuy >= 100 * EOK),
+  S("t-thrifty-surplus", "type", "win", "알뜰 흑자 상인", "적게 쓰고 더 벌었습니다 — BP 관리 교과서.", (s) => s.net > 0 && s.totalBuy < 100 * JO && s.sellCount > 0),
+  S("t-bigdeficit", "type", "lose", "과감한 투자자", "수입 대비 지출이 큽니다 — 스쿼드 업그레이드에 올인한 시즌.", (s) => s.net < 0 && s.totalBuy >= s.totalSell * 3 && s.totalBuy >= 100 * JO),
   S("t-dormant", "type", "info", "휴식기 구단주", "최근 2주 넘게 거래가 없어요 — 시장 복귀를 기다립니다.", (s) => (s.daysSinceLast ?? 0) >= 14 && s.buyCount + s.sellCount > 0),
   S("t-nightowl", "type", "info", "심야 상인", "거래 절반 이상이 새벽 — 모두가 잘 때 매물을 낚아챕니다.", (s) => s.buyCount + s.sellCount >= 10 && s.nightTrades >= (s.buyCount + s.sellCount) * 0.5),
   S("t-weekender", "type", "info", "주말 장꾼", "거래가 주말에 집중 — 주말이 곧 이적시장 데이입니다.", (s) => s.buyCount + s.sellCount >= 10 && s.weekendTrades >= (s.buyCount + s.sellCount) * 0.6),
   S("t-margin", "type", "win", "마진 장인", "팔 때 평균가가 살 때보다 높습니다 — 시세 읽는 눈이 남다르네요.", (s) => s.buyCount >= 5 && s.sellCount >= 5 && s.avgSell >= s.avgBuy * 1.5),
-  S("t-highroller", "type", "gold", "하이롤러", "평균 단가 자체가 최상위권 — 시장의 VIP 고객입니다.", (s) => s.buyCount >= 3 && s.avgBuy >= 300 * EOK),
+  S("t-highroller", "type", "gold", "하이롤러", "평균 단가 자체가 최상위권 — 시장의 VIP 고객입니다.", (s) => s.buyCount >= 3 && s.avgBuy >= 80 * JO),
   S("t-fresh", "type", "info", "갓 개장한 상점", "이적시장 기록이 이제 막 쌓이기 시작했어요.", (s) => s.buyCount + s.sellCount <= 5),
   S("t-balanced", "type", "info", "균형 잡힌 구단주", "영입과 방출이 고르게 — 필요할 때 사고 팔 줄 아는 유형입니다.", () => true),
 
   // ═══════════ 총지출 (note) ═══════════
   S("n-spend-0", "note", "info", "무지출 런", "이번 표본에서 영입 지출이 없습니다 — 무과금 근육이 단단하네요.", (s) => s.buyCount === 0 && s.sellCount > 0),
-  S("n-spend-t1", "note", "info", "소액 지출", "총 영입 지출 1억 미만 — 시장을 조심스럽게 탐색 중입니다.", (s) => s.buyCount > 0 && s.totalBuy < 1 * EOK),
-  S("n-spend-t2", "note", "info", "가벼운 지출", "총 영입 지출 1~10억 — 필요한 자리만 채우는 실속형.", (s) => s.totalBuy >= 1 * EOK && s.totalBuy < 10 * EOK),
-  S("n-spend-t3", "note", "info", "중간 지출", "총 영입 지출 10~100억 — 로테이션까지 챙기기 시작했군요.", (s) => s.totalBuy >= 10 * EOK && s.totalBuy < 100 * EOK),
-  S("n-spend-t4", "note", "gold", "큰 지출", "총 영입 지출 100~1,000억 — 주전 라인업 대공사 규모입니다.", (s) => s.totalBuy >= 100 * EOK && s.totalBuy < 1000 * EOK),
-  S("n-spend-t5", "note", "gold", "초대형 지출", "총 영입 지출 1,000억~1조 — 리그에서 소문나는 수준의 투자.", (s) => s.totalBuy >= 1000 * EOK && s.totalBuy < 1 * JO),
-  S("n-spend-t6", "note", "gold", "천문학적 지출", "총 영입 지출 1조 이상 — 이적시장의 큰손입니다.", (s) => s.totalBuy >= 1 * JO),
+  S("n-spend-t1", "note", "info", "소액 지출", "총 영입 지출 1조 미만 — 시장을 조심스럽게 탐색 중입니다.", (s) => s.buyCount > 0 && s.totalBuy < 1 * JO),
+  S("n-spend-t2", "note", "info", "가벼운 지출", "총 영입 지출 1~10조 — 필요한 자리만 채우는 실속형.", (s) => s.totalBuy >= 1 * JO && s.totalBuy < 10 * JO),
+  S("n-spend-t3", "note", "info", "중간 지출", "총 영입 지출 10~100조 — 로테이션까지 챙기기 시작했군요.", (s) => s.totalBuy >= 10 * JO && s.totalBuy < 100 * JO),
+  S("n-spend-t4", "note", "gold", "큰 지출", "총 영입 지출 100~1,000조 — 주전 라인업 대공사 규모입니다.", (s) => s.totalBuy >= 100 * JO && s.totalBuy < 1000 * JO),
+  S("n-spend-t5", "note", "gold", "초대형 지출", "총 영입 지출 1,000조~1경 — 리그에서 소문나는 수준의 투자.", (s) => s.totalBuy >= 1000 * JO && s.totalBuy < 1 * GYEONG),
+  S("n-spend-t6", "note", "gold", "천문학적 지출", "총 영입 지출 1경 이상 — 이적시장의 큰손입니다.", (s) => s.totalBuy >= 1 * GYEONG),
 
   // ═══════════ 총수입 (note) ═══════════
   S("n-income-0", "note", "info", "방출 제로", "판 선수가 없습니다 — 정든 선수는 못 보내는 타입인가요?", (s) => s.sellCount === 0 && s.buyCount > 0),
-  S("n-income-t1", "note", "info", "소소한 수입", "방출 수입 1억 미만 — 정리보다는 유지에 가깝습니다.", (s) => s.sellCount > 0 && s.totalSell < 1 * EOK),
-  S("n-income-t2", "note", "info", "쏠쏠한 수입", "방출 수입 1~10억 — 벤치 정리로 용돈벌이 성공.", (s) => s.totalSell >= 1 * EOK && s.totalSell < 10 * EOK),
-  S("n-income-t3", "note", "win", "짭짤한 수입", "방출 수입 10~100억 — 파는 감각이 있습니다.", (s) => s.totalSell >= 10 * EOK && s.totalSell < 100 * EOK),
-  S("n-income-t4", "note", "win", "대형 수입", "방출 수입 100~1,000억 — 셀링 클럽의 풍모.", (s) => s.totalSell >= 100 * EOK && s.totalSell < 1000 * EOK),
-  S("n-income-t5", "note", "win", "초대형 수입", "방출 수입 1,000억 이상 — 팔 때를 아는 구단주.", (s) => s.totalSell >= 1000 * EOK),
+  S("n-income-t1", "note", "info", "소소한 수입", "방출 수입 1조 미만 — 정리보다는 유지에 가깝습니다.", (s) => s.sellCount > 0 && s.totalSell < 1 * JO),
+  S("n-income-t2", "note", "info", "쏠쏠한 수입", "방출 수입 1~10조 — 벤치 정리로 용돈벌이 성공.", (s) => s.totalSell >= 1 * JO && s.totalSell < 10 * JO),
+  S("n-income-t3", "note", "win", "짭짤한 수입", "방출 수입 10~100조 — 파는 감각이 있습니다.", (s) => s.totalSell >= 10 * JO && s.totalSell < 100 * JO),
+  S("n-income-t4", "note", "win", "대형 수입", "방출 수입 100~1,000조 — 셀링 클럽의 풍모.", (s) => s.totalSell >= 100 * JO && s.totalSell < 1000 * JO),
+  S("n-income-t5", "note", "win", "초대형 수입", "방출 수입 1,000조 이상 — 팔 때를 아는 구단주.", (s) => s.totalSell >= 1000 * JO),
 
   // ═══════════ 순수지 (note) ═══════════
-  S("n-net-bigplus", "note", "win", "대흑자", "순수지 +1,000억 이상 — 이적시장이 당신의 수익원입니다.", (s) => s.net >= 1000 * EOK),
-  S("n-net-plus", "note", "win", "흑자 운영", "순수지 흑자 — 사고팔며 오히려 BP가 늘었습니다.", (s) => s.net > 0 && s.net < 1000 * EOK),
+  S("n-net-bigplus", "note", "win", "대흑자", "순수지 +1,000조 이상 — 이적시장이 당신의 수익원입니다.", (s) => s.net >= 1000 * JO),
+  S("n-net-plus", "note", "win", "흑자 운영", "순수지 흑자 — 사고팔며 오히려 BP가 늘었습니다.", (s) => s.net > 0 && s.net < 1000 * JO),
   S("n-net-zeroish", "note", "info", "본전 사수", "수입과 지출이 거의 같습니다 — 손해는 안 보는 장사꾼.", (s) => s.buyCount + s.sellCount > 0 && Math.abs(s.net) <= Math.max(s.totalBuy, s.totalSell) * 0.05),
-  S("n-net-minus", "note", "lose", "적자 운영", "순수지 적자 — 그만큼 스쿼드에 투자했다는 뜻이기도 합니다.", (s) => s.net < 0 && s.net > -1000 * EOK),
-  S("n-net-bigminus", "note", "lose", "대적자", "순수지 -1,000억 이하 — 스쿼드가 그 값을 해줘야 합니다.", (s) => s.net <= -1000 * EOK),
+  S("n-net-minus", "note", "lose", "적자 운영", "순수지 적자 — 그만큼 스쿼드에 투자했다는 뜻이기도 합니다.", (s) => s.net < 0 && s.net > -1000 * JO),
+  S("n-net-bigminus", "note", "lose", "대적자", "순수지 -1,000조 이하 — 스쿼드가 그 값을 해줘야 합니다.", (s) => s.net <= -1000 * JO),
 
   // ═══════════ 최고가 영입 (note) ═══════════
-  S("n-maxbuy-t1", "note", "info", "신중한 최고가", "가장 비싼 영입이 10억 미만 — 고가 카드엔 아직 신중합니다.", (s) => s.maxBuy > 0 && s.maxBuy < 10 * EOK),
-  S("n-maxbuy-t2", "note", "info", "중형 최고가", "최고가 영입 10~100억 — 핵심 자리엔 지갑을 엽니다.", (s) => s.maxBuy >= 10 * EOK && s.maxBuy < 100 * EOK),
-  S("n-maxbuy-t3", "note", "gold", "대형 영입 한 방", "최고가 영입 100~1,000억 — 팀의 얼굴이 될 카드군요.", (s) => s.maxBuy >= 100 * EOK && s.maxBuy < 1000 * EOK),
-  S("n-maxbuy-t4", "note", "gold", "슈퍼스타 영입", "최고가 영입 1,000억 이상 — 리그 최고 수준의 베팅입니다.", (s) => s.maxBuy >= 1000 * EOK),
+  S("n-maxbuy-t1", "note", "info", "신중한 최고가", "가장 비싼 영입이 10조 미만 — 고가 카드엔 아직 신중합니다.", (s) => s.maxBuy > 0 && s.maxBuy < 10 * JO),
+  S("n-maxbuy-t2", "note", "info", "중형 최고가", "최고가 영입 10~50조 — 핵심 자리엔 지갑을 엽니다.", (s) => s.maxBuy >= 10 * JO && s.maxBuy < 50 * JO),
+  S("n-maxbuy-t3", "note", "gold", "대형 영입 한 방", "최고가 영입 50~200조 — 팀의 얼굴이 될 카드군요.", (s) => s.maxBuy >= 50 * JO && s.maxBuy < 200 * JO),
+  S("n-maxbuy-t4", "note", "gold", "슈퍼스타 영입", "최고가 영입 200조 이상 — 리그 최고 수준의 베팅입니다.", (s) => s.maxBuy >= 200 * JO),
   S("n-maxbuy-half", "note", "gold", "몰빵 영입", "단 한 건이 전체 지출의 절반 이상 — 확실한 에이스 픽.", (s) => s.buyCount >= 3 && s.maxBuy >= s.totalBuy * 0.5),
 
   // ═══════════ 최고가 방출 (note) ═══════════
-  S("n-maxsell-t1", "note", "info", "잔잔한 방출", "최고가 방출이 10억 미만 — 고가 카드는 아직 품고 있습니다.", (s) => s.maxSell > 0 && s.maxSell < 10 * EOK),
-  S("n-maxsell-t2", "note", "win", "중형 방출", "최고가 방출 10~100억 — 팔 건 파는 결단력.", (s) => s.maxSell >= 10 * EOK && s.maxSell < 100 * EOK),
-  S("n-maxsell-t3", "note", "win", "대형 방출", "최고가 방출 100억 이상 — 에이스급도 값이 맞으면 보냅니다.", (s) => s.maxSell >= 100 * EOK),
+  S("n-maxsell-t1", "note", "info", "잔잔한 방출", "최고가 방출이 10조 미만 — 고가 카드는 아직 품고 있습니다.", (s) => s.maxSell > 0 && s.maxSell < 10 * JO),
+  S("n-maxsell-t2", "note", "win", "중형 방출", "최고가 방출 10~50조 — 팔 건 파는 결단력.", (s) => s.maxSell >= 10 * JO && s.maxSell < 50 * JO),
+  S("n-maxsell-t3", "note", "win", "대형 방출", "최고가 방출 50조 이상 — 에이스급도 값이 맞으면 보냅니다.", (s) => s.maxSell >= 50 * JO),
   S("n-maxsell-half", "note", "win", "한 방 정리", "방출 수입 절반이 단 한 건 — 제값 받고 보냈습니다.", (s) => s.sellCount >= 3 && s.maxSell >= s.totalSell * 0.5),
 
   // ═══════════ 평균 단가 (note) ═══════════
-  S("n-avgbuy-t1", "note", "info", "가성비 쇼핑", "영입 평균 단가 1억 미만 — 저평가 카드 발굴형.", (s) => s.buyCount >= 3 && s.avgBuy < 1 * EOK),
-  S("n-avgbuy-t2", "note", "info", "실속 쇼핑", "영입 평균 단가 1~10억 — 중저가 시장의 단골.", (s) => s.buyCount >= 3 && s.avgBuy >= 1 * EOK && s.avgBuy < 10 * EOK),
-  S("n-avgbuy-t3", "note", "info", "프리미엄 쇼핑", "영입 평균 단가 10~100억 — 검증된 카드 위주로 삽니다.", (s) => s.buyCount >= 3 && s.avgBuy >= 10 * EOK && s.avgBuy < 100 * EOK),
-  S("n-avgbuy-t4", "note", "gold", "명품관 단골", "영입 평균 단가 100억 이상 — 카탈로그 맨 윗줄만 봅니다.", (s) => s.buyCount >= 3 && s.avgBuy >= 100 * EOK),
-  S("n-avgsell-high", "note", "win", "고가 판매 장인", "방출 평균 단가 10억 이상 — 헐값에 넘기지 않습니다.", (s) => s.sellCount >= 3 && s.avgSell >= 10 * EOK),
+  S("n-avgbuy-t1", "note", "info", "가성비 쇼핑", "영입 평균 단가 1조 미만 — 저평가 카드 발굴형.", (s) => s.buyCount >= 3 && s.avgBuy < 1 * JO),
+  S("n-avgbuy-t2", "note", "info", "실속 쇼핑", "영입 평균 단가 1~10조 — 중저가 시장의 단골.", (s) => s.buyCount >= 3 && s.avgBuy >= 1 * JO && s.avgBuy < 10 * JO),
+  S("n-avgbuy-t3", "note", "info", "프리미엄 쇼핑", "영입 평균 단가 10~50조 — 검증된 카드 위주로 삽니다.", (s) => s.buyCount >= 3 && s.avgBuy >= 10 * JO && s.avgBuy < 50 * JO),
+  S("n-avgbuy-t4", "note", "gold", "명품관 단골", "영입 평균 단가 50조 이상 — 카탈로그 맨 윗줄만 봅니다.", (s) => s.buyCount >= 3 && s.avgBuy >= 50 * JO),
+  S("n-avgsell-high", "note", "win", "고가 판매 장인", "방출 평균 단가 10조 이상 — 헐값에 넘기지 않습니다.", (s) => s.sellCount >= 3 && s.avgSell >= 10 * JO),
   S("n-avg-sellgtbuy", "note", "win", "마진 트레이더", "방출 평균가가 영입 평균가보다 높습니다 — 싸게 사서 비싸게 파는 감각.", (s) => s.buyCount >= 3 && s.sellCount >= 3 && s.avgSell > s.avgBuy),
 
   // ═══════════ 거래 빈도 (note) ═══════════
@@ -228,15 +230,15 @@ export const MARKET_RULES: MarketRule[] = [
   // ═══════════ 조합 코멘트 (note) ═══════════
   S("n-combo-sellwell", "note", "win", "곳간 지킴이", "많이 팔고 적게 썼습니다 — BP 잔고가 웃고 있겠네요.", (s) => s.totalSell >= s.totalBuy * 2 && s.sellCount >= 5),
   S("n-combo-allin", "note", "lose", "올인 시즌", "수입의 3배 넘게 지출 — 이번 시즌에 승부를 걸었습니다.", (s) => s.totalBuy >= s.totalSell * 3 && s.buyCount >= 5),
-  S("n-combo-luxfew", "note", "gold", "미니멀 럭셔리", "거래는 적지만 전부 고가 — 양보다 질입니다.", (s) => s.buyCount + s.sellCount <= 10 && s.avgBuy >= 50 * EOK && s.buyCount >= 2),
-  S("n-combo-manytiny", "note", "info", "티끌 모아 스쿼드", "저가 카드 다건 거래 — 발품으로 스쿼드를 완성하는 중.", (s) => s.buyCount >= 15 && s.avgBuy < 5 * EOK),
-  S("n-combo-bigboth", "note", "gold", "큰물 트레이더", "지출과 수입 모두 100억 이상 — 시장의 유동성 공급자.", (s) => s.totalBuy >= 100 * EOK && s.totalSell >= 100 * EOK),
-  S("n-combo-quietrich", "note", "gold", "조용한 부자", "거래는 드물지만 단가가 높습니다 — 움직일 때만 크게 움직이는 타입.", (s) => s.buyCount + s.sellCount <= 8 && (s.avgBuy >= 100 * EOK || s.avgSell >= 100 * EOK)),
+  S("n-combo-luxfew", "note", "gold", "미니멀 럭셔리", "거래는 적지만 전부 고가 — 양보다 질입니다.", (s) => s.buyCount + s.sellCount <= 10 && s.avgBuy >= 50 * JO && s.buyCount >= 2),
+  S("n-combo-manytiny", "note", "info", "티끌 모아 스쿼드", "저가 카드 다건 거래 — 발품으로 스쿼드를 완성하는 중.", (s) => s.buyCount >= 15 && s.avgBuy < 5 * JO),
+  S("n-combo-bigboth", "note", "gold", "큰물 트레이더", "지출과 수입 모두 100조 이상 — 시장의 유동성 공급자.", (s) => s.totalBuy >= 100 * JO && s.totalSell >= 100 * JO),
+  S("n-combo-quietrich", "note", "gold", "조용한 부자", "거래는 드물지만 단가가 높습니다 — 움직일 때만 크게 움직이는 타입.", (s) => s.buyCount + s.sellCount <= 8 && (s.avgBuy >= 100 * JO || s.avgSell >= 100 * JO)),
 
   // ═══════════ 최저가/헐값 (note) ═══════════
-  S("n-minbuy-tiny", "note", "info", "천원샵 발견", "1,000만 BP 미만 영입 기록 — 잡초 속 보석을 노리는 눈썰미.", (s) => s.minBuy > 0 && s.minBuy < 0.1 * EOK),
-  S("n-minbuy-none-cheap", "note", "gold", "저가 카드 무관심", "가장 싼 영입도 10억 이상 — 애초에 싼 매물은 안 봅니다.", (s) => s.buyCount >= 3 && s.minBuy >= 10 * EOK),
-  S("n-minsell-tiny", "note", "info", "떨이 처분", "1,000만 BP 미만 방출 기록 — 자리 정리가 우선이었군요.", (s) => s.minSell > 0 && s.minSell < 0.1 * EOK),
+  S("n-minbuy-tiny", "note", "info", "천원샵 발견", "1,000억 BP 미만 영입 기록 — 잡초 속 보석을 노리는 눈썰미.", (s) => s.minBuy > 0 && s.minBuy < 0.1 * JO),
+  S("n-minbuy-none-cheap", "note", "gold", "저가 카드 무관심", "가장 싼 영입도 10조 이상 — 애초에 싼 매물은 안 봅니다.", (s) => s.buyCount >= 3 && s.minBuy >= 10 * JO),
+  S("n-minsell-tiny", "note", "info", "떨이 처분", "1,000억 BP 미만 방출 기록 — 자리 정리가 우선이었군요.", (s) => s.minSell > 0 && s.minSell < 0.1 * JO),
   S("n-buyrange-wide", "note", "info", "전천후 쇼핑", "최저가와 최고가 영입이 100배 이상 차이 — 시장 전 구간을 훑습니다.", (s) => s.minBuy > 0 && s.maxBuy >= s.minBuy * 100),
   S("n-sellrange-wide", "note", "info", "전천후 판매", "헐값 정리부터 프리미엄 판매까지 — 방출 스펙트럼이 넓습니다.", (s) => s.minSell > 0 && s.maxSell >= s.minSell * 100),
 
@@ -270,7 +272,7 @@ export const MARKET_RULES: MarketRule[] = [
   S("n-combo-upgrade", "note", "info", "업그레이드 사이클", "싸게 팔고 비싸게 삽니다 — 전형적인 스쿼드 상향 패턴.", (s) => s.buyCount >= 5 && s.sellCount >= 5 && s.avgBuy > s.avgSell * 2),
   S("n-combo-window", "note", "info", "이적시장 개장 러시", "활동일 대비 거래량이 높습니다 — 열리면 바로 움직이는 타입.", (s) => s.activeDays >= 2 && (s.buyCount + s.sellCount) / s.activeDays >= 5),
   S("n-combo-patient", "note", "info", "느긋한 시장가", "긴 기간에 드문드문 거래 — 급할 것 없는 관록의 운영.", (s) => s.spanDays >= 20 && (s.buyCount + s.sellCount) / Math.max(1, s.activeDays) <= 2),
-  S("n-combo-jackpot", "note", "gold", "잭팟 한 건", "단일 방출로 100억 이상 — 그날은 발 뻗고 주무셨겠어요.", (s) => s.maxSell >= 100 * EOK && s.totalSell > 0 && s.maxSell >= s.totalSell * 0.7),
+  S("n-combo-jackpot", "note", "gold", "잭팟 한 건", "단일 방출로 50조 이상 — 그날은 발 뻗고 주무셨겠어요.", (s) => s.maxSell >= 50 * JO && s.totalSell > 0 && s.maxSell >= s.totalSell * 0.7),
 ] as const as MarketRule[];
 
 export interface MarketDiagnosis {
