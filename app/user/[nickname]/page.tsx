@@ -109,57 +109,56 @@ export default async function UserPage({
           className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full"
           style={{ background: "radial-gradient(closest-side, rgba(200,245,66,0.14), transparent)" }}
         />
-        {/* 좌: 닉네임·레벨·등급 / 우: 성향 배지 세로 스택 — 모바일 공백 최소화 */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-              <h1 className="text-2xl font-bold sm:text-4xl">{basic.nickname}</h1>
-              <p className="scoreboard mb-0.5 text-sm font-semibold text-muted">
-                LV.<span className="text-accent">{basic.level}</span>
-              </p>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+            <h1 className="text-2xl font-bold sm:text-4xl">{basic.nickname}</h1>
+            <p className="scoreboard mb-0.5 text-sm font-semibold text-muted">
+              LV.<span className="text-accent">{basic.level}</span>
+            </p>
+          </div>
+          {divisionCards.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {divisionCards.map((d) => (
+                <p
+                  key={d.matchTypeName}
+                  className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-muted"
+                >
+                  <span className="whitespace-nowrap">{d.matchTypeName}</span>
+                  {/* 등급 아이콘은 등급명 바로 왼쪽 (인게임 표기와 동일) */}
+                  {d.iconUrl && <DivisionIcon src={d.iconUrl} size={20} />}
+                  <span className="whitespace-nowrap font-bold text-gold">
+                    {d.divisionName}
+                  </span>
+                  {/* 달성일은 모바일에서 숨겨 공간 확보 */}
+                  <span className="hidden whitespace-nowrap sm:inline">({d.date})</span>
+                </p>
+              ))}
             </div>
-            {divisionCards.length > 0 && (
-              <div className="mt-3 space-y-1.5">
-                {divisionCards.map((d) => (
-                  <p
-                    key={d.matchTypeName}
-                    className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-muted"
-                  >
-                    <span className="whitespace-nowrap">{d.matchTypeName}</span>
-                    {/* 등급 아이콘은 등급명 바로 왼쪽 (인게임 표기와 동일) */}
-                    {d.iconUrl && <DivisionIcon src={d.iconUrl} size={20} />}
-                    <span className="whitespace-nowrap font-bold text-gold">
-                      {d.divisionName}
-                    </span>
-                    {/* 달성일은 모바일에서 숨겨 공간 확보 */}
-                    <span className="hidden whitespace-nowrap sm:inline">({d.date})</span>
-                  </p>
-                ))}
-              </div>
-            )}
-            {/* 계급 인증 카드 — 등급 바로 아래에 배치해 '숨긴 자산' 방지 (기존엔 페이지 최하단) */}
-            {divisionCards.length > 0 && (
-              <div className="mt-3">
-                <ShareCardButton
-                  url={`/api/card/rank/${encodeURIComponent(basic.nickname)}`}
-                  filename={`fcscope-rank-${basic.nickname}.png`}
-                  label="🏆 계급 인증 카드"
-                />
-              </div>
-            )}
-          </div>
-          {/* 성향 배지 — 공식경기 유형 + 이적시장 유형 (스트리밍, 우측 세로 2줄) */}
-          <div className="flex-none">
-            <Suspense
-              fallback={
-                <span className="skeleton inline-block h-16 w-36 rounded-lg" aria-hidden />
-              }
-            >
-              <HeroBadges ouid={ouid} nickname={basic.nickname} />
-            </Suspense>
-          </div>
+          )}
+          {/* 계급 인증 카드 — 등급 바로 아래에 배치해 '숨긴 자산' 방지 (기존엔 페이지 최하단) */}
+          {divisionCards.length > 0 && (
+            <div className="mt-3">
+              <ShareCardButton
+                url={`/api/card/rank/${encodeURIComponent(basic.nickname)}`}
+                filename={`fcscope-rank-${basic.nickname}.png`}
+                label="🏆 계급 인증 카드"
+              />
+            </div>
+          )}
         </div>
       </section>
+
+      {/* 성향 배지 — 공식경기·이적시장 유형 + "왜 그런지" 설명 (스트리밍) */}
+      <Suspense
+        fallback={
+          <div className="mt-3 grid gap-2 sm:grid-cols-2" aria-hidden>
+            <div className="skeleton h-16" />
+            <div className="skeleton h-16" />
+          </div>
+        }
+      >
+        <HeroBadges ouid={ouid} nickname={basic.nickname} />
+      </Suspense>
 
       {/* 매치 종류 탭 + 이적시장 진입 — 모바일에서도 한 줄 유지(넘치면 가로 스크롤) */}
       <nav className="scrollbar-hide rise rise-1 mt-6 flex flex-nowrap items-center gap-1.5 overflow-x-auto">
