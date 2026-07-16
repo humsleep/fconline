@@ -64,6 +64,16 @@ export async function getMatchTypeName(matchType: number): Promise<string> {
   return found ?? MATCHTYPE_FALLBACK[matchType] ?? `매치 ${matchType}`;
 }
 
+/**
+ * 등급(division) → 티어 색. division 숫자가 작을수록 상위(800 슈퍼챔피언스 … 3100 유망주3).
+ * 챌린지 이상(≤1300)=gold, 월드클래스(≤2200)=lime, 프로 이하=muted. (순수 — API 미사용)
+ */
+export function divisionTierColor(division: number): 'gold' | 'lime' | 'muted' {
+  if (division > 0 && division <= 1300) return 'gold';
+  if (division <= 2200) return 'lime';
+  return 'muted';
+}
+
 /** 전적 페이지에서 탭으로 노출하는 매치 종류 */
 export const MATCH_TABS = [
   { type: 50, label: '공식경기' },
