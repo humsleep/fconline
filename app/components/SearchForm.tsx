@@ -38,6 +38,7 @@ export default function SearchForm({
   const router = useRouter();
   const [value, setValue] = useState(defaultValue);
   const [recent, setRecent] = useState<string[]>([]);
+  const [error, setError] = useState(false);
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   const isLg = size === "lg";
@@ -54,7 +55,13 @@ export default function SearchForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const nickname = value.trim();
-    if (!nickname) return;
+    // 빈 입력 무반응(첫 방문자가 가장 자주 겪는 막힘) → 포커스 + 인라인 안내
+    if (!nickname) {
+      setError(true);
+      inputRef.current?.focus();
+      return;
+    }
+    setError(false);
     rememberSearch(nickname);
     startTransition(() => {
       router.push(`/user/${encodeURIComponent(nickname)}`);
@@ -76,16 +83,20 @@ export default function SearchForm({
           id={isLg ? "hero-search" : undefined}
           type="search"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            setValue(e.target.value);
+            if (error) setError(false);
+          }}
           placeholder="구단주명 검색"
           aria-label="구단주명 검색"
+          aria-invalid={error || undefined}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="search"
           className={`input-search ${
             isLg ? "h-14 pl-5 pr-24 text-base" : "h-9 pl-3 pr-16 text-sm"
-          }`}
+          } ${error ? "ring-2 ring-lose" : ""}`}
         />
         <button
           type="submit"
@@ -98,6 +109,12 @@ export default function SearchForm({
         </button>
       </form>
 
+      {error && (
+        <p className="mt-2 text-center text-sm font-medium text-lose" role="alert">
+          구단주명을 입력해 주세요
+        </p>
+      )}
+
       {/* 최근 검색 칩 — 한글 닉네임 반복 입력 마찰 제거 */}
       {isLg && recent.length > 0 && (
         <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
@@ -107,14 +124,14 @@ export default function SearchForm({
               key={r}
               href={`/user/${encodeURIComponent(r)}`}
               onClick={() => rememberSearch(r)}
-              className="max-w-[10rem] truncate rounded-full bg-surface-2 px-3 py-1 text-sm font-medium text-ink transition-colors hover:bg-accent hover:text-accent-ink"
+              className="inline-flex min-h-9 max-w-[10rem] items-center truncate rounded-full bg-surface-2 px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-accent hover:text-accent-ink"
             >
               {r}
             </Link>
           ))}
           <button
             onClick={clearRecent}
-            className="text-[13px] text-muted underline underline-offset-2"
+            className="inline-flex min-h-9 items-center px-1 text-[13px] text-muted underline underline-offset-2"
             aria-label="최근 검색 지우기"
           >
             지우기

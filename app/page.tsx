@@ -29,8 +29,8 @@ const FEATURES = [
     tag: "커뮤니티 · 배틀",
     title: "자랑하고, 모으고, 겨룬다",
     desc: "스쿼드 자랑과 평가, 클럽원 모집, 투표로 겨루는 스쿼드 배틀.",
-    hint: "바로가기 →",
-    href: "/community",
+    hint: "스쿼드 배틀 보기 →",
+    href: "/community?type=squad_battle",
   },
 ] as const;
 
@@ -60,15 +60,16 @@ export default function Home() {
           <circle cx="200" cy="120" r="3" fill="var(--accent)" stroke="none" />
         </svg>
 
-        <p className="rise scoreboard relative hidden text-xs font-semibold tracking-[0.3em] text-accent sm:block">
+        <p className="rise scoreboard relative block text-xs font-semibold tracking-[0.3em] text-accent">
           EA SPORTS FC ONLINE DATA LAB
         </p>
         <h1 className="rise rise-1 relative mt-5 text-4xl font-bold leading-tight sm:text-5xl">
           감이 아니라,
           <br className="sm:hidden" /> <span className="text-accent">데이터</span>로.
         </h1>
-        <p className="rise rise-2 relative mt-4 max-w-md text-sm leading-relaxed text-muted sm:text-base">
-          전적 조회를 넘어 진단까지 — FC온라인 데이터 도구 모음
+        {/* 첫 3초 인지: 모바일에서도 '무슨 서비스인지' 즉시 보이도록 (전엔 라벨이 sm 이상에서만 노출) */}
+        <p className="rise rise-2 relative mt-4 max-w-md text-sm font-semibold leading-relaxed text-ink sm:text-base">
+          FC온라인 전적·스쿼드·랭커 메타를 한 곳에
         </p>
 
         <div className="rise rise-3 relative mt-8 w-full max-w-md">
