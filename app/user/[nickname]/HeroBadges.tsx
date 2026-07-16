@@ -7,8 +7,9 @@ import { computeMatchPerfStats, diagnoseMatchPerf } from "@/lib/match/diagnosis"
 import { TONE_BG, TONE_TEXT } from "@/lib/diagnosis/tone";
 
 /**
- * 히어로 우측 성향 배지 — ⚽ 공식경기 유형 + 💰 이적시장 유형.
- * 각 배지는 상세(분석 탭 / 이적시장 페이지)로 연결. 데이터 없으면 해당 배지 생략.
+ * 성향 배지 — ⚽ 공식경기 유형 + 💰 이적시장 유형.
+ * 각 배지는 "왜 이 유형인지" 설명을 함께 노출(모바일은 hover 툴팁이 없어 텍스트로 표시)하고,
+ * 탭하면 상세 진단(분석 탭 / 이적시장)으로 이동. 데이터 없으면 해당 배지 생략.
  */
 export default async function HeroBadges({
   ouid,
@@ -39,27 +40,38 @@ export default async function HeroBadges({
   if (!marketType && !matchType) return null;
 
   const enc = encodeURIComponent(nickname);
-  // 세로 스택 — 히어로 우측 공백을 활용해 한 칸에 하나씩
   return (
-    <div className="flex flex-col items-end gap-1.5">
+    <section className="mt-3 grid gap-2 sm:grid-cols-2">
       {matchType && (
         <Link
           href={`/user/${enc}?type=50&view=report`}
-          title={matchType.desc}
-          className={`scoreboard whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-bold transition-opacity hover:opacity-80 sm:px-3 sm:text-sm ${TONE_BG[matchType.tone]} ${TONE_TEXT[matchType.tone]}`}
+          className="panel flex items-start gap-2.5 p-3 transition-colors hover:border-accent/50"
         >
-          ⚽ {matchType.title}
+          <span
+            className={`scoreboard mt-0.5 flex-none whitespace-nowrap rounded-lg px-2.5 py-1 text-[13px] font-bold ${TONE_BG[matchType.tone]} ${TONE_TEXT[matchType.tone]}`}
+          >
+            ⚽ {matchType.title}
+          </span>
+          <span className="min-w-0 text-[13px] leading-relaxed text-muted">
+            {matchType.desc}
+          </span>
         </Link>
       )}
       {marketType && (
         <Link
           href={`/market/${enc}`}
-          title={marketType.desc}
-          className={`scoreboard whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-bold transition-opacity hover:opacity-80 sm:px-3 sm:text-sm ${TONE_BG[marketType.tone]} ${TONE_TEXT[marketType.tone]}`}
+          className="panel flex items-start gap-2.5 p-3 transition-colors hover:border-accent/50"
         >
-          💰 {marketType.title}
+          <span
+            className={`scoreboard mt-0.5 flex-none whitespace-nowrap rounded-lg px-2.5 py-1 text-[13px] font-bold ${TONE_BG[marketType.tone]} ${TONE_TEXT[marketType.tone]}`}
+          >
+            💰 {marketType.title}
+          </span>
+          <span className="min-w-0 text-[13px] leading-relaxed text-muted">
+            {marketType.desc}
+          </span>
         </Link>
       )}
-    </div>
+    </section>
   );
 }

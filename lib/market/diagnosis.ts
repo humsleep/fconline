@@ -136,7 +136,7 @@ export const MARKET_RULES: MarketRule[] = [
   S("t-flipper", "type", "win", "정리의 달인", "방출이 영입을 압도 — 선수단을 팔아 곳간을 채우는 중입니다.", (s) => s.sellCount >= 15 && s.sellCount >= s.buyCount * 2),
   S("t-collector", "type", "info", "수집가", "사기만 하고 팔지 않는 타입 — 창고에 잠든 카드가 늘고 있어요.", (s) => s.buyCount >= 15 && s.sellCount <= Math.max(2, s.buyCount * 0.2)),
   S("t-daytrader", "type", "info", "마켓 단타러", "짧은 기간에 사고팔기를 반복 — 이적시장이 곧 콘텐츠인 유형.", (s) => s.buyCount + s.sellCount >= 40 && s.spanDays <= 14),
-  S("t-grinder", "type", "win", "꾸준한 강화러", "고강 카드 위주로 영입 — 강화 시장의 큰손입니다.", (s) => s.highGradeBuys >= 10),
+  S("t-grinder", "type", "win", "완성형 선호", "8강 이상 완성 카드를 자주 영입 — 직접 강화 대신 시장에서 완성품을 사는 타입입니다.", (s) => s.highGradeBuys >= 10),
   S("t-thrifty-surplus", "type", "win", "알뜰 흑자 상인", "적게 쓰고 더 벌었습니다 — BP 관리 교과서.", (s) => s.net > 0 && s.totalBuy < 100 * JO && s.sellCount > 0),
   S("t-bigdeficit", "type", "lose", "과감한 투자자", "수입 대비 지출이 큽니다 — 스쿼드 업그레이드에 올인한 시즌.", (s) => s.net < 0 && s.totalBuy >= s.totalSell * 3 && s.totalBuy >= 100 * JO),
   S("t-dormant", "type", "info", "휴식기 구단주", "최근 2주 넘게 거래가 없어요 — 시장 복귀를 기다립니다.", (s) => (s.daysSinceLast ?? 0) >= 14 && s.buyCount + s.sellCount > 0),
@@ -208,7 +208,7 @@ export const MARKET_RULES: MarketRule[] = [
   S("n-bal-onlysell", "note", "info", "일방통행 방출", "이번 표본은 전부 방출 — 대청소가 진행 중입니다.", (s) => s.sellCount >= 5 && s.buyCount === 0),
 
   // ═══════════ 강화 등급 (note) ═══════════
-  S("n-grade-low", "note", "info", "원카 선호", "영입 평균 강화 3강 미만 — 직접 키우는 재미파.", (s) => s.buyCount >= 3 && s.gradeAvgBuy > 0 && s.gradeAvgBuy < 3),
+  S("n-grade-low", "note", "info", "원카 선호", "영입 카드의 평균 강화가 3강 미만 — 낮은 강화 카드 위주로 담습니다.", (s) => s.buyCount >= 3 && s.gradeAvgBuy > 0 && s.gradeAvgBuy < 3),
   S("n-grade-mid", "note", "info", "중강 실속파", "영입 평균 강화 3~6강 — 가격과 성능의 균형점을 압니다.", (s) => s.buyCount >= 3 && s.gradeAvgBuy >= 3 && s.gradeAvgBuy < 6),
   S("n-grade-high", "note", "gold", "고강 지향", "영입 평균 강화 6강 이상 — 완성품만 삽니다.", (s) => s.buyCount >= 3 && s.gradeAvgBuy >= 6),
   S("n-grade-8plus", "note", "gold", "8강 클럽", "8강 이상 카드를 여러 장 영입 — 강화 실패의 아픔을 돈으로 건너뛰었군요.", (s) => s.highGradeBuys >= 3 && s.highGradeBuys < 10),
@@ -260,7 +260,7 @@ export const MARKET_RULES: MarketRule[] = [
 
   // ═══════════ 강화 최고치 (note) ═══════════
   S("n-maxgrade-10", "note", "gold", "10강+ 헌터", "10강 이상 카드를 영입 — 강화 확률과의 싸움을 돈으로 이겼습니다.", (s) => s.maxGradeBuy >= 10),
-  S("n-maxgrade-1only", "note", "info", "순정 원카파", "영입 카드가 전부 1강 — 강화는 내 손으로 한다는 신념.", (s) => s.buyCount >= 3 && s.maxGradeBuy <= 1),
+  S("n-maxgrade-1only", "note", "info", "순정 원카파", "영입 카드가 전부 1강 — 완성품 대신 원카만 담습니다.", (s) => s.buyCount >= 3 && s.maxGradeBuy <= 1),
 
   // ═══════════ 수익률/회전 (note) ═══════════
   S("n-roi-double", "note", "win", "2배 회수", "방출 수입이 영입 지출의 2배 이상 — 투자 수익률이 훌륭합니다.", (s) => s.totalBuy > 0 && s.totalSell >= s.totalBuy * 2),
