@@ -1,5 +1,12 @@
 # DEVLOG
 
+## 2026-07-16 — [데일리 회의 Day 2] 계급 인증 카드 (숨긴 자산 승격)
+
+- **회의 결론**: 오픈 초기 발견성·바이럴 관점에서 "이미 뽑아둔 maxdivision을 공유 자산으로 승격"이 최고 ROI. 넥슨 추가 호출 0회(전적 페이지에서 이미 조회 중), 디시 '계급 인증글' 포맷과 정확히 맞음
+- **`/api/card/rank/[nickname]`** 신설: 대표 계급(공식경기 50 우선, 없으면 최상위 division) 주역 + 다른 매치 종류를 배지로. 티어색 `divisionTierColor()`(≤1300 챌린지↑=gold / ≤2200 월드클래스=lime / 프로↓=muted, 순수 함수·API 미사용)로 등급별 스탬프 색 분기. 9:16 1080×1920 `renderCard` 재사용. 렌더 실측 정상(113KB PNG)
+- **전적 페이지 하단 공유 줄**에 `🏆 계급 인증 카드` 버튼 추가(전적 카드 옆, `divisionCards>0`일 때만). origin/main이 히어로에서 이미 등급을 DivisionIcon+골드로 승격해둔 상태라 히어로 중복 엠블럼은 넣지 않고 공유 버튼만 추가
+- 리베이스로 origin/main(HeroBadges·DivisionIcon·/market 분리·페이지 rate limit) 위에 재정렬. `npx tsc` 0 err, build ✓, 단위 **121 PASS**. PR #42
+
 ## 2026-07-15 — 정식 오픈: BETA 배지 제거
 
 - 로고 옆·스쿼드 클리닉·플레이스타일 3곳의 "BETA" 배지 제거 (정식 서비스 오픈). PR #40
