@@ -31,7 +31,13 @@ export async function generateMetadata({
   params: Promise<{ nickname: string }>;
 }): Promise<Metadata> {
   const { nickname } = await params;
-  const decoded = decodeURIComponent(nickname);
+  // 잘못된 % 시퀀스도 throw 없이 통과 (외부/레거시 링크 방어)
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(nickname);
+  } catch {
+    decoded = nickname;
+  }
   return {
     title: `${decoded} 전적`,
     description: `${decoded}의 FC온라인 최근 경기 기록, 승률, 슛맵 매치 리포트`,
@@ -49,7 +55,13 @@ export default async function UserPage({
     params,
     searchParams,
   ]);
-  const nickname = decodeURIComponent(raw);
+  // 잘못된 % 시퀀스는 raw 그대로 사용 → getOuid가 not-found로 자연 처리(크래시 방지)
+  let nickname: string;
+  try {
+    nickname = decodeURIComponent(raw);
+  } catch {
+    nickname = raw;
+  }
   // 이적시장은 매치 종류와 무관 → 독립 페이지로 이동 (기존 링크 호환)
   if (view === "market") redirect(`/market/${encodeURIComponent(nickname)}`);
 
@@ -125,6 +137,16 @@ export default async function UserPage({
                 ))}
               </div>
             )}
+            {/* 계급 인증 카드 — 등급 바로 아래에 배치해 '숨긴 자산' 방지 (기존엔 페이지 최하단) */}
+            {divisionCards.length > 0 && (
+              <div className="mt-3">
+                <ShareCardButton
+                  url={`/api/card/rank/${encodeURIComponent(basic.nickname)}`}
+                  filename={`fcscope-rank-${basic.nickname}.png`}
+                  label="🏆 계급 인증 카드"
+                />
+              </div>
+            )}
           </div>
           {/* 성향 배지 — 공식경기 유형 + 이적시장 유형 (스트리밍, 우측 세로 2줄) */}
           <div className="flex-none">
@@ -156,9 +178,10 @@ export default async function UserPage({
             {t.label}
           </Link>
         ))}
+        {/* 이적시장 — ml-auto 제거: 좁은 화면에서 스크롤 컨테이너 밖으로 밀려 잘리던 문제 해소 */}
         <Link
           href={`/market/${encodeURIComponent(basic.nickname)}`}
-          className="scoreboard ml-auto flex-none whitespace-nowrap rounded-lg bg-gold/15 px-2.5 py-1.5 text-[13px] font-bold text-gold transition-colors hover:bg-gold/25 sm:px-3.5 sm:text-sm"
+          className="scoreboard flex-none whitespace-nowrap rounded-lg bg-gold/15 px-2.5 py-1.5 text-[13px] font-bold text-gold transition-colors hover:bg-gold/25 sm:px-3.5 sm:text-sm"
         >
           💰 이적시장
         </Link>
@@ -212,21 +235,13 @@ export default async function UserPage({
         </Suspense>
       )}
 
-      {/* 전적 카드 저장·공유 — 콘텐츠를 다 본 뒤 공유하는 흐름이라 하단 배치 */}
-      <div className="mt-8 flex flex-wrap justify-center gap-2">
+      {/* 전적 카드 저장·공유 — 콘텐츠를 다 본 뒤 공유하는 흐름이라 하단 배치 (계급 카드는 히어로로 승격) */}
+      <div className="mt-8 flex justify-center">
         <ShareCardButton
           url={`/api/card/user/${encodeURIComponent(basic.nickname)}`}
           filename={`fcscope-${basic.nickname}.png`}
           label="전적 카드 저장 · 공유"
         />
-        {/* 계급 인증 카드 — 디시 '계급 인증글' 바이럴 포맷 (maxdivision 재사용, 추가 호출 0) */}
-        {divisionCards.length > 0 && (
-          <ShareCardButton
-            url={`/api/card/rank/${encodeURIComponent(basic.nickname)}`}
-            filename={`fcscope-rank-${basic.nickname}.png`}
-            label="🏆 계급 인증 카드"
-          />
-        )}
       </div>
     </div>
   );

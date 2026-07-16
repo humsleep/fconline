@@ -18,7 +18,10 @@ export function summarizeMatch(
   const info = detail.matchInfo;
   if (!Array.isArray(info) || info.length === 0) return null;
 
-  const mine = info.find((e) => e.ouid === ouid) ?? info[0];
+  // 요청한 ouid가 이 경기 matchInfo에 없으면(닉네임 변경 지연 등) 상대를 '나'로 착각해
+  // 승패·득점·평점이 조용히 반전된다 → 카드를 버려 오염 방지.
+  const mine = info.find((e) => e.ouid === ouid);
+  if (!mine) return null;
   const other = info.find((e) => e.ouid !== mine.ouid) ?? null;
 
   const result = mine.matchDetail?.matchResult;

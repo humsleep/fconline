@@ -51,7 +51,7 @@ export default function ShareCardButton({
     <button
       onClick={onClick}
       disabled={busy}
-      className="scoreboard inline-flex items-center gap-1.5 rounded-lg bg-surface-2 px-4 py-2 text-sm font-bold text-ink transition-colors hover:bg-line disabled:opacity-50"
+      className="scoreboard inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-surface-2 px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:bg-line disabled:opacity-50"
     >
       <span aria-hidden>⬇</span>
       {busy ? "만드는 중…" : label}
