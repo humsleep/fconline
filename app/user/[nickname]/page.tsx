@@ -213,12 +213,20 @@ export default async function UserPage({
       )}
 
       {/* 전적 카드 저장·공유 — 콘텐츠를 다 본 뒤 공유하는 흐름이라 하단 배치 */}
-      <div className="mt-8 flex justify-center">
+      <div className="mt-8 flex flex-wrap justify-center gap-2">
         <ShareCardButton
           url={`/api/card/user/${encodeURIComponent(basic.nickname)}`}
           filename={`fcscope-${basic.nickname}.png`}
           label="전적 카드 저장 · 공유"
         />
+        {/* 계급 인증 카드 — 디시 '계급 인증글' 바이럴 포맷 (maxdivision 재사용, 추가 호출 0) */}
+        {divisionCards.length > 0 && (
+          <ShareCardButton
+            url={`/api/card/rank/${encodeURIComponent(basic.nickname)}`}
+            filename={`fcscope-rank-${basic.nickname}.png`}
+            label="🏆 계급 인증 카드"
+          />
+        )}
       </div>
     </div>
   );
