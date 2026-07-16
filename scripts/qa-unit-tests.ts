@@ -294,14 +294,26 @@ const NOW = Date.parse('2026-07-15T12:00:00Z');
 const trade = (daysAgo: number, value: number, grade = 1, spid = 251000001): TradeRecord =>
   ({ tradeDate: new Date(NOW - daysAgo * 86400000).toISOString(), saleSn: `${daysAgo}-${value}-${spid}`, spid, grade, value }) as TradeRecord;
 
-// 큰손 흑자: 1조 지출 + 그 이상 수입
+// 큰손 흑자: 1경 이상 지출 + 그 이상 수입 (요즘 시세 스케일)
 const whale = computeMarketStats(
-  [trade(1, 1.2e12, 8), trade(2, 3e11, 9)],
-  [trade(0, 2e12), trade(3, 5e11)],
+  [trade(1, 7e15, 8), trade(2, 5e15, 9)],
+  [trade(0, 9e15), trade(3, 5e15)],
   NOW
 );
-eq(diagnoseMarket(whale).type?.id, 't-whale-surplus', '큰손 흑자 유형 판정');
+eq(diagnoseMarket(whale).type?.id, 't-whale-surplus', '큰손 흑자 유형 판정(1경+)');
 ok(diagnoseMarket(whale).notes.length > 0 && diagnoseMarket(whale).notes.length <= 4, '코멘트 1~4개');
+
+// 1경 미만은 큰손 아님 — 새 스케일 회귀 방지 (5000조 지출은 whale 미달)
+const midSpender = computeMarketStats(
+  [trade(1, 3e15), trade(2, 2e15)],
+  [trade(0, 1e15)],
+  NOW
+);
+ok(
+  diagnoseMarket(midSpender).type?.id !== 't-whale-surplus' &&
+    diagnoseMarket(midSpender).type?.id !== 't-whale-deficit',
+  '5000조 지출은 큰손 유형 아님(1경 기준)'
+);
 
 // 빈 데이터 → 진단 없음
 eq(diagnoseMarket(computeMarketStats([], [], NOW)).type, null, '거래 없으면 진단 없음');
@@ -311,8 +323,8 @@ const tiny = computeMarketStats([trade(0, 5000)], [], NOW);
 ok(diagnoseMarket(tiny).type !== null, '소액 1건도 유형 폴백 매칭');
 
 // 지표 계산 검증
-eq(whale.totalBuy, 1.5e12, 'totalBuy 합산');
-eq(whale.net, 1e12, 'net 계산');
+eq(whale.totalBuy, 1.2e16, 'totalBuy 합산');
+eq(whale.net, 2e15, 'net 계산');
 eq(whale.highGradeBuys, 2, '8강 이상 영입 수');
 eq(tiny.daysSinceLast, 0, 'daysSinceLast 오늘 = 0');
 
