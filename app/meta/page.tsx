@@ -143,6 +143,43 @@ async function loadPicks(): Promise<{
   }
 }
 
+interface TopMover {
+  spId: number;
+  position: number;
+  /** >0 = 라인 내 순위 상승폭, null = 오늘 새로 진입(NEW) */
+  delta: number | null;
+  matchCount: number;
+  line: string;
+}
+
+/**
+ * "오늘의 급상승" 1건 선정 — loadPicks가 이미 채운 delta 재활용(추가 호출 0).
+ * 상승폭 최대(동률 시 사용량 큰 카드) 우선, 없으면 NEW 진입 중 사용량 최대.
+ * NEW를 동급 후보로 포함해야 변동이 작은 날에도 헤드라인이 비지 않는다.
+ */
+function pickTopMover(byLine: Map<string, PickRow[]>): TopMover | null {
+  let riser: (TopMover & { delta: number }) | null = null;
+  let newcomer: TopMover | null = null;
+  for (const [line, rows] of byLine) {
+    for (const r of rows) {
+      if (typeof r.delta === "number" && r.delta > 0) {
+        if (
+          !riser ||
+          r.delta > riser.delta ||
+          (r.delta === riser.delta && r.matchCount > riser.matchCount)
+        ) {
+          riser = { spId: r.spId, position: r.position, delta: r.delta, matchCount: r.matchCount, line };
+        }
+      } else if (r.delta === null) {
+        if (!newcomer || r.matchCount > newcomer.matchCount) {
+          newcomer = { spId: r.spId, position: r.position, delta: null, matchCount: r.matchCount, line };
+        }
+      }
+    }
+  }
+  return riser ?? newcomer;
+}
+
 export default async function MetaPage() {
   const { date, byLine } = await loadPicks();
   const allIds = [...byLine.values()].flat().map((r) => r.spId);
@@ -150,6 +187,7 @@ export default async function MetaPage() {
   const seasons = await getSeasonNames(allIds);
 
   const hasData = allIds.length > 0;
+  const mover = pickTopMover(byLine);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 pb-24 md:pb-16">
@@ -183,6 +221,43 @@ export default async function MetaPage() {
         </div>
       ) : (
         <div className="mt-6 space-y-6">
+          {/* 오늘의 급상승 — 매일 바뀌는 delta를 '사건'으로 헤드라인화 (재방문 훅) */}
+          {mover && (
+            <Link
+              href={`/player/${mover.spId}`}
+              className="panel flex items-center gap-3 border-win/40 px-4 py-3 transition-colors hover:border-accent"
+            >
+              <Image
+                src={`/api/player-image/${mover.spId}`}
+                alt=""
+                width={44}
+                height={44}
+                unoptimized
+                className="h-11 w-11 flex-none rounded-lg bg-surface-2 object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="scoreboard text-[12px] font-bold tracking-[0.2em] text-win">
+                  ⚡ 오늘의 급상승
+                </p>
+                <p className="mt-0.5 truncate text-sm font-bold">
+                  {names.get(mover.spId) ?? `선수 ${mover.spId}`}
+                  <span className="ml-1.5 text-[13px] font-medium text-muted">
+                    {getPositionLabel(mover.position)} ·{" "}
+                    {LINE_TITLE[mover.line as keyof typeof LINE_TITLE]}
+                  </span>
+                </p>
+              </div>
+              <span
+                className={`scoreboard flex-none rounded-lg px-2.5 py-1.5 text-sm font-bold ${
+                  mover.delta === null
+                    ? "bg-gold/15 text-gold"
+                    : "bg-win/15 text-win"
+                }`}
+              >
+                {mover.delta === null ? "NEW 진입" : `▲${mover.delta}`}
+              </span>
+            </Link>
+          )}
           {LINE_ORDER.map((line) => {
             const rows = (byLine.get(line) ?? []).slice(0, 10);
             if (rows.length === 0) return null;

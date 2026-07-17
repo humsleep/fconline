@@ -168,7 +168,7 @@ export default async function UserPage({
             href={`/user/${encodeURIComponent(basic.nickname)}?type=${t.type}${
               activeView === "matches" ? "" : `&view=${activeView}`
             }`}
-            className={`scoreboard flex-none whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors sm:px-3.5 sm:text-sm ${
+            className={`scoreboard inline-flex min-h-11 flex-none items-center whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors sm:px-3.5 sm:text-sm ${
               t.type === matchType
                 ? "bg-accent text-accent-ink"
                 : "bg-surface-2 text-muted hover:text-ink"
@@ -191,7 +191,7 @@ export default async function UserPage({
         {(
           [
             { view: "matches", label: "경기 기록" },
-            { view: "report", label: "분석" },
+            { view: "report", label: "종합 리포트" },
             { view: "squad", label: "선수 성적표" },
             { view: "style", label: "플레이스타일" },
           ] as const
@@ -204,7 +204,7 @@ export default async function UserPage({
             <Link
               key={v.view}
               href={href}
-              className={`-mb-px flex-none whitespace-nowrap border-b-2 px-1 pb-2 text-sm font-semibold transition-colors ${
+              className={`-mb-px inline-flex min-h-11 flex-none items-center whitespace-nowrap border-b-2 px-1 pb-2 text-sm font-semibold transition-colors ${
                 on
                   ? "border-accent text-ink"
                   : "border-transparent text-muted hover:text-ink"

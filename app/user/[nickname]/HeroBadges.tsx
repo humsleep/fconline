@@ -24,10 +24,10 @@ export default async function HeroBadges({
     getRecentMatchDetails(ouid, 50, 30).catch(() => null),
   ]);
 
+  // buy/sell 중 하나만 실패(429/장애)하면 한쪽이 null → 예: 매입만 실패 시
+  // "무지출 셀러"로 확신에 찬 오답 라벨이 뜬다. 두 피드가 모두 있을 때만 진단.
   const marketType =
-    buy || sell
-      ? diagnoseMarket(computeMarketStats(buy ?? [], sell ?? [])).type
-      : null;
+    buy && sell ? diagnoseMarket(computeMarketStats(buy, sell)).type : null;
 
   let matchType = null;
   if (recent) {
