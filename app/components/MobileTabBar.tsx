@@ -49,6 +49,19 @@ const TABS = [
       </>
     ),
   },
+  {
+    // /me 는 로그인 없이도 기기 기반 재방문 훅(내 스쿼드·최근 검색·지난 방문)을 보여줌.
+    // 기존엔 하단탭에 없어 모바일(특히 비로그인)에서 사실상 도달 불가 → 5번째 탭으로 노출.
+    href: "/me",
+    label: "내 정보",
+    match: (p: string) => p === "/me", // "/meta" 와 충돌 방지 (startsWith 금지)
+    icon: (
+      <>
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
+      </>
+    ),
+  },
 ] as const;
 
 export default function MobileTabBar() {

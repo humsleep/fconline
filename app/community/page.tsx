@@ -269,7 +269,7 @@ function TabChip({
     <Link
       href={href}
       className={
-        'flex-none whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition ' +
+        'inline-flex min-h-11 flex-none items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition ' +
         (active
           ? 'bg-accent font-semibold text-accent-ink'
           : 'bg-surface-2 text-muted hover:text-ink')

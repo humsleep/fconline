@@ -9,7 +9,6 @@ import type { TradeRecord } from "../nexon/types";
  */
 
 // 요즘 FC온라인 시세 반영 — 상위 카드 단건이 수십~수백조라 총액은 경 단위까지 감.
-const EOK = 1e8; // 억
 const JO = 1e12; // 조
 const GYEONG = 1e16; // 경 (= 10,000조)
 const DAY_MS = 86_400_000;
