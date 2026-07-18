@@ -444,6 +444,10 @@ function RivalsPanel({ rivals }: { rivals: Rival[] }) {
         {rivals.map((r) => {
           const edge =
             r.win > r.lose ? "text-win" : r.win < r.lose ? "text-lose" : "text-muted";
+          // 천적/호구 — 이미 있는 승패 집계 재사용. 3경기 이상 + 2경기차 이상일 때만 라벨.
+          const diff = r.win - r.lose;
+          const nemesis = r.games >= 3 && diff <= -2;
+          const prey = r.games >= 3 && diff >= 2;
           return (
             <li key={r.nickname}>
               <Link
@@ -451,8 +455,20 @@ function RivalsPanel({ rivals }: { rivals: Rival[] }) {
                 className="block rounded-lg bg-surface-2 px-3 py-2 transition-colors hover:bg-line"
               >
                 <span className="flex items-center gap-3">
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                    {r.nickname}
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <span className="min-w-0 truncate text-sm font-semibold">
+                      {r.nickname}
+                    </span>
+                    {nemesis && (
+                      <span className="scoreboard flex-none rounded bg-lose/15 px-1.5 py-0.5 text-[11px] font-bold text-lose">
+                        천적
+                      </span>
+                    )}
+                    {prey && (
+                      <span className="scoreboard flex-none rounded bg-win/15 px-1.5 py-0.5 text-[11px] font-bold text-win">
+                        호구
+                      </span>
+                    )}
                   </span>
                   <span className={`scoreboard text-sm font-bold ${edge}`}>
                     {r.win}승 {r.draw}무 {r.lose}패

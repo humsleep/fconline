@@ -59,7 +59,7 @@ export default async function PlaystyleSection({
     return (
       <div className="panel mt-4 px-6 py-14 text-center text-sm text-muted">
         플레이스타일을 분석하려면 경기가 더 필요해요. (유효 {result.games}경기 /
-        최소 5경기)
+        최소 5경기) 위의 다른 매치 유형 탭도 확인해 보세요.
       </div>
     );
   }

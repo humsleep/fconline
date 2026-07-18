@@ -391,8 +391,14 @@ export default function SquadBuilder() {
         빈 자리를 탭하면 바로 검색, 배치한 선수를 탭하면 랭커 실전 스탯. 선수를 끌면 위치까지 자유롭게.
       </p>
 
-      {/* 빠른 시작: 프리셋 + 내 스쿼드 불러오기 */}
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      {/* 빠른 시작: 프리셋 + 내 스쿼드 불러오기 (라벨 없으면 정체불명 폼으로 보임) */}
+      <p className="mt-4 text-sm font-semibold">
+        ⚡ 빠른 시작{" "}
+        <span className="font-normal text-muted">
+          — 리그·팀 프리셋으로 채우거나, 구단주명으로 내 스쿼드를 바로 불러오세요
+        </span>
+      </p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <div className="flex items-center gap-2">
           <select
             defaultValue=""

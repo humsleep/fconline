@@ -5,6 +5,7 @@ import { getPlayerBySpid } from "@/lib/nexon/players";
 import { getPlayerRankerMeta, type PlayerPositionStat } from "@/lib/nexon/player-meta";
 import { getPositionLabel } from "@/lib/nexon/meta";
 import SeasonBadge from "@/app/components/SeasonBadge";
+import PlayerSearch from "@/app/meta/PlayerSearch";
 
 export const revalidate = 3600;
 
@@ -144,6 +145,9 @@ export default async function PlayerPage({
           </p>
         </section>
       )}
+
+      {/* 다른 선수 이어서 검색 — 도감 상세가 dead-end 되던 문제 해소 */}
+      <PlayerSearch />
 
       {/* CTA */}
       <div className="mt-6 flex flex-wrap gap-2">
