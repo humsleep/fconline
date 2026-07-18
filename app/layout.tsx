@@ -92,6 +92,14 @@ export default function RootLayout({
               >
                 커뮤니티
               </Link>
+              {/* /me는 로그인 없이도 기기 기반 내 스쿼드·최근 검색을 보여줌 —
+                  데스크톱 비로그인 유저의 유일 진입 경로가 없던 문제 해소 */}
+              <Link
+                href="/me"
+                className="text-sm font-semibold text-muted transition-colors hover:text-ink"
+              >
+                내 정보
+              </Link>
             </nav>
             <div className="hidden w-56 md:block">
               <SearchForm size="sm" />

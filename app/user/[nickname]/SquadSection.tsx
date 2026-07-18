@@ -39,8 +39,8 @@ export default async function SquadSection({
     return (
       <div className="panel mt-4 px-6 py-14 text-center text-sm text-muted">
         {details.length === 0
-          ? "최근 경기 기록이 없습니다."
-          : `선수 성적표를 만들 표본이 부족합니다. (${MIN_GAMES}경기 이상 출전 선수 없음)`}
+          ? "이 매치 유형에는 최근 경기 기록이 없어요. 위의 다른 매치 유형 탭을 확인해 보세요."
+          : `선수 성적표를 만들 표본이 부족해요. (${MIN_GAMES}경기 이상 출전 선수 없음)`}
       </div>
     );
   }

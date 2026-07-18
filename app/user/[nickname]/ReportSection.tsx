@@ -45,7 +45,7 @@ export default async function ReportSection({
     return (
       <div className="panel mt-4 px-6 py-14 text-center text-sm text-muted">
         {listOk
-          ? "분석할 경기 기록이 없어요."
+          ? "이 매치 유형에는 분석할 경기가 없어요. 위의 다른 매치 유형 탭을 확인해 보세요."
           : "넥슨 조회가 일시적으로 원활하지 않아 경기를 불러오지 못했어요. 잠시 후 새로고침해 주세요."}
       </div>
     );
