@@ -84,7 +84,7 @@ export default async function MetaPage() {
       <PlayerSearch />
 
       {!hasData ? (
-        <div className="panel mt-6 px-6 py-16 text-center text-sm text-muted">
+        <div className="panel mt-6 px-6 py-10 text-center text-sm text-muted">
           <p className="text-base font-semibold text-ink">
             오늘의 랭킹을 준비하고 있어요 ⚽
           </p>
@@ -100,7 +100,7 @@ export default async function MetaPage() {
           </Link>
         </div>
       ) : (
-        <div className="mt-6 space-y-6">
+        <div className="mt-6 space-y-4">
           {/* 오늘의 급상승 — 매일 바뀌는 delta를 '사건'으로 헤드라인화 (재방문 훅) */}
           {mover && (
             <Link
@@ -223,8 +223,7 @@ export default async function MetaPage() {
             );
           })}
           <p className="text-[13px] leading-relaxed text-muted">
-            집계 기준: 상위 랭커 실사용 데이터(넥슨 랭커 스탯)를 매일 스냅샷.
-            같은 선수라도 포지션이 다르면 따로 집계됩니다.
+            넥슨 랭커 스탯 매일 스냅샷 · 포지션별 집계
           </p>
         </div>
       )}

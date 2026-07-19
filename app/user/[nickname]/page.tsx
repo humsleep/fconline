@@ -161,7 +161,7 @@ export default async function UserPage({
       </Suspense>
 
       {/* 매치 종류 탭 + 이적시장 진입 — 모바일에서도 한 줄 유지(넘치면 가로 스크롤) */}
-      <nav className="scrollbar-hide rise rise-1 mt-6 flex flex-nowrap items-center gap-1.5 overflow-x-auto">
+      <nav className="scrollbar-hide rise rise-1 mt-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto">
         {MATCH_TABS.map((t) => (
           <Link
             key={t.type}
@@ -235,7 +235,7 @@ export default async function UserPage({
       )}
 
       {/* 전적 카드 저장·공유 — 콘텐츠를 다 본 뒤 공유하는 흐름이라 하단 배치 (계급 카드는 히어로로 승격) */}
-      <div className="mt-8 flex justify-center">
+      <div className="mt-6 flex justify-center">
         <ShareCardButton
           url={`/api/card/user/${encodeURIComponent(basic.nickname)}`}
           filename={`fcscope-${basic.nickname}.png`}
@@ -271,7 +271,7 @@ async function MatchSection({
 
   if (summaries.length === 0) {
     return (
-      <div className="panel mt-4 px-6 py-14 text-center text-sm text-muted">
+      <div className="panel mt-4 px-6 py-10 text-center text-sm text-muted">
         {listOk
           ? "최근 경기 기록이 없습니다."
           : "넥슨 조회가 일시적으로 원활하지 않아 경기 목록을 불러오지 못했어요. 잠시 후 새로고침해 주세요."}
@@ -613,7 +613,7 @@ function SquadSkeleton() {
 
 function TooManyRequests({ nickname }: { nickname: string }) {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-24 text-center">
+    <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-16 text-center">
       <h1 className="text-xl font-bold">지금 조회 요청이 많아요</h1>
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
         같은 네트워크에서 요청이 몰리고 있어요. 1~2분 후에 다시 검색해 주세요.
@@ -668,7 +668,7 @@ function ErrorState({ err, nickname }: { err: unknown; nickname: string }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-24 text-center">
+    <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-16 text-center">
       {notFound && (
         <p
           aria-hidden

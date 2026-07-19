@@ -133,12 +133,11 @@ export default async function PlayerPage({
             <PositionCard key={p.position} stat={p} />
           ))}
           <p className="text-[13px] leading-relaxed text-muted">
-            상위 랭커가 이 카드를 실제로 쓴 공식경기 평균({meta.date} 스냅샷). 카드
-            오버롤·고유 특성은 넥슨 공식 API 미제공이라, 랭커 실사용 기록으로 대신 보여줍니다.
+            상위 랭커의 이 카드 공식경기 평균 ({meta.date} 스냅샷)
           </p>
         </section>
       ) : (
-        <section className="panel mt-4 px-6 py-12 text-center text-sm text-muted">
+        <section className="panel mt-4 px-6 py-10 text-center text-sm text-muted">
           <p className="text-base font-semibold text-ink">아직 랭커 사용 데이터가 없어요</p>
           <p className="mt-2">
             이 카드를 쓴 랭커 경기가 쌓이면 포지션별 평균 스탯이 표시됩니다.

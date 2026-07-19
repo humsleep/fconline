@@ -38,7 +38,7 @@ export default function Home() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4">
       {/* 히어로 */}
-      <section className="relative flex flex-col items-center pb-16 pt-16 text-center sm:pb-24 sm:pt-24">
+      <section className="relative flex flex-col items-center pb-8 pt-10 text-center sm:pb-24 sm:pt-24">
         {/* 피치 라인 아트 */}
         <svg
           aria-hidden
@@ -63,16 +63,15 @@ export default function Home() {
         <p className="rise scoreboard relative block text-xs font-semibold tracking-[0.3em] text-accent">
           EA SPORTS FC ONLINE DATA LAB
         </p>
-        <h1 className="rise rise-1 relative mt-5 text-4xl font-bold leading-tight sm:text-5xl">
-          감이 아니라,
-          <br className="sm:hidden" /> <span className="text-accent">데이터</span>로.
+        <h1 className="rise rise-1 relative mt-4 text-4xl font-bold leading-tight sm:text-5xl">
+          감이 아니라, <span className="text-accent">데이터</span>로.
         </h1>
         {/* 첫 3초 인지: 모바일에서도 '무슨 서비스인지' 즉시 보이도록 (전엔 라벨이 sm 이상에서만 노출) */}
         <p className="rise rise-2 relative mt-4 max-w-md text-sm font-semibold leading-relaxed text-ink sm:text-base">
           FC온라인 전적·스쿼드·랭커 메타를 한 곳에
         </p>
 
-        <div className="rise rise-3 relative mt-8 w-full max-w-md">
+        <div className="rise rise-3 relative mt-5 w-full max-w-md">
           <SearchForm size="lg" />
         </div>
 
@@ -88,7 +87,7 @@ export default function Home() {
       </section>
 
       {/* 기능 */}
-      <section className="pb-24 md:pb-16">
+      <section className="pb-12 md:pb-16">
         <h2 className="scoreboard text-xs font-semibold tracking-[0.25em] text-muted">
           여기서 할 수 있는 것
         </h2>
