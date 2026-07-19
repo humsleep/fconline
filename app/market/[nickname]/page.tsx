@@ -35,7 +35,7 @@ export default async function MarketPage({
   const rl = limitNexonFanout(await headers(), "market-page");
   if (!rl.ok) {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-16 text-center">
         <h1 className="text-xl font-bold">지금 조회 요청이 많아요</h1>
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
           1~2분 후에 다시 시도해 주세요.
@@ -52,7 +52,7 @@ export default async function MarketPage({
     ouid = await getOuid(nickname);
   } catch (err) {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-16 text-center">
         <h1 className="text-xl font-bold">
           {isUserNotFound(err)
             ? `‘${nickname}’ 구단주를 찾을 수 없어요`

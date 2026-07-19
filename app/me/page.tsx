@@ -117,7 +117,7 @@ export default function MyPage() {
       <h1 className="text-2xl font-bold sm:text-3xl">마이페이지</h1>
 
       {/* 계정 / 연동 구단주 */}
-      <section className="panel mt-4 p-5">
+      <section className="panel mt-4 p-4 sm:p-5">
         {!configured || !user ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted">
@@ -163,7 +163,7 @@ export default function MyPage() {
 
       {/* 지난 방문 대비 변화 — 재방문 훅 */}
       {snapshot && (
-        <section className="panel mt-3 p-5">
+        <section className="panel mt-3 p-4 sm:p-5">
           <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
             지난 방문 대비
           </p>
@@ -214,7 +214,7 @@ export default function MyPage() {
       )}
 
       {/* 내 스쿼드 */}
-      <section className="panel mt-3 p-5">
+      <section className="panel mt-3 p-4 sm:p-5">
         <div className="flex items-baseline justify-between">
           <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
             내 스쿼드
@@ -265,7 +265,7 @@ export default function MyPage() {
 
       {/* 최근 검색 */}
       {recent.length > 0 && (
-        <section className="panel mt-3 p-5">
+        <section className="panel mt-3 p-4 sm:p-5">
           <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
             최근 검색
           </p>
@@ -285,7 +285,7 @@ export default function MyPage() {
 
       {/* 내 커뮤니티 글 */}
       {user && (
-        <section className="panel mt-3 p-5">
+        <section className="panel mt-3 p-4 sm:p-5">
           <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
             내가 쓴 글
           </p>

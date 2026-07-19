@@ -56,9 +56,9 @@ export default async function CommunityBoard({
   const writeHref = `/community/new${type ? `?type=${type}` : ''}`;
 
   return (
-    <div className="mx-auto w-full max-w-3xl pb-28 md:pb-16">
+    <div className="mx-auto w-full max-w-3xl pb-24 md:pb-16">
       {/* 헤더 */}
-      <div className="px-4 pt-6">
+      <div className="px-4 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">커뮤니티</h1>
