@@ -94,11 +94,18 @@ export default async function SquadViewPage({
           filename={`fcscope-squad-${squad.id}.png`}
           label="스쿼드 카드 저장 · 공유"
         />
+        {/* 복제해서 편집 — 뷰어가 방금 본 구성을 잃지 않고 빌더로 이어가도록 (전엔 빈 빌더뿐) */}
+        <Link
+          href={`/squad?load=${encodeURIComponent(squad.id)}`}
+          className="scoreboard inline-flex min-h-11 items-center rounded-lg bg-accent px-4 py-2 text-sm font-bold text-accent-ink transition-opacity hover:opacity-90"
+        >
+          이 스쿼드 복제해서 편집
+        </Link>
         <Link
           href="/squad"
-          className="scoreboard rounded-lg bg-surface-2 px-4 py-2 text-sm font-bold text-ink transition-colors hover:bg-line"
+          className="scoreboard inline-flex min-h-11 items-center rounded-lg bg-surface-2 px-4 py-2 text-sm font-bold text-ink transition-colors hover:bg-line"
         >
-          내 스쿼드 만들기
+          새로 만들기
         </Link>
       </div>
     </div>

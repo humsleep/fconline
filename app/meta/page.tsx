@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getAdmin } from "@/lib/supabase/admin";
 import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
 import { getPositionLabel } from "@/lib/nexon/meta";
-import { baseLabelOfCode, posLineOf } from "@/lib/squad/assign";
+import { loadPicks, type PickRow } from "@/lib/meta/picks";
 import SeasonBadge from "@/app/components/SeasonBadge";
 import PlayerSearch from "./PlayerSearch";
-import type { RankerStat } from "@/lib/nexon/types";
 
 export const revalidate = 3600; // 스냅샷은 일 단위 — 1시간 캐시면 충분
 
@@ -17,16 +15,6 @@ export const metadata: Metadata = {
     "상위 랭커가 실제로 가장 많이 쓴 선수 카드. 감이 아니라 데이터로 보는 메타.",
 };
 
-interface PickRow {
-  spId: number;
-  position: number;
-  matchCount: number;
-  rating: number;
-  goalsPerMatch: number;
-  /** 전일 대비 순위 변동 (+상승/−하락), null=NEW, undefined=비교 불가 */
-  delta?: number | null;
-}
-
 const LINE_ORDER = ["ATT", "MID", "DEF", "GK"] as const;
 const LINE_TITLE: Record<(typeof LINE_ORDER)[number], string> = {
   ATT: "공격",
@@ -34,114 +22,6 @@ const LINE_TITLE: Record<(typeof LINE_ORDER)[number], string> = {
   DEF: "수비",
   GK: "골키퍼",
 };
-
-async function loadPicks(): Promise<{
-  date: string | null;
-  byLine: Map<string, PickRow[]>;
-}> {
-  const empty = { date: null, byLine: new Map<string, PickRow[]>() };
-  const db = getAdmin();
-  if (!db) return empty;
-
-  async function rowsForDate(cand: string): Promise<PickRow[]> {
-    const db2 = getAdmin();
-    if (!db2) return [];
-    const { data } = await db2
-      .from("ranker_stats_snapshot")
-      .select("sp_id, sp_position, payload")
-      .eq("match_type", 50)
-      .eq("snapshot_date", cand)
-      .is("payload->empty", null) // tombstone({empty:true}) 제외
-      .order("sp_id", { ascending: true }) // 결정적 순서 (임의 누락 방지)
-      .limit(400);
-    const rows: PickRow[] = [];
-    for (const r of data ?? []) {
-      const payload = r.payload as RankerStat | null;
-      const st = payload?.status ?? {};
-      const matchCount = st.matchCount ?? 0;
-      if (matchCount <= 0) continue;
-      rows.push({
-        spId: r.sp_id as number,
-        position: r.sp_position as number,
-        matchCount,
-        rating: st.spRating ?? 0,
-        goalsPerMatch: Math.round(((st.goal ?? 0) / matchCount) * 100) / 100,
-      });
-    }
-    return rows;
-  }
-
-  function groupByLine(rows: PickRow[]): Map<string, PickRow[]> {
-    const byLine = new Map<string, PickRow[]>();
-    for (const row of rows) {
-      const line = posLineOf(baseLabelOfCode(row.position));
-      const arr = byLine.get(line) ?? [];
-      arr.push(row);
-      byLine.set(line, arr);
-    }
-    for (const arr of byLine.values())
-      arr.sort((a, b) => b.matchCount - a.matchCount);
-    return byLine;
-  }
-
-  try {
-    // 최근 날짜 후보를 뽑아, 유효 데이터가 충분한 날을 채택 (자정 직후 편향/빈 랭킹 방지)
-    const { data: dateRows } = await db
-      .from("ranker_stats_snapshot")
-      .select("snapshot_date")
-      .eq("match_type", 50)
-      .order("snapshot_date", { ascending: false })
-      .limit(300);
-    const candidates = [...new Set((dateRows ?? []).map((r) => r.snapshot_date as string))].slice(0, 4);
-    if (candidates.length === 0) return empty;
-
-    const MIN_ROWS = 20;
-    let date: string | null = null;
-    let best: PickRow[] = [];
-    let chosenIdx = -1;
-
-    for (let i = 0; i < Math.min(candidates.length, 3); i++) {
-      const rows = await rowsForDate(candidates[i]);
-      if (rows.length >= MIN_ROWS) {
-        date = candidates[i];
-        best = rows;
-        chosenIdx = i;
-        break;
-      }
-      if (rows.length > best.length) {
-        date = candidates[i];
-        best = rows;
-        chosenIdx = i;
-      }
-    }
-
-    const byLine = groupByLine(best);
-
-    // 순위 변동(▲▼/NEW): 채택일 다음 후보(=직전 스냅샷)와 라인 내 순위 비교
-    const prevDate = chosenIdx >= 0 ? candidates[chosenIdx + 1] : undefined;
-    if (prevDate) {
-      const prevRows = await rowsForDate(prevDate);
-      if (prevRows.length > 0) {
-        const prevRank = new Map<string, number>();
-        for (const [, arr] of groupByLine(prevRows)) {
-          arr.forEach((r, idx) =>
-            prevRank.set(`${r.spId}:${r.position}`, idx + 1)
-          );
-        }
-        for (const [, arr] of byLine) {
-          arr.forEach((r, idx) => {
-            const prev = prevRank.get(`${r.spId}:${r.position}`);
-            r.delta = prev === undefined ? null : prev - (idx + 1);
-          });
-        }
-      }
-    }
-
-    return { date, byLine };
-  } catch {
-    return empty;
-  }
-}
 
 interface TopMover {
   spId: number;
