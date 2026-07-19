@@ -7,6 +7,7 @@ import { getPositionLabel } from "@/lib/nexon/meta";
 import { aggregatePlayers, type PlayerAggregate } from "@/lib/nexon/player-stats";
 import { getPlayerNames } from "@/lib/nexon/players";
 import { getRankerStatsCached, rankerKey, type RankerMap } from "@/lib/nexon/ranker";
+import { loadPicks, topPickIdsByLine, isTopPick } from "@/lib/meta/picks";
 import { verdictFromRating } from "@/lib/verdict";
 import { diagnoseSquad } from "@/lib/squad-clinic";
 import VerdictStamp from "@/app/components/VerdictStamp";
@@ -58,6 +59,25 @@ export default async function SquadSection({
 
   const names = await getPlayerNames(players.map((p) => p.spId));
 
+  // 내 픽 vs 랭커 픽 — 라인별 인기 TOP10 픽과 대조. 매일 갱신되는 스냅샷 → 재방문 훅.
+  // 대조는 spId×라인(정확 포지션 코드 아님 — ST=24/25/26 등 코드 별칭 오탐 방지).
+  // 스냅샷은 공식(50)·감독(52)만 워밍 → 그 외 매치유형/콜드스타트면 idsByLine 비어 헤드라인 숨김.
+  let idsByLine = new Map<string, Set<number>>();
+  let pickDate: string | null = null;
+  let hasPickData = false;
+  try {
+    const picks = await loadPicks(matchType, false);
+    idsByLine = topPickIdsByLine(picks.byLine, 10);
+    hasPickData = [...idsByLine.values()].some((s) => s.size > 0);
+    if (hasPickData) pickDate = picks.date;
+  } catch {
+    // 스냅샷 없거나 조회 실패 → 헤드라인 숨김 (성적표는 정상 표시)
+  }
+  const topPickCount = hasPickData
+    ? players.filter((p) => isTopPick(idsByLine, p.spId, p.mainPosition)).length
+    : 0;
+  const offTopCount = players.length - topPickCount;
+
   // 클리닉 진단 — 이미 집계된 players + 랭커 맵 재사용(추가 fetch 없음)
   const clinic = diagnoseSquad(
     players,
@@ -102,6 +122,35 @@ export default async function SquadSection({
         </div>
       </section>
 
+      {/* 내 픽 vs 랭커 픽 — 매일 갱신되는 인기 TOP10 픽과 겹치는 카드 수 (재방문 훅) */}
+      {hasPickData && (
+        <section className="panel mt-2 px-5 py-4">
+          <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
+            내 픽 vs 랭커 픽
+          </p>
+          <div className="mt-2 flex items-end gap-8">
+            <div>
+              <p className="scoreboard text-3xl font-bold text-win">
+                {topPickCount}
+                <span className="ml-0.5 text-base font-semibold text-muted">명</span>
+              </p>
+              <p className="text-[13px] text-muted">랭커 대세픽</p>
+            </div>
+            <div>
+              <p className="scoreboard text-3xl font-bold text-ink">
+                {offTopCount}
+                <span className="ml-0.5 text-base font-semibold text-muted">명</span>
+              </p>
+              <p className="text-[13px] text-muted">TOP10 외</p>
+            </div>
+          </div>
+          <p className="mt-2 text-[12px] text-muted">
+            내가 쓴 {players.length}명 중 랭커 인기 TOP10과 겹치는 카드
+            {pickDate ? ` · ${pickDate} 스냅샷` : ""} · 매일 갱신
+          </p>
+        </section>
+      )}
+
       <p className="mt-3 text-sm text-muted">
         최근 {details.length}경기 · {MIN_GAMES}경기 이상 출전 선수 · 랭커 평균은
         같은 포지션 상위 랭커 기준
@@ -115,6 +164,7 @@ export default async function SquadSection({
             rankerRating={
               ranker.get(rankerKey(p.spId, p.mainPosition))?.status?.spRating
             }
+            topPick={hasPickData && isTopPick(idsByLine, p.spId, p.mainPosition)}
           />
         ))}
       </div>
@@ -126,10 +176,12 @@ function PlayerCard({
   p,
   name,
   rankerRating,
+  topPick,
 }: {
   p: PlayerAggregate;
   name: string;
   rankerRating?: number;
+  topPick?: boolean;
 }) {
   const hasRanker = typeof rankerRating === "number" && rankerRating > 0;
   const gap = hasRanker ? p.avgRating - rankerRating! : undefined;
@@ -163,6 +215,11 @@ function PlayerCard({
             <span className="ml-1.5 text-sm font-medium text-muted">
               {getPositionLabel(p.mainPosition)}
             </span>
+            {topPick && (
+              <span className="ml-1.5 rounded bg-win/15 px-1.5 py-0.5 text-[11px] font-bold text-win">
+                🔥 대세픽
+              </span>
+            )}
             <span className="ml-1.5 text-[12px] font-semibold text-accent">도감 →</span>
           </p>
           <div className="mt-1">

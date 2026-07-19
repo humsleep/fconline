@@ -274,7 +274,7 @@ export default function MyPage() {
               <Link
                 key={r}
                 href={`/user/${encodeURIComponent(r)}`}
-                className="scoreboard rounded-lg bg-surface-2 px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:bg-line"
+                className="scoreboard inline-flex min-h-11 items-center rounded-lg bg-surface-2 px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:bg-line"
               >
                 {r}
               </Link>
@@ -304,7 +304,7 @@ export default function MyPage() {
                 <li key={p.id}>
                   <Link
                     href={`/community/${p.id}`}
-                    className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 transition-colors hover:bg-line"
+                    className="flex min-h-11 items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 transition-colors hover:bg-line"
                   >
                     <span className="flex-none text-[13px]">
                       {POST_TYPES[p.type as keyof typeof POST_TYPES]?.emoji ?? "📝"}

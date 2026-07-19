@@ -18,6 +18,7 @@ import { baseLabelOfCode, assignByPosition, bestFormationId } from '../lib/squad
 import { formatKoreanBP, formatKoreanBPShort } from '../lib/format';
 import { MARKET_RULES, computeMarketStats, diagnoseMarket } from '../lib/market/diagnosis';
 import { MATCH_RULES, computeMatchPerfStats, diagnoseMatchPerf } from '../lib/match/diagnosis';
+import { topPickIdsByLine, isTopPick } from '../lib/meta/picks';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -384,6 +385,33 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
     threw = true;
   }
   ok(!threw, '경기 룰 평가 중 예외 없음');
+}
+
+// ── 내 픽 vs 랭커 픽 (spId×라인 대조, 포지션 코드 별칭 오탐 방지) ──
+{
+  const pr = (spId: number, position: number) => ({
+    spId,
+    position,
+    matchCount: 100,
+    rating: 7,
+    goalsPerMatch: 1,
+  });
+  // 랭커 TOP픽: 100번 카드가 ST 코드 25로 ATT 라인에 있음
+  const byLine = new Map([['ATT', [pr(100, 25)]]]);
+  const ids = topPickIdsByLine(byLine, 10);
+  ok(ids.get('ATT')?.has(100) === true, 'topPickIdsByLine: 라인별 spId 집합');
+  // 같은 선수(100)를 다른 ST 코드 24로 기용해도 같은 라인이라 대세픽으로 인정
+  eq(isTopPick(ids, 100, 24), true, 'isTopPick: 포지션 코드 달라도 같은 라인이면 매칭');
+  // 다른 선수/다른 라인은 미매칭
+  eq(isTopPick(ids, 999, 25), false, 'isTopPick: 집합에 없는 spId는 미매칭');
+  eq(isTopPick(ids, 100, 0), false, 'isTopPick: 다른 라인(GK)이면 미매칭');
+  // topN 컷: 11번째 픽은 집합에서 제외
+  const many = new Map([
+    ['ATT', Array.from({ length: 12 }, (_, i) => pr(200 + i, 25))],
+  ]);
+  const top10 = topPickIdsByLine(many, 10);
+  eq(top10.get('ATT')?.size, 10, 'topPickIdsByLine: topN=10 컷');
+  eq(isTopPick(top10, 211, 25), false, 'isTopPick: TOP10 밖 카드는 미매칭');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
