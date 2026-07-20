@@ -218,7 +218,7 @@ export default async function UserPage({
 
       {activeView === "squad" ? (
         <Suspense key={`sq-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
-          <SquadSection ouid={ouid} matchType={matchType} />
+          <SquadSection ouid={ouid} matchType={matchType} nickname={basic.nickname} />
         </Suspense>
       ) : activeView === "style" ? (
         <Suspense key={`st-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>

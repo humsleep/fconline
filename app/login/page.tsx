@@ -14,6 +14,7 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const next = safeNextPath(searchParams.get('next'));
   const hasError = searchParams.get('error');
+  const reason = searchParams.get('reason');
   const configured = isSupabaseConfigured();
 
   useEffect(() => {
@@ -66,6 +67,11 @@ function LoginContent() {
           <span className="text-ink">SCOPE</span>
         </div>
         <h1 className="mt-6 text-xl font-bold">로그인</h1>
+        {reason === 'write' && (
+          <p className="mt-3 rounded-lg bg-accent/10 px-3 py-2 text-sm font-semibold text-accent">
+            글을 쓰려면 로그인이 필요해요
+          </p>
+        )}
         <p className="mt-2 text-sm text-muted">
           클럽 모집·커뮤니티 참여에는 로그인이 필요합니다. 전적 검색·진단은
           로그인 없이도 이용할 수 있어요.
