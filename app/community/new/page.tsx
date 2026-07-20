@@ -50,9 +50,9 @@ function NewPostForm() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      // 선택한 유형(type)을 로그인 후에도 유지
+      // 선택한 유형(type)을 로그인 후에도 유지 + reason으로 "왜 로그인 화면인지" 안내
       router.replace(
-        `/login?next=${encodeURIComponent(`/community/new?type=${initialType}`)}`
+        `/login?reason=write&next=${encodeURIComponent(`/community/new?type=${initialType}`)}`
       );
       return;
     }

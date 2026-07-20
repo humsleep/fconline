@@ -12,6 +12,7 @@ import { verdictFromRating } from "@/lib/verdict";
 import { diagnoseSquad } from "@/lib/squad-clinic";
 import VerdictStamp from "@/app/components/VerdictStamp";
 import TugOfWar from "@/app/components/TugOfWar";
+import ShareCardButton from "@/app/components/ShareCardButton";
 import SquadClinic from "./SquadClinic";
 
 const MATCH_COUNT = 30;
@@ -21,9 +22,11 @@ const MIN_GAMES = 2; // 표본 부족 선수는 제외 (덕후 신뢰 요건)
 export default async function SquadSection({
   ouid,
   matchType,
+  nickname,
 }: {
   ouid: string;
   matchType: number;
+  nickname: string;
 }) {
   let matchIds: string[] = [];
   try {
@@ -148,6 +151,14 @@ export default async function SquadSection({
             내가 쓴 {players.length}명 중 랭커 인기 TOP10과 겹치는 카드
             {pickDate ? ` · ${pickDate} 스냅샷` : ""} · 매일 갱신
           </p>
+          {/* 챌린지 공유 카드 — "너는 몇 명?"으로 보는 사람→검색 전환 (바이럴 루프) */}
+          <div className="mt-3">
+            <ShareCardButton
+              url={`/api/card/pickmatch/${encodeURIComponent(nickname)}?mt=${matchType}`}
+              filename={`fcscope-pick-${nickname}.png`}
+              label="🔥 랭커 대세픽 카드"
+            />
+          </div>
         </section>
       )}
 

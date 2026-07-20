@@ -163,7 +163,8 @@ export default async function PostDetail({
         {/* 스쿼드 배틀 — A/B 스쿼드 + 투표 */}
         {post.type === "squad_battle" && post.squad_id && typeof post.meta.squad_b === "string" ? (
           <div className="mt-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+            {/* 모바일도 A/B 나란히 — 세로로 쌓으면 투표 버튼이 ~950px 아래로 밀려 전환율↓ */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <div>
                 <p className="scoreboard mb-1 text-sm font-bold text-accent">🅰️ A팀</p>
                 <AttachedSquad squadId={post.squad_id} />

@@ -156,7 +156,7 @@ export default function AuthButton() {
                   href={`/community/${n.postId}`}
                   role="menuitem"
                   onClick={() => setOpen(false)}
-                  className="mt-1 flex items-center gap-2 text-sm hover:text-accent"
+                  className="-mx-1 mt-1 flex min-h-11 items-center gap-2 rounded-lg px-1 text-sm hover:bg-surface-2 hover:text-accent"
                 >
                   <span className="min-w-0 flex-1 truncate">{n.title}</span>
                   <span className="flex-none font-bold text-accent">+{n.count}</span>
