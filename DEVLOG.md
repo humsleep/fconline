@@ -1,5 +1,12 @@
 # DEVLOG
 
+## 2026-07-21 — [op.gg 벤치마킹 Phase 2] 전적 갱신 + 콜드 로드 속도
+
+- **전적 갱신 버튼**(op.gg 시그니처): `POST /api/refresh/[nickname]` → `revalidatePath`로 전적·이적시장 캐시 만료 → 다음 렌더에서 변하는 데이터만 넥슨 최신 조회(불변 매치 상세는 영구 캐시 유지). 남용 방지: 프로필당 20초 1회 + IP당 분당 15회(429). RefreshButton 히어로 배치(갱신 중…/갱신됨/잠시 후 다시, 44px)
+- **속도**: `getUserBasic`+`getMaxDivisions` Promise.all 병렬화 → 콜드 프로필 직렬 왕복 1회 절감
+- 검증: `tsc` 0·**128 PASS**·build ✓·라우트 스모크(POST 200 → 즉시 429 → GET 405). PR #53
+- 마이그레이션/환경변수 변경 없음
+
 ## 2026-07-21 — [op.gg 벤치마킹 Phase 1] 검색 유입 엔진 (SEO 색인)
 
 - **배경**: op.gg 성장의 핵심 = 프로필/엔티티 페이지 검색 색인. 기존 sitemap이 최대 SEO 자산(선수 도감·구단주 프로필)을 누락하고 있었음
