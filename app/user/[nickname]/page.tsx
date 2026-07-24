@@ -19,6 +19,7 @@ import HeroBadges from "./HeroBadges";
 import DivisionIcon from "@/app/components/DivisionIcon";
 import { divisionIconUrl } from "@/lib/nexon/division-icon";
 import ShareCardButton from "@/app/components/ShareCardButton";
+import RefreshButton from "@/app/components/RefreshButton";
 import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import { computeMatchPerfStats, diagnoseMatchPerf } from "@/lib/match/diagnosis";
 import { logNicknameSearch } from "@/lib/search-log";
@@ -83,11 +84,17 @@ export default async function UserPage({
 
   let ouid: string;
   let basic: Awaited<ReturnType<typeof getUserBasic>>;
+  let divisions: Awaited<ReturnType<typeof getMaxDivisions>> = [];
   try {
     ouid = await getOuid(nickname);
-    // getUserBasic이 첫 '실제' 넥슨 호출인 경우가 많다(getOuid는 데이터 캐시 히트 가능).
+    // basic·등급은 둘 다 ouid만 필요 → 병렬로 받아 직렬 왕복 1회 절감(콜드 조회 체감속도↑).
     // 여기서 보호하지 않으면 429/점검/타임아웃이 맞춤 ErrorState 대신 generic error로 추락.
-    basic = await getUserBasic(ouid);
+    const [b, d] = await Promise.all([
+      getUserBasic(ouid),
+      getMaxDivisions(ouid).catch(() => []),
+    ]);
+    basic = b;
+    divisions = d;
   } catch (err) {
     return <ErrorState err={err} nickname={nickname} />;
   }
@@ -95,7 +102,6 @@ export default async function UserPage({
   // 검색된 구단주 기록 → sitemap 색인 시드 (best-effort, 렌더 안 막음)
   logNicknameSearch(basic.nickname);
 
-  const divisions = await getMaxDivisions(ouid).catch(() => []);
   const divisionCards = await Promise.all(
     divisions.slice(0, 3).map(async (d) => ({
       matchTypeName: await getMatchTypeName(d.matchType),
@@ -133,11 +139,15 @@ export default async function UserPage({
           style={{ background: "radial-gradient(closest-side, rgba(200,245,66,0.14), transparent)" }}
         />
         <div className="min-w-0">
-          <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h1 className="text-2xl font-bold sm:text-4xl">{basic.nickname}</h1>
-            <p className="scoreboard mb-0.5 text-sm font-semibold text-muted">
+            <p className="scoreboard text-sm font-semibold text-muted">
               LV.<span className="text-accent">{basic.level}</span>
             </p>
+            {/* 전적 갱신 — op.gg 시그니처. 캐시 만료 후 최신 조회 */}
+            <div className="ml-auto">
+              <RefreshButton nickname={basic.nickname} />
+            </div>
           </div>
           {divisionCards.length > 0 && (
             <div className="mt-3 space-y-1.5">
