@@ -2,6 +2,23 @@ import Link from "next/link";
 import SearchForm from "./components/SearchForm";
 import FocusSearchCard from "./components/FocusSearchCard";
 import { DEMO_NICKNAME } from "@/lib/demo";
+import { SITE_URL } from "@/lib/site";
+
+// 구글 sitelinks 검색창 — 구단주명 검색이 SERP에 직접 노출 (op.gg식 프로필 유입)
+const WEBSITE_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "FC Scope",
+  url: SITE_URL,
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${SITE_URL}/user/{search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  },
+};
 
 const FEATURES = [
   {
@@ -37,6 +54,10 @@ const FEATURES = [
 export default function Home() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_JSONLD) }}
+      />
       {/* 히어로 */}
       <section className="relative flex flex-col items-center pb-8 pt-10 text-center sm:pb-24 sm:pt-24">
         {/* 피치 라인 아트 */}

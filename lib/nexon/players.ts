@@ -129,6 +129,16 @@ export async function getPlayerName(spId: number): Promise<string> {
   return idx.nameById.get(spId) ?? `선수 ${spId}`;
 }
 
+/**
+ * 실선수 1명당 대표 카드(최신 시즌) 목록 — sitemap 색인용.
+ * 시즌 변형별로 전부 넣으면 thin 중복 페이지가 양산되므로 대표 spid만.
+ * 넥슨 메타 실패 시 빈 배열(graceful).
+ */
+export async function getAllPlayerReps(): Promise<PlayerHit[]> {
+  const idx = await loadIndex();
+  return idx.reps;
+}
+
 export async function getPlayerNames(
   spIds: number[]
 ): Promise<Map<number, string>> {
