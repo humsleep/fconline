@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-24 — [도메인] fcscope.xyz 커스텀 도메인 전환 + 검색엔진 준비
+
+- **도메인**: Vercel primary = `www.fcscope.xyz` (apex `fcscope.xyz` → 308 → www). 가비아 구매, Vercel A(`216.198.79.1`) + www CNAME 연결·SSL 발급 완료
+- **`lib/site.ts`**: 기본 `SITE_URL` 을 구 프리뷰 호스트 → `https://www.fcscope.xyz`. sitemap/robots/canonical/OG 전부 이 단일 소스에서 파생 → 새 도메인 자동 반영
+- **`app/layout.tsx`**: `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` / `NEXT_PUBLIC_NAVER_SITE_VERIFICATION` env 기반 소유확인 meta 태그(미설정 시 미출력) + canonical alternate 명시
+- **`.env.example`** 신규(gitignore allow-list) — 도메인·검증·기존 env 문서화
+- 검증: `tsc` 0 · build ✓ · robots.txt/ sitemap.xml 가 www.fcscope.xyz 로 출력 확인
+- **⚠️ 사용자 조치**: ① Vercel `NEXT_PUBLIC_SITE_URL=https://www.fcscope.xyz` 설정 후 재배포 ② Google Search Console/네이버 서치어드바이저 소유확인 + sitemap 제출 ③ Supabase Auth URL Configuration(Site URL + Redirect URLs)에 새 도메인 추가
+
 ## 2026-07-21 — [op.gg 벤치마킹 Phase 2] 전적 갱신 + 콜드 로드 속도
 
 - **전적 갱신 버튼**(op.gg 시그니처): `POST /api/refresh/[nickname]` → `revalidatePath`로 전적·이적시장 캐시 만료 → 다음 렌더에서 변하는 데이터만 넥슨 최신 조회(불변 매치 상세는 영구 캐시 유지). 남용 방지: 프로필당 20초 1회 + IP당 분당 15회(429). RefreshButton 히어로 배치(갱신 중…/갱신됨/잠시 후 다시, 44px)
