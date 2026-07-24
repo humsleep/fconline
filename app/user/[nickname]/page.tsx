@@ -21,6 +21,8 @@ import { divisionIconUrl } from "@/lib/nexon/division-icon";
 import ShareCardButton from "@/app/components/ShareCardButton";
 import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import { computeMatchPerfStats, diagnoseMatchPerf } from "@/lib/match/diagnosis";
+import { logNicknameSearch } from "@/lib/search-log";
+import { SITE_URL } from "@/lib/site";
 import { TONE_BG, TONE_DOT, TONE_TEXT } from "@/lib/diagnosis/tone";
 
 export const maxDuration = 60; // 콜드 조회: 매치 상세 최대 30건 순차 호출 대비
@@ -90,6 +92,9 @@ export default async function UserPage({
     return <ErrorState err={err} nickname={nickname} />;
   }
 
+  // 검색된 구단주 기록 → sitemap 색인 시드 (best-effort, 렌더 안 막음)
+  logNicknameSearch(basic.nickname);
+
   const divisions = await getMaxDivisions(ouid).catch(() => []);
   const divisionCards = await Promise.all(
     divisions.slice(0, 3).map(async (d) => ({
@@ -100,8 +105,26 @@ export default async function UserPage({
     }))
   );
 
+  const profileJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    name: `${basic.nickname} 전적`,
+    url: `${SITE_URL}/user/${encodeURIComponent(basic.nickname)}`,
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "홈", item: `${SITE_URL}/` },
+        { "@type": "ListItem", position: 2, name: `${basic.nickname} 전적` },
+      ],
+    },
+  };
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-16 pt-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(profileJsonLd) }}
+      />
       {/* 히어로 — 전광판 */}
       <section className="panel rise relative overflow-hidden px-5 py-5">
         <div

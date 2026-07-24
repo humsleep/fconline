@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getPlayerBySpid } from "@/lib/nexon/players";
 import { getPlayerRankerMeta, type PlayerPositionStat } from "@/lib/nexon/player-meta";
 import { getPositionLabel } from "@/lib/nexon/meta";
+import { SITE_URL } from "@/lib/site";
 import SeasonBadge from "@/app/components/SeasonBadge";
 import PlayerSearch from "@/app/meta/PlayerSearch";
 
@@ -63,8 +64,22 @@ export default async function PlayerPage({
   ]);
   const name = player?.name ?? `선수 ${spid}`;
 
+  const breadcrumb = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "홈", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "랭커 픽 랭킹", item: `${SITE_URL}/meta` },
+      { "@type": "ListItem", position: 3, name },
+    ],
+  };
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-8 md:pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+      />
       {/* 히어로 */}
       <section className="panel relative overflow-hidden p-5">
         <div
