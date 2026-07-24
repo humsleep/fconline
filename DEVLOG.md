@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-21 — [op.gg 벤치마킹 Phase 1] 검색 유입 엔진 (SEO 색인)
+
+- **배경**: op.gg 성장의 핵심 = 프로필/엔티티 페이지 검색 색인. 기존 sitemap이 최대 SEO 자산(선수 도감·구단주 프로필)을 누락하고 있었음
+- **sitemap 확장**: `/player/[spid]`(실선수 대표 카드, thin 중복 방지) + `/user/[nickname]`(검색된 구단주). try/catch graceful
+- **search_log (마이그레이션 0016)**: 검색 닉네임 기록(service_role 전용, RLS on·정책 없음). `logNicknameSearch()` fire-and-forget, 테이블 미생성 시 무시
+- **JSON-LD**: 홈 `WebSite`+`SearchAction`(구글 sitelinks 검색창), /player `BreadcrumbList`, /user `ProfilePage`+`BreadcrumbList`
+- **⚠️ 사용자 조치**: `supabase/migrations/0016_search_log.sql` 실행 필요(미실행 시 /user 색인만 비활성, 나머지 즉시 동작). 아울러 Google Search Console 도메인 등록 권장(색인 측정)
+- 검증: `tsc` 0·**128 PASS**·build ✓·/sitemap.xml 200·홈 SearchAction 노출. PR #52
+
 ## 2026-07-21 — [7일 프로그램 종료] 정합성 수정 + 최종 요약
 
 - **마지막 회의**: 새 위험 없이 안정화. `pickTopMover`가 각 라인 전체(최대 400)에서 급상승을 뽑아 11위+ 카드가 헤드라인에 뜨는데 목록엔 없던 불일치 → 후보를 노출 목록과 동일한 상위 10위로 제한. `tsc` 0·**128 PASS**·build ✓. PR #51
