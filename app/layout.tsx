@@ -22,6 +22,10 @@ const plex = IBM_Plex_Sans_KR({
   weight: ["400", "500", "600", "700"],
 });
 
+// 검색엔진 소유확인 — 메타태그 방식용. env 미설정 시 태그 미출력(=DNS 방식 사용 가능).
+const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+const naverVerification = process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION;
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -30,12 +34,19 @@ export const metadata: Metadata = {
   },
   description:
     "FC온라인 전적 검색, AI 스쿼드 진단, 랭커 데이터 비교. 감이 아니라 데이터로.",
+  alternates: { canonical: "/" },
   appleWebApp: {
     capable: true,
     title: "FC Scope",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },
+  verification: {
+    ...(googleVerification ? { google: googleVerification } : {}),
+    ...(naverVerification
+      ? { other: { "naver-site-verification": naverVerification } }
+      : {}),
+  },
 };
 
 export const viewport: Viewport = {
