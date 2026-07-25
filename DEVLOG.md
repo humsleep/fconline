@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-24 — [성장 1순위] FC Scope 스코어 (자체 경기 퍼포먼스 점수 0~10)
+
+- **배경**: 방문 빈도(습관)의 핵심 = 정체성 + 매 세션 재확인 훅. op.gg OP Score / fut.gg GGR 대응을 넥슨 경기 데이터만으로(유료 시세·OVR 불필요) 구현
+- **`lib/nexon/score.ts`**(순수·단위테스트): `matchScore`(결과+득실차+인게임평점+점유율→0~10, 몰수 고정) · `recentScore`(최근 평균) · `scoreTier`(월드클래스 gold/수준급 win/평범 muted/분발 lose)
+- **전적 폼 전광판**: FC Scope 스코어를 승률 앞 대표 지표로(점수+등급 라벨+색)
+- **경기 행**: 경기별 스코어 칩 모바일에서도 항상 노출("리포트 →"는 모바일 숨김으로 자리 확보)
+- **전적 공유 카드**(`/api/card/user`): `FC 스코어` 대표 배지(등급색) → 공유 자산과 결합
+- 검증: `tsc` 0 · build ✓ · 단위 **140 PASS**(+12). PR #56. 마이그레이션 없음
+
 ## 2026-07-24 — [도메인] fcscope.xyz 커스텀 도메인 전환 + 검색엔진 준비
 
 - **도메인**: Vercel primary = `www.fcscope.xyz` (apex `fcscope.xyz` → 308 → www). 가비아 구매, Vercel A(`216.198.79.1`) + www CNAME 연결·SSL 발급 완료
