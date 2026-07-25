@@ -2,6 +2,7 @@ import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/ne
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { getDivisionName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
+import { recentScore, scoreTier } from "@/lib/nexon/score";
 import { renderCard } from "@/lib/card/render";
 import { limitNexonFanout } from "@/lib/security/rate-limit";
 
@@ -43,6 +44,10 @@ export async function GET(
       if (s) summaries.push(s);
     }
     const rec = aggregate(summaries);
+    const score = recentScore(summaries);
+    const tier = scoreTier(score);
+    const tierColor =
+      tier.tone === "gold" ? "gold" : tier.tone === "lose" ? "lose" : "lime";
 
     return renderCard({
       kicker: "전적 카드",
@@ -54,9 +59,12 @@ export async function GET(
         ? { text: `${rec.win}승 ${rec.draw}무 ${rec.lose}패`, icon: "▲", color: "lime" }
         : undefined,
       badges: [
+        // FC Scope 스코어를 대표 배지로 (표본 있을 때만)
+        ...(rec.played
+          ? [{ label: "FC 스코어", value: score.toFixed(1), color: tierColor as "gold" | "lime" | "lose" }]
+          : []),
         { label: "최근 경기", value: `${rec.played}` },
         { label: "득실", value: `${rec.goalsFor}:${rec.goalsAgainst}` },
-        { label: "점유율", value: `${rec.avgPossession}%` },
       ],
       footerUrl: "fcscope",
     });
