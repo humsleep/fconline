@@ -1,8 +1,14 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import SearchForm from "./components/SearchForm";
 import FocusSearchCard from "./components/FocusSearchCard";
+import HomeDashboard from "./components/HomeDashboard";
+import TodayMover from "./components/TodayMover";
 import { DEMO_NICKNAME } from "@/lib/demo";
 import { SITE_URL } from "@/lib/site";
+
+// 홈은 "오늘의 급상승"(랭커 스냅샷 DB) 때문에 ISR — 1시간 캐시로 빠르게 유지
+export const revalidate = 3600;
 
 // 구글 sitelinks 검색창 — 구단주명 검색이 SERP에 직접 노출 (op.gg식 프로필 유입)
 const WEBSITE_JSONLD = {
@@ -105,6 +111,16 @@ export default function Home() {
             👀 예시 리포트 먼저 구경하기 →
           </Link>
         )}
+
+        {/* 개인화 대시보드 — 방문 스트릭 + 즐겨찾기 (재방문 훅, localStorage) */}
+        <HomeDashboard />
+      </section>
+
+      {/* 오늘의 급상승 — 매일 바뀌는 데일리 훅 (스냅샷 없으면 미표시) */}
+      <section className="pb-4">
+        <Suspense fallback={null}>
+          <TodayMover />
+        </Suspense>
       </section>
 
       {/* 기능 */}

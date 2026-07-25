@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
 import { getPositionLabel } from "@/lib/nexon/meta";
-import { loadPicks, type PickRow } from "@/lib/meta/picks";
+import { loadPicks, pickTopMover, LINE_TITLE, type PickRow } from "@/lib/meta/picks";
 import SeasonBadge from "@/app/components/SeasonBadge";
 import PlayerSearch from "./PlayerSearch";
 
@@ -16,51 +16,6 @@ export const metadata: Metadata = {
 };
 
 const LINE_ORDER = ["ATT", "MID", "DEF", "GK"] as const;
-const LINE_TITLE: Record<(typeof LINE_ORDER)[number], string> = {
-  ATT: "공격",
-  MID: "미드필드",
-  DEF: "수비",
-  GK: "골키퍼",
-};
-
-interface TopMover {
-  spId: number;
-  position: number;
-  /** >0 = 라인 내 순위 상승폭, null = 오늘 새로 진입(NEW) */
-  delta: number | null;
-  matchCount: number;
-  line: string;
-}
-
-/**
- * "오늘의 급상승" 1건 선정 — loadPicks가 이미 채운 delta 재활용(추가 호출 0).
- * 상승폭 최대(동률 시 사용량 큰 카드) 우선, 없으면 NEW 진입 중 사용량 최대.
- * NEW를 동급 후보로 포함해야 변동이 작은 날에도 헤드라인이 비지 않는다.
- * 후보는 각 라인 상위 10위(=화면에 실제 노출되는 목록)로 제한 —
- * 11위+ 카드가 헤드라인에 뜨는데 아래 목록엔 없는 불일치 방지.
- */
-function pickTopMover(byLine: Map<string, PickRow[]>): TopMover | null {
-  let riser: (TopMover & { delta: number }) | null = null;
-  let newcomer: TopMover | null = null;
-  for (const [line, rows] of byLine) {
-    for (const r of rows.slice(0, 10)) {
-      if (typeof r.delta === "number" && r.delta > 0) {
-        if (
-          !riser ||
-          r.delta > riser.delta ||
-          (r.delta === riser.delta && r.matchCount > riser.matchCount)
-        ) {
-          riser = { spId: r.spId, position: r.position, delta: r.delta, matchCount: r.matchCount, line };
-        }
-      } else if (r.delta === null) {
-        if (!newcomer || r.matchCount > newcomer.matchCount) {
-          newcomer = { spId: r.spId, position: r.position, delta: null, matchCount: r.matchCount, line };
-        }
-      }
-    }
-  }
-  return riser ?? newcomer;
-}
 
 export default async function MetaPage() {
   const { date, byLine } = await loadPicks();

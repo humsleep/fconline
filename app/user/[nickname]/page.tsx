@@ -21,6 +21,7 @@ import DivisionIcon from "@/app/components/DivisionIcon";
 import { divisionIconUrl } from "@/lib/nexon/division-icon";
 import ShareCardButton from "@/app/components/ShareCardButton";
 import RefreshButton from "@/app/components/RefreshButton";
+import FavoriteButton from "@/app/components/FavoriteButton";
 import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import { computeMatchPerfStats, diagnoseMatchPerf } from "@/lib/match/diagnosis";
 import { logNicknameSearch } from "@/lib/search-log";
@@ -145,8 +146,9 @@ export default async function UserPage({
             <p className="scoreboard text-sm font-semibold text-muted">
               LV.<span className="text-accent">{basic.level}</span>
             </p>
-            {/* 전적 갱신 — op.gg 시그니처. 캐시 만료 후 최신 조회 */}
-            <div className="ml-auto">
+            {/* 즐겨찾기 + 전적 갱신 — 재방문 훅 + op.gg 시그니처 */}
+            <div className="ml-auto flex items-center gap-2">
+              <FavoriteButton nickname={basic.nickname} />
               <RefreshButton nickname={basic.nickname} />
             </div>
           </div>
