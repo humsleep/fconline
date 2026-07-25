@@ -133,6 +133,51 @@ export async function loadPicks(
   }
 }
 
+/** 라인 라벨 (posLineOf 반환값과 동일 키). */
+export const LINE_TITLE: Record<string, string> = {
+  ATT: "공격",
+  MID: "미드필드",
+  DEF: "수비",
+  GK: "골키퍼",
+};
+
+export interface TopMover {
+  spId: number;
+  position: number;
+  /** >0 = 라인 내 순위 상승폭, null = 오늘 새로 진입(NEW) */
+  delta: number | null;
+  matchCount: number;
+  line: string;
+}
+
+/**
+ * "오늘의 급상승" 1건 선정 — loadPicks가 이미 채운 delta 재활용(추가 호출 0).
+ * 상승폭 최대(동률 시 사용량 큰 카드) 우선, 없으면 NEW 진입 중 사용량 최대.
+ * 후보는 각 라인 상위 10위(=화면에 실제 노출되는 목록)로 제한.
+ */
+export function pickTopMover(byLine: Map<string, PickRow[]>): TopMover | null {
+  let riser: (TopMover & { delta: number }) | null = null;
+  let newcomer: TopMover | null = null;
+  for (const [line, rows] of byLine) {
+    for (const r of rows.slice(0, 10)) {
+      if (typeof r.delta === "number" && r.delta > 0) {
+        if (
+          !riser ||
+          r.delta > riser.delta ||
+          (r.delta === riser.delta && r.matchCount > riser.matchCount)
+        ) {
+          riser = { spId: r.spId, position: r.position, delta: r.delta, matchCount: r.matchCount, line };
+        }
+      } else if (r.delta === null) {
+        if (!newcomer || r.matchCount > newcomer.matchCount) {
+          newcomer = { spId: r.spId, position: r.position, delta: null, matchCount: r.matchCount, line };
+        }
+      }
+    }
+  }
+  return riser ?? newcomer;
+}
+
 /**
  * 라인별 상위 topN 픽의 spId 집합(라인 → Set<spId>).
  * 대조는 정확 포지션 코드가 아니라 "같은 라인 안의 spId"로 한다 —
