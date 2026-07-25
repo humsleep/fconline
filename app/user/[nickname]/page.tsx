@@ -10,6 +10,7 @@ import { getMaxDivisions, getOuid, getUserBasic } from "@/lib/nexon/api";
 import { isMaintenance, isNotConfigured, isPaused, isRateLimited, isTimeout, isUserNotFound } from "@/lib/nexon/client";
 import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, topRivals, type MatchSummary, type Rival } from "@/lib/nexon/summary";
+import { matchScore, recentScore, scoreTier } from "@/lib/nexon/score";
 import { formatAchievementDate, formatMatchDate } from "@/lib/format";
 import SquadSection from "./SquadSection";
 import PlaystyleSection from "./PlaystyleSection";
@@ -281,6 +282,14 @@ export default async function UserPage({
 
 const MATCH_COUNT = 30;
 
+// FC Scope 스코어 등급 색 토큰
+const TIER_TEXT: Record<"gold" | "win" | "muted" | "lose", string> = {
+  gold: "text-gold",
+  win: "text-win",
+  muted: "text-ink",
+  lose: "text-lose",
+};
+
 async function MatchSection({
   ouid,
   matchType,
@@ -315,6 +324,9 @@ async function MatchSection({
   const rec = aggregate(summaries);
   const recent10 = summaries.slice(0, 10);
   const rivals = topRivals(summaries);
+  // FC Scope 스코어 — 최근 경기 퍼포먼스 대표 점수 (정체성·매세션 재확인 훅)
+  const score = recentScore(summaries);
+  const tier = scoreTier(score);
   // 본인 방문 스냅샷 기록용 평균 평점 (0 제외)
   const ratings = summaries.map((m) => m.me.rating).filter((r) => r > 0);
   const avgRating = ratings.length
@@ -342,6 +354,17 @@ async function MatchSection({
       {/* 폼 전광판 */}
       <section className="panel mt-4 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+          {/* FC Scope 스코어 — 대표 퍼포먼스 점수 (op.gg OP Score 대응) */}
+          <div>
+            <p className="text-[13px] font-medium text-muted">FC Scope 스코어</p>
+            <p className={`scoreboard text-4xl font-bold ${TIER_TEXT[tier.tone]}`}>
+              {score.toFixed(1)}
+              <span className="ml-0.5 text-lg font-semibold text-muted">/10</span>
+            </p>
+            <p className={`scoreboard mt-0.5 text-xs font-bold ${TIER_TEXT[tier.tone]}`}>
+              {tier.label}
+            </p>
+          </div>
           <div>
             <p className="text-[13px] font-medium text-muted">최근 {rec.played}경기 승률</p>
             <p className="scoreboard text-4xl font-bold text-accent">{rec.winRate}%</p>
@@ -571,6 +594,8 @@ function StatTile({ label, value }: { label: string; value: string }) {
 function MatchRow({ m, ouid }: { m: MatchSummary; ouid: string }) {
   const badge =
     m.result === "승" ? "badge-win" : m.result === "패" ? "badge-lose" : "badge-draw";
+  const sc = matchScore(m);
+  const scTier = scoreTier(sc);
 
   return (
     <Link
@@ -595,6 +620,14 @@ function MatchRow({ m, ouid }: { m: MatchSummary; ouid: string }) {
         </p>
       </div>
 
+      {/* FC Scope 스코어 — 경기별 대표 점수 (모바일에서도 노출) */}
+      <div className="flex-none text-right">
+        <p className="text-[13px] text-muted">스코어</p>
+        <p className={`scoreboard text-sm font-bold ${TIER_TEXT[scTier.tone]}`}>
+          {sc.toFixed(1)}
+        </p>
+      </div>
+
       <div className="hidden text-right sm:block">
         <p className="text-[13px] text-muted">평점</p>
         <p className="scoreboard text-sm font-semibold">
@@ -602,7 +635,7 @@ function MatchRow({ m, ouid }: { m: MatchSummary; ouid: string }) {
         </p>
       </div>
 
-      <span className="scoreboard text-xs font-bold text-muted transition-colors group-hover:text-accent">
+      <span className="scoreboard hidden text-xs font-bold text-muted transition-colors group-hover:text-accent sm:inline">
         리포트 →
       </span>
     </Link>

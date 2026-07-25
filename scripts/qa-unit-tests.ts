@@ -19,6 +19,7 @@ import { formatKoreanBP, formatKoreanBPShort } from '../lib/format';
 import { MARKET_RULES, computeMarketStats, diagnoseMarket } from '../lib/market/diagnosis';
 import { MATCH_RULES, computeMatchPerfStats, diagnoseMatchPerf } from '../lib/match/diagnosis';
 import { topPickIdsByLine, isTopPick } from '../lib/meta/picks';
+import { matchScore, recentScore, scoreTier } from '../lib/nexon/score';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -412,6 +413,30 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   const top10 = topPickIdsByLine(many, 10);
   eq(top10.get('ATT')?.size, 10, 'topPickIdsByLine: topN=10 컷');
   eq(isTopPick(top10, 211, 25), false, 'isTopPick: TOP10 밖 카드는 미매칭');
+}
+
+// ── FC Scope 스코어 (경기 퍼포먼스 0~10) ──
+{
+  const big = matchScore(sum('승', 4, 0, 8)); // 대승+고평점
+  ok(big >= 8, 'matchScore: 대승+고평점은 8점대↑');
+  const bad = matchScore(sum('패', 0, 4, 5)); // 대패+저평점
+  ok(bad < 5 && bad >= 0, 'matchScore: 대패+저평점은 5점 미만');
+  const mid = matchScore(sum('무', 1, 1, 7)); // 무승부 평범
+  ok(mid >= 5 && mid < 6, 'matchScore: 무승부 평범대');
+  // 0~10 클램프
+  const ext = matchScore(sum('승', 9, 0, 9, 90));
+  ok(ext <= 10, 'matchScore: 상한 10 클램프');
+  // 몰수는 고정값
+  eq(matchScore({ ...sum('승', 3, 0), forfeit: true }), 6, 'matchScore: 몰수승 6 고정');
+  eq(matchScore({ ...sum('패', 0, 3), forfeit: true }), 3, 'matchScore: 몰수패 3 고정');
+  // recentScore
+  eq(recentScore([]), 0, 'recentScore: 표본 없으면 0');
+  ok(recentScore([sum('승', 3, 0, 8), sum('패', 0, 3, 5)]) > 0, 'recentScore: 혼합 표본 평균');
+  // scoreTier 경계
+  eq(scoreTier(8).tone, 'gold', 'scoreTier: 8↑ gold');
+  eq(scoreTier(7).tone, 'win', 'scoreTier: 6.5↑ win');
+  eq(scoreTier(5.5).tone, 'muted', 'scoreTier: 5↑ muted');
+  eq(scoreTier(4).tone, 'lose', 'scoreTier: 5미만 lose');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
