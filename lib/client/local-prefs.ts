@@ -78,6 +78,11 @@ function readStreak(): Streak | null {
   return null;
 }
 
+/** 기록 없이 현재 스트릭만 읽기 (표시 전용). */
+export function getStreak(): Streak | null {
+  return readStreak();
+}
+
 /** 오늘 방문 기록 후 갱신된 스트릭 반환. 하루 1회만 카운트. */
 export function recordVisit(): Streak {
   const today = todayStr();

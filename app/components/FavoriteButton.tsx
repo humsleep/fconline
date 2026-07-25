@@ -21,6 +21,7 @@ export default function FavoriteButton({ nickname }: { nickname: string }) {
   return (
     <button
       onClick={onClick}
+      disabled={!ready}
       aria-pressed={fav}
       aria-label={fav ? "즐겨찾기 해제" : "즐겨찾기"}
       className={`scoreboard inline-flex min-h-11 flex-none items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-bold transition-colors ${

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useUser } from "@/lib/supabase/useUser";
 import { forgetMySquad, loadMySquads, MAX_MY_SQUADS, type MySquad } from "@/app/components/MySquadPicker";
 import { POST_TYPES } from "@/lib/community/post-types";
+import { getFavorites, toggleFavorite, getStreak, type Streak } from "@/lib/client/local-prefs";
 
 const RECENT_KEY = "fcscope-recent-searches";
 
@@ -40,10 +41,14 @@ export default function MyPage() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [squads, setSquads] = useState<MySquad[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [streak, setStreak] = useState<Streak | null>(null);
   const [fetched, setFetched] = useState(false);
 
   useEffect(() => {
     setSquads(loadMySquads());
+    setFavorites(getFavorites());
+    setStreak(getStreak());
     try {
       const raw = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
       if (Array.isArray(raw)) setRecent(raw.filter((x) => typeof x === "string").slice(0, 8));
@@ -51,6 +56,10 @@ export default function MyPage() {
       // ignore
     }
   }, []);
+
+  function removeFavorite(nick: string) {
+    setFavorites(toggleFavorite(nick)); // 있으면 제거 → 최신 목록 반영
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -262,6 +271,50 @@ export default function MyPage() {
           </ul>
         )}
       </section>
+
+      {/* 즐겨찾기 워치리스트 + 방문 스트릭 */}
+      {(favorites.length > 0 || (streak && streak.current >= 2)) && (
+        <section className="panel mt-3 p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
+              ⭐ 즐겨찾기 구단주
+            </p>
+            {streak && streak.current >= 2 && (
+              <span className="scoreboard text-[13px] font-bold text-accent">
+                🔥 {streak.current}일 연속
+              </span>
+            )}
+          </div>
+          {favorites.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {favorites.map((n) => (
+                <span
+                  key={n}
+                  className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-surface-2 pl-3 pr-1.5 text-[13px] font-semibold text-ink"
+                >
+                  <Link
+                    href={`/user/${encodeURIComponent(n)}`}
+                    className="max-w-[9rem] truncate hover:text-accent"
+                  >
+                    {n}
+                  </Link>
+                  <button
+                    onClick={() => removeFavorite(n)}
+                    aria-label={`${n} 즐겨찾기 해제`}
+                    className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-md text-muted hover:bg-line hover:text-lose"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted">
+              전적 페이지에서 ☆를 눌러 구단주를 즐겨찾기하면 여기 모여요.
+            </p>
+          )}
+        </section>
+      )}
 
       {/* 최근 검색 */}
       {recent.length > 0 && (
