@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-24 — [정합성] ranker-stats 실제 스펙 정합 (spRating/intercept 없음)
+
+- 공식 ranker-stats 스키마 확인: status는 경기당 평균 고정 필드 집합, **spRating·intercept 없음**. 앱이 둘을 읽어 가짜 "평점 0.00" 표시 + 골 이중평균(goal/matchCount) 하던 것 수정
+- picks.ts: spRating 제거, goalsPerMatch=status.goal(이미 경기당 평균), passPct 추가
+- /meta·/player·RankerStatPanel·ranker-stat API: 평점 제거→경기당 득점/패스%/랭커 N경기, 태클·인터셉트→태클·블락
+- ⚠️ match-detail의 player.status.spRating(경기 개인평점)은 정상 존재 → 전적/성적표/POTM은 그대로
+- SquadSection 랭커 평점 벤치마크는 undefined로 자연 숨김 → 실스탯 비교로 후속 대체
+- 검증: `tsc` 0·**148 PASS**·build ✓. PR #61
+
 ## 2026-07-24 — [홈 배치] 데일리 대시보드 리듬 정리
 
 - 홈에 쌓인 데일리 섹션(급상승·영상 2종·기능)을 하나의 대시보드로 정리
