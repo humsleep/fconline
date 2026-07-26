@@ -11,7 +11,6 @@ import { loadPicks, topPickIdsByLine, isTopPick } from "@/lib/meta/picks";
 import { verdictFromRating } from "@/lib/verdict";
 import { diagnoseSquad } from "@/lib/squad-clinic";
 import VerdictStamp from "@/app/components/VerdictStamp";
-import TugOfWar from "@/app/components/TugOfWar";
 import ShareCardButton from "@/app/components/ShareCardButton";
 import SquadClinic from "./SquadClinic";
 
@@ -172,9 +171,7 @@ export default async function SquadSection({
             key={p.spId}
             p={p}
             name={names.get(p.spId) ?? `선수 ${p.spId}`}
-            rankerRating={
-              ranker.get(rankerKey(p.spId, p.mainPosition))?.status?.spRating
-            }
+            ranker={rankerCompare(ranker.get(rankerKey(p.spId, p.mainPosition))?.status)}
             topPick={hasPickData && isTopPick(idsByLine, p.spId, p.mainPosition)}
           />
         ))}
@@ -183,26 +180,60 @@ export default async function SquadSection({
   );
 }
 
+/** 랭커 status → 비교용 실스탯. matchCount 0이면 undefined(비교 숨김). */
+function rankerCompare(
+  st: { goal?: number; passTry?: number; passSuccess?: number; matchCount?: number } | undefined
+): { goal: number; passRate: number } | undefined {
+  if (!st || (st.matchCount ?? 0) <= 0) return undefined;
+  const passTry = st.passTry ?? 0;
+  return {
+    goal: Math.round((st.goal ?? 0) * 100) / 100,
+    passRate: passTry > 0 ? Math.round(((st.passSuccess ?? 0) / passTry) * 100) : 0,
+  };
+}
+
+function Compare({
+  label,
+  mine,
+  ranker,
+  suffix = "",
+}: {
+  label: string;
+  mine: number;
+  ranker: number;
+  suffix?: string;
+}) {
+  const win = mine >= ranker;
+  return (
+    <div className="rounded bg-surface-2 px-2 py-1.5">
+      <p className="text-[12px] text-muted">{label}</p>
+      <p className="scoreboard mt-0.5 text-[13px] font-bold">
+        <span className={win ? "text-win" : "text-ink"}>
+          나 {mine}{suffix}
+        </span>
+        <span className="mx-1 font-normal text-muted">·</span>
+        <span className="text-muted">랭커 {ranker}{suffix}</span>
+      </p>
+    </div>
+  );
+}
+
 function PlayerCard({
   p,
   name,
-  rankerRating,
+  ranker,
   topPick,
 }: {
   p: PlayerAggregate;
   name: string;
-  rankerRating?: number;
+  ranker?: { goal: number; passRate: number };
   topPick?: boolean;
 }) {
-  const hasRanker = typeof rankerRating === "number" && rankerRating > 0;
-  const gap = hasRanker ? p.avgRating - rankerRating! : undefined;
-
-  // 선수(게임 카드) 판정 — subjectType 'player'(카드 놀리기 허용). 문구는 spId로 고정.
+  // 선수(게임 카드) 판정 — 내 실사용 평점 기준(match-detail spRating, 유효).
   const verdict = verdictFromRating({
     rating: p.avgRating,
     subjectType: "player",
     seed: p.spId,
-    rankerGap: gap,
   });
 
   return (
@@ -246,15 +277,11 @@ function PlayerCard({
         </div>
       </div>
 
-      {/* 랭커 대비 — tug-of-war 발광 바 */}
-      {hasRanker && (
-        <div className="mt-2.5">
-          <TugOfWar
-            label={`평점 vs 랭커 ${getPositionLabel(p.mainPosition)}`}
-            mine={p.avgRating}
-            ranker={rankerRating!}
-            max={10}
-          />
+      {/* 내 카드 vs 랭커 실스탯 (평점은 ranker-stats에 없어 골·패스%로 비교) */}
+      {ranker && (
+        <div className="mt-2.5 grid grid-cols-2 gap-2">
+          <Compare label={`경기당 골 vs 랭커 ${getPositionLabel(p.mainPosition)}`} mine={p.goalsPerGame} ranker={ranker.goal} />
+          <Compare label="패스 성공률" mine={p.passRate} ranker={ranker.passRate} suffix="%" />
         </div>
       )}
 

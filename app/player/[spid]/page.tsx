@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getPlayerBySpid } from "@/lib/nexon/players";
 import { getPlayerRankerMeta, type PlayerPositionStat } from "@/lib/nexon/player-meta";
 import { getPositionLabel } from "@/lib/nexon/meta";
+import { playstyleOf } from "@/lib/nexon/playstyle";
 import { SITE_URL } from "@/lib/site";
 import SeasonBadge from "@/app/components/SeasonBadge";
 import PlayerSearch from "@/app/meta/PlayerSearch";
@@ -183,6 +184,7 @@ export default async function PlayerPage({
 }
 
 function PositionCard({ stat }: { stat: PlayerPositionStat }) {
+  const style = playstyleOf(stat);
   return (
     <div className="panel p-4">
       <div className="flex items-baseline justify-between">
@@ -190,6 +192,19 @@ function PositionCard({ stat }: { stat: PlayerPositionStat }) {
           {getPositionLabel(stat.position)}
         </span>
         <span className="scoreboard flex items-center gap-2 text-[13px] text-muted">
+          {style && (
+            <span
+              className={`rounded px-1.5 py-0.5 font-bold ${
+                style.tone === "gold"
+                  ? "bg-gold/15 text-gold"
+                  : style.tone === "win"
+                    ? "bg-win/15 text-win"
+                    : "bg-surface-2 text-ink"
+              }`}
+            >
+              {style.emoji} {style.label}
+            </span>
+          )}
           <span className="rounded bg-surface-2 px-1.5 py-0.5 font-bold text-ink">
             랭커 {stat.matchCount.toLocaleString()}경기
           </span>
