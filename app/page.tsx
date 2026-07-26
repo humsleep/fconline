@@ -4,6 +4,8 @@ import SearchForm from "./components/SearchForm";
 import FocusSearchCard from "./components/FocusSearchCard";
 import HomeDashboard from "./components/HomeDashboard";
 import TodayMover from "./components/TodayMover";
+import YoutubeStrip from "./components/YoutubeStrip";
+import { FCONLINE_CHANNELS, FOOTBALL_CHANNELS } from "@/lib/youtube/channels";
 import { DEMO_NICKNAME } from "@/lib/demo";
 import { SITE_URL } from "@/lib/site";
 
@@ -122,6 +124,14 @@ export default function Home() {
           <TodayMover />
         </Suspense>
       </section>
+
+      {/* FC온라인 영상 — 게임 유튜버 + 실제 축구 (RSS, 채널 없으면 미표시) */}
+      <Suspense fallback={null}>
+        <YoutubeStrip title="🎮 FC온라인 인기 영상" channels={FCONLINE_CHANNELS} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <YoutubeStrip title="⚽ 축구 소식" channels={FOOTBALL_CHANNELS} />
+      </Suspense>
 
       {/* 기능 */}
       <section className="pb-12 md:pb-16">

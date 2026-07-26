@@ -20,6 +20,7 @@ import { MARKET_RULES, computeMarketStats, diagnoseMarket } from '../lib/market/
 import { MATCH_RULES, computeMatchPerfStats, diagnoseMatchPerf } from '../lib/match/diagnosis';
 import { topPickIdsByLine, isTopPick } from '../lib/meta/picks';
 import { matchScore, recentScore, scoreTier } from '../lib/nexon/score';
+import { parseFeed } from '../lib/youtube/feed';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -437,6 +438,31 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   eq(scoreTier(7).tone, 'win', 'scoreTier: 6.5↑ win');
   eq(scoreTier(5.5).tone, 'muted', 'scoreTier: 5↑ muted');
   eq(scoreTier(4).tone, 'lose', 'scoreTier: 5미만 lose');
+}
+
+// ── 유튜브 RSS 파서 ──
+{
+  const xml = `<?xml version="1.0"?><feed>
+    <entry><yt:videoId>abc123XYZ_-</yt:videoId>
+      <title>FC온라인 &amp; 스쿼드 &lt;신규&gt; 메타</title>
+      <published>2026-07-20T10:00:00+00:00</published></entry>
+    <entry><yt:videoId>def456</yt:videoId>
+      <title>두 번째 영상</title>
+      <published>2026-07-19T10:00:00+00:00</published></entry>
+    <entry><yt:videoId>ghi789</yt:videoId>
+      <title>세 번째(잘림)</title>
+      <published>2026-07-18T10:00:00+00:00</published></entry>
+  </feed>`;
+  const ch = { name: "테스트채널", channelId: "UCtest" };
+  const vids = parseFeed(xml, ch, 2);
+  eq(vids.length, 2, 'parseFeed: perChannel=2 컷');
+  eq(vids[0].id, 'abc123XYZ_-', 'parseFeed: videoId 추출');
+  eq(vids[0].title, 'FC온라인 & 스쿼드 <신규> 메타', 'parseFeed: XML 엔티티 디코드');
+  eq(vids[0].channel, '테스트채널', 'parseFeed: 채널명 주입');
+  eq(vids[0].url, 'https://www.youtube.com/watch?v=abc123XYZ_-', 'parseFeed: watch URL');
+  eq(vids[0].thumb, 'https://i.ytimg.com/vi/abc123XYZ_-/mqdefault.jpg', 'parseFeed: 썸네일 URL');
+  eq(parseFeed('<feed></feed>', ch).length, 0, 'parseFeed: 빈 피드 → 0');
+  eq(parseFeed('total garbage', ch).length, 0, 'parseFeed: 깨진 입력 → 0 (throw 없음)');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
