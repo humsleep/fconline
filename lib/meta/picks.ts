@@ -184,6 +184,27 @@ export function pickTopMover(byLine: Map<string, PickRow[]>): TopMover | null {
 }
 
 /**
+ * 주간 리포트용 — 급상승(delta>0) + 신규진입(NEW) 카드를 임팩트순으로 최대 limit개.
+ * 각 라인 상위 10위 내에서만(=노출 목록과 일치). 상승폭↓ → 사용량↓ 순, NEW는 사용량순 후순위.
+ */
+export function topMovers(byLine: Map<string, PickRow[]>, limit = 6): TopMover[] {
+  const risers: (TopMover & { delta: number })[] = [];
+  const newcomers: TopMover[] = [];
+  for (const [line, rows] of byLine) {
+    for (const r of rows.slice(0, 10)) {
+      if (typeof r.delta === "number" && r.delta > 0) {
+        risers.push({ spId: r.spId, position: r.position, delta: r.delta, matchCount: r.matchCount, line });
+      } else if (r.delta === null) {
+        newcomers.push({ spId: r.spId, position: r.position, delta: null, matchCount: r.matchCount, line });
+      }
+    }
+  }
+  risers.sort((a, b) => b.delta - a.delta || b.matchCount - a.matchCount);
+  newcomers.sort((a, b) => b.matchCount - a.matchCount);
+  return [...risers, ...newcomers].slice(0, limit);
+}
+
+/**
  * 라인별 상위 topN 픽의 spId 집합(라인 → Set<spId>).
  * 대조는 정확 포지션 코드가 아니라 "같은 라인 안의 spId"로 한다 —
  * ST=24/25/26처럼 한 포지션이 여러 코드를 가져 정확 코드 매칭은 오탐(거짓 미포함)이 생기기 때문.

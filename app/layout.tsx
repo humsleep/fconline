@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Chakra_Petch, IBM_Plex_Sans_KR } from "next/font/google";
+import Script from "next/script";
 import Link from "next/link";
 import SearchForm from "./components/SearchForm";
 import MobileTabBar from "./components/MobileTabBar";
@@ -25,6 +26,9 @@ const plex = IBM_Plex_Sans_KR({
 // 검색엔진 소유확인 — 메타태그 방식용. env 미설정 시 태그 미출력(=DNS 방식 사용 가능).
 const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
 const naverVerification = process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION;
+
+// GA4 — env(NEXT_PUBLIC_GA_ID) 설정 시에만 로드. 미설정이면 아무것도 렌더 안 함.
+const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -163,6 +167,17 @@ export default function RootLayout({
 
         <MobileTabBar />
         <Analytics />
+        {gaId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
