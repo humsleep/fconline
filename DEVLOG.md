@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-24 — [성장] 주간 메타 리포트 + GA4 측정
+
+- 트래픽 성장 착수(수익화 전제).
+- **② `/report/weekly`**: 상시 SEO 콘텐츠 — 이번 주 급상승·신규 + 라인별 대세 TOP5(일일 스냅샷). ISR 1h, Article JSON-LD, canonical/OG, sitemap 등재, /meta 링크. `topMovers()` 헬퍼
+- **P1 GA4**: `NEXT_PUBLIC_GA_ID` env-gated gtag(next/script). 미설정 시 미렌더(확인). 검색어·퍼널 측정용
+- `/user` 속도: 안전 개선(병렬 fetch) 기반영, 심화 LCP는 프로덕션 프로파일링 필요로 보류
+- 검증: `tsc` 0·**154 PASS**·build ✓·/report/weekly 200·390px 오버플로 0. PR #63
+- **사용자 조치(P0, 계정)**: 0016 실행 · Search Console/네이버 등록+sitemap 제출 · (원하면)`NEXT_PUBLIC_GA_ID` 설정 · 넥슨 키 재발급
+
 ## 2026-07-24 — [기능] 내 카드 vs 랭커 실스탯 비교 + 플레이스타일 배지
 
 - ranker-stats 문서 확정 필드로 신규 기능(①④). 
