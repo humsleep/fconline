@@ -36,6 +36,12 @@ export default async function MetaPage() {
         상위 랭커가 실제 경기에서 가장 많이 쓴 카드.
         {date && <span className="ml-1">({date} 스냅샷 기준)</span>}
       </p>
+      <Link
+        href="/report/weekly"
+        className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-accent hover:underline"
+      >
+        📊 메타 리포트 (급상승·대세 요약) →
+      </Link>
 
       {/* 선수 이름으로 도감 바로 검색 */}
       <PlayerSearch />
