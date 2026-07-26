@@ -1,5 +1,13 @@
 # DEVLOG
 
+## 2026-07-24 — [기능] 내 카드 vs 랭커 실스탯 비교 + 플레이스타일 배지
+
+- ranker-stats 문서 확정 필드로 신규 기능(①④). 
+- **① 내 카드 vs 랭커**: 선수 성적표에서 내 카드 경기당 골·패스% vs 같은 카드×포지션 랭커 평균 비교(내 값 우위면 초록). 기존 spRating 의존 평점 막대 제거
+- **④ 플레이스타일 배지**: `lib/nexon/playstyle.ts`(순수) 결정력/개인기/연계/수비형 → 도감 포지션별 카드
+- ② 도감 스탯 정정은 PR #61 반영 / ③ 포지션별은 기존 PositionCard가 제공(배지로 강화)
+- 검증: `tsc` 0·**154 PASS**(+6)·build ✓. PR #62
+
 ## 2026-07-24 — [정합성] ranker-stats 실제 스펙 정합 (spRating/intercept 없음)
 
 - 공식 ranker-stats 스키마 확인: status는 경기당 평균 고정 필드 집합, **spRating·intercept 없음**. 앱이 둘을 읽어 가짜 "평점 0.00" 표시 + 골 이중평균(goal/matchCount) 하던 것 수정
