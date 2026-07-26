@@ -21,6 +21,7 @@ import { MATCH_RULES, computeMatchPerfStats, diagnoseMatchPerf } from '../lib/ma
 import { topPickIdsByLine, isTopPick } from '../lib/meta/picks';
 import { matchScore, recentScore, scoreTier } from '../lib/nexon/score';
 import { parseFeed } from '../lib/youtube/feed';
+import { playstyleOf } from '../lib/nexon/playstyle';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -463,6 +464,18 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   eq(vids[0].thumb, 'https://i.ytimg.com/vi/abc123XYZ_-/mqdefault.jpg', 'parseFeed: 썸네일 URL');
   eq(parseFeed('<feed></feed>', ch).length, 0, 'parseFeed: 빈 피드 → 0');
   eq(parseFeed('total garbage', ch).length, 0, 'parseFeed: 깨진 입력 → 0 (throw 없음)');
+}
+
+// ── 플레이스타일 배지 ──
+{
+  const base = { goal: 0, assist: 0, passTry: 0, passSuccess: 0, dribbleTry: 0, dribbleSuccess: 0, tackle: 0, block: 0 };
+  eq(playstyleOf({ ...base, goal: 0.6 })?.label, '결정력형', 'playstyle: 득점 → 결정력형');
+  eq(playstyleOf({ ...base, dribbleTry: 5, dribbleSuccess: 4 })?.label, '개인기형', 'playstyle: 드리블 성공률↑ → 개인기형');
+  eq(playstyleOf({ ...base, passTry: 20, passSuccess: 18, assist: 0.3 })?.label, '연계형', 'playstyle: 패스+어시 → 연계형');
+  eq(playstyleOf({ ...base, tackle: 2, block: 2 })?.label, '수비형', 'playstyle: 태클+블락 → 수비형');
+  eq(playstyleOf(base), null, 'playstyle: 신호 약하면 null');
+  // 우선순위: 득점이 다른 조건보다 우선
+  eq(playstyleOf({ ...base, goal: 0.5, passTry: 20, passSuccess: 19, assist: 0.5 })?.label, '결정력형', 'playstyle: 득점 우선순위');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
