@@ -7,8 +7,10 @@ export interface PickRow {
   spId: number;
   position: number;
   matchCount: number;
-  rating: number;
+  /** 경기당 득점 — ranker-stats status.goal은 이미 '평균' 값(경기당) */
   goalsPerMatch: number;
+  /** 패스 성공률 0~100 */
+  passPct: number;
   /** 전일 대비 순위 변동 (+상승/−하락), null=NEW, undefined=비교 불가 */
   delta?: number | null;
 }
@@ -46,12 +48,15 @@ export async function loadPicks(
       const st = payload?.status ?? {};
       const matchCount = st.matchCount ?? 0;
       if (matchCount <= 0) continue;
+      // status.goal 등은 ranker-stats 스펙상 이미 '평균(경기당)' 값 → matchCount로 다시 나누지 않는다.
+      // spRating은 ranker-stats에 없는 필드라 사용하지 않음.
+      const passTry = st.passTry ?? 0;
       rows.push({
         spId: r.sp_id as number,
         position: r.sp_position as number,
         matchCount,
-        rating: st.spRating ?? 0,
-        goalsPerMatch: Math.round(((st.goal ?? 0) / matchCount) * 100) / 100,
+        goalsPerMatch: Math.round((st.goal ?? 0) * 100) / 100,
+        passPct: passTry > 0 ? Math.round(((st.passSuccess ?? 0) / passTry) * 100) : 0,
       });
     }
     return rows;

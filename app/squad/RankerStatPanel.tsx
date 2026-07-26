@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 interface StatData {
   matchCount: number;
-  spRating: number;
   goal: number;
   assist: number;
   shoot: number;
@@ -14,7 +13,6 @@ interface StatData {
   dribbleTry: number;
   dribbleSuccess: number;
   tackle: number;
-  intercept: number;
   block: number;
 }
 
@@ -83,8 +81,8 @@ export default function RankerStatPanel({
           {pos}
         </span>
         {state === "ready" && stat && (
-          <span className="scoreboard ml-auto flex-none rounded bg-gold/15 px-1.5 py-0.5 text-[13px] font-bold text-gold">
-            평점 {stat.spRating.toFixed(2)}
+          <span className="scoreboard ml-auto flex-none rounded bg-surface px-1.5 py-0.5 text-[13px] font-bold text-muted">
+            {stat.matchCount}경기
           </span>
         )}
       </div>
@@ -106,7 +104,7 @@ export default function RankerStatPanel({
               ["슛 (유효)", `${avg(stat.shoot)} (${avg(stat.effectiveShoot)})`],
               ["패스 성공", pct(stat.passSuccess, stat.passTry)],
               ["드리블 성공", pct(stat.dribbleSuccess, stat.dribbleTry)],
-              ["태클·인터셉트", `${avg(stat.tackle)}·${avg(stat.intercept)}`],
+              ["태클·블락", `${avg(stat.tackle)}·${avg(stat.block)}`],
             ].map(([label, value]) => (
               <div key={label} className="rounded bg-surface px-1 py-1.5">
                 <dt className="text-[12px] text-muted">{label}</dt>

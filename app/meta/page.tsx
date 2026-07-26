@@ -151,8 +151,9 @@ export default async function MetaPage() {
                               className="flex-none"
                             />
                             <span>
-                              평점 {r.rating.toFixed(2)}
-                              {line === "ATT" && ` · 경기당 ⚽${r.goalsPerMatch}`}
+                              {line === "ATT" || line === "MID"
+                                ? `경기당 ⚽${r.goalsPerMatch}`
+                                : `패스 ${r.passPct}%`}
                             </span>
                           </p>
                         </div>

@@ -72,7 +72,6 @@ export async function GET(request: Request) {
       spPosition: best.spPosition,
       stat: {
         matchCount: s.matchCount ?? 0,
-        spRating: s.spRating ?? 0,
         goal: s.goal ?? 0,
         assist: s.assist ?? 0,
         shoot: s.shoot ?? 0,
@@ -82,7 +81,6 @@ export async function GET(request: Request) {
         dribbleTry: s.dribbleTry ?? 0,
         dribbleSuccess: s.dribbleSuccess ?? 0,
         tackle: s.tackle ?? 0,
-        intercept: s.intercept ?? 0,
         block: s.block ?? 0,
       },
     });

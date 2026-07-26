@@ -395,8 +395,8 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
     spId,
     position,
     matchCount: 100,
-    rating: 7,
     goalsPerMatch: 1,
+    passPct: 80,
   });
   // 랭커 TOP픽: 100번 카드가 ST 코드 25로 ATT 라인에 있음
   const byLine = new Map([['ATT', [pr(100, 25)]]]);

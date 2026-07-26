@@ -190,10 +190,9 @@ function PositionCard({ stat }: { stat: PlayerPositionStat }) {
           {getPositionLabel(stat.position)}
         </span>
         <span className="scoreboard flex items-center gap-2 text-[13px] text-muted">
-          <span className="rounded bg-gold/15 px-1.5 py-0.5 font-bold text-gold">
-            평점 {stat.rating.toFixed(2)}
+          <span className="rounded bg-surface-2 px-1.5 py-0.5 font-bold text-ink">
+            랭커 {stat.matchCount.toLocaleString()}경기
           </span>
-          <span>랭커 {stat.matchCount.toLocaleString()}경기</span>
         </span>
       </div>
       <dl className="mt-3 grid grid-cols-3 gap-1.5 text-center">
@@ -203,7 +202,7 @@ function PositionCard({ stat }: { stat: PlayerPositionStat }) {
           ["유효슛/슛", `${per(stat.effectiveShoot)}/${per(stat.shoot)}`],
           ["패스 성공", pct(stat.passSuccess, stat.passTry)],
           ["드리블 성공", pct(stat.dribbleSuccess, stat.dribbleTry)],
-          ["태클·인터셉트", `${per(stat.tackle)}·${per(stat.intercept)}`],
+          ["태클·블락", `${per(stat.tackle)}·${per(stat.block)}`],
         ].map(([label, value]) => (
           <div key={label} className="rounded bg-surface-2 px-1 py-1.5">
             <dt className="text-[12px] text-muted">{label}</dt>
