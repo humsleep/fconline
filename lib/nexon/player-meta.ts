@@ -6,7 +6,6 @@ import type { RankerStat } from './types';
 export interface PlayerPositionStat {
   position: number;
   matchCount: number;
-  rating: number;
   goal: number;
   assist: number;
   shoot: number;
@@ -16,7 +15,7 @@ export interface PlayerPositionStat {
   dribbleSuccess: number;
   dribbleTry: number;
   tackle: number;
-  intercept: number;
+  block: number;
 }
 
 export interface PlayerRankerMeta {
@@ -56,7 +55,6 @@ export async function getPlayerRankerMeta(spid: number): Promise<PlayerRankerMet
       positions.push({
         position: r.sp_position as number,
         matchCount,
-        rating: st.spRating ?? 0,
         goal: st.goal ?? 0,
         assist: st.assist ?? 0,
         shoot: st.shoot ?? 0,
@@ -66,7 +64,7 @@ export async function getPlayerRankerMeta(spid: number): Promise<PlayerRankerMet
         dribbleSuccess: st.dribbleSuccess ?? 0,
         dribbleTry: st.dribbleTry ?? 0,
         tackle: st.tackle ?? 0,
-        intercept: st.intercept ?? 0,
+        block: st.block ?? 0,
       });
     }
     positions.sort((a, b) => b.matchCount - a.matchCount);
