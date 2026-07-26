@@ -67,7 +67,7 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_JSONLD) }}
       />
       {/* 히어로 */}
-      <section className="relative flex flex-col items-center pb-8 pt-10 text-center sm:pb-24 sm:pt-24">
+      <section className="relative flex flex-col items-center pb-8 pt-10 text-center sm:pb-14 sm:pt-16">
         {/* 피치 라인 아트 */}
         <svg
           aria-hidden
@@ -118,14 +118,10 @@ export default function Home() {
         <HomeDashboard />
       </section>
 
-      {/* 오늘의 급상승 — 매일 바뀌는 데일리 훅 (스냅샷 없으면 미표시) */}
-      <section className="pb-4">
-        <Suspense fallback={null}>
-          <TodayMover />
-        </Suspense>
-      </section>
-
-      {/* FC온라인 영상 — 게임 유튜버 + 실제 축구 (RSS, 채널 없으면 미표시) */}
+      {/* 데일리 신선 콘텐츠 — 급상승 + 영상 (각 항목은 데이터 없으면 자체 미표시) */}
+      <Suspense fallback={null}>
+        <TodayMover />
+      </Suspense>
       <Suspense fallback={null}>
         <YoutubeStrip title="🎮 FC온라인 인기 영상" channels={FCONLINE_CHANNELS} />
       </Suspense>
@@ -134,7 +130,7 @@ export default function Home() {
       </Suspense>
 
       {/* 기능 */}
-      <section className="pb-12 md:pb-16">
+      <section className="mt-8 pb-12 md:pb-16">
         <h2 className="scoreboard text-xs font-semibold tracking-[0.25em] text-muted">
           여기서 할 수 있는 것
         </h2>

@@ -18,7 +18,7 @@ export default async function YoutubeStrip({
   if (videos.length === 0) return null;
 
   return (
-    <section className="pb-2">
+    <section className="mt-6">
       <h2 className="scoreboard text-xs font-semibold tracking-[0.25em] text-muted">
         {title}
       </h2>

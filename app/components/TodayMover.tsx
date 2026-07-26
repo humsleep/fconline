@@ -18,7 +18,7 @@ export default async function TodayMover() {
   return (
     <Link
       href={`/player/${mover.spId}`}
-      className="panel flex items-center gap-3 border-win/40 px-4 py-3 transition-colors hover:border-accent"
+      className="panel mt-6 flex items-center gap-3 border-win/40 px-4 py-3 transition-colors hover:border-accent"
     >
       <Image
         src={`/api/player-image/${mover.spId}`}
