@@ -399,6 +399,12 @@ async function MatchSection({
             <RatingSparkline values={[...summaries].reverse().map((m) => m.me.rating)} />
           </div>
         </div>
+        {/* FC Scope 스코어 설명 — 브랜드 대표 숫자의 의미를 한 줄로 (op.gg OP Score식) */}
+        <p className="mt-3 border-t border-line/60 pt-2.5 text-[12px] leading-relaxed text-muted">
+          <b className="text-ink">FC Scope 스코어</b>는 최근 경기의 승패·득실차·인게임 평점·점유율을
+          종합한 <b className="text-ink">퍼포먼스 점수(10점 만점)</b>예요. 이기기만 한 게 아니라
+          경기 내용까지 반영합니다.
+        </p>
       </section>
 
       {/* 스탯 타일 */}

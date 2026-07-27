@@ -47,7 +47,7 @@ export default function HomeDashboard() {
               <Link
                 key={n}
                 href={`/user/${encodeURIComponent(n)}`}
-                className="scoreboard inline-flex min-h-9 max-w-[10rem] items-center truncate rounded-full bg-surface-2 px-3 py-1.5 text-sm font-semibold text-ink transition-colors hover:bg-accent hover:text-accent-ink"
+                className="scoreboard inline-flex min-h-11 max-w-[10rem] items-center truncate rounded-full bg-surface-2 px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-accent hover:text-accent-ink"
               >
                 {n}
               </Link>
