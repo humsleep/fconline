@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-27 — [주간 회의] 메타 리포트 발견성 + FC Scope 스코어 설명 + 클리닉 모순 수정
+
+- 주간 개선 회의(4렌즈 수렴): 발견성·명료성·정확성 3건 묶음
+- **발견성(Lens1)**: `/report/weekly`가 `/meta` 인라인 링크 하나로만 도달 → 홈 FEATURES에 메타 리포트 카드 추가 + `/meta` 링크를 44px 블록으로 승격 + 홈 FEATURES를 유튜브 스트립 위로 재배치 + 즐겨찾기 칩 44px
+- **명료성(Lens2)**: FC Scope 스코어 설명 캡션(승패·득실차·평점·점유율 종합 10점) + 실사용 평점 스케일(인게임 평점 출전수 가중, 10점) 명시
+- **정확성(Lens4, CONFIRMED)**: `SquadSection`이 `diagnoseSquad`에 ranker-stats의 없는 필드 `spRating` 조회를 넘겨 항상 undefined → 클리닉이 매번 "랭커 비교 데이터 적음" 경고, 아래 카드는 실제 랭커 비교 표시하던 모순 제거. 죽은 조회 제거 + coverage 0(설계상)일 때 경고 억제(부분 매칭 시엔 유지)
+- 검증: `tsc` 0·**154 PASS**·build ✓·Playwright 390px home/meta/report 오버플로 0. PR #64
+- 다음 주 후보: FC 스코어 추세 그래프(재방문 훅) — `user_snapshots`에 score 컬럼 마이그레이션 필요
+
 ## 2026-07-24 — [성장] 주간 메타 리포트 + GA4 측정
 
 - 트래픽 성장 착수(수익화 전제).
