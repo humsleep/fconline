@@ -80,11 +80,10 @@ export default async function SquadSection({
     : 0;
   const offTopCount = players.length - topPickCount;
 
-  // 클리닉 진단 — 이미 집계된 players + 랭커 맵 재사용(추가 fetch 없음)
-  const clinic = diagnoseSquad(
-    players,
-    (spId, position) => ranker.get(rankerKey(spId, position))?.status?.spRating
-  );
+  // 클리닉 진단 — 이미 집계된 players 기준. 랭커 스탯(ranker-stats)에는 평점(spRating)이
+  // 없으므로 종합 진단은 내 실사용 평점(match-detail)만으로 계산한다.
+  // 랭커 실스탯 대조(경기당 골·패스%)는 아래 선수 카드에서 rankerCompare로 개별 제공.
+  const clinic = diagnoseSquad(players, () => undefined);
 
   // 실전 가치 — 금액(시세) 대신, 스쿼드의 실사용 평점을 출전 수로 가중 평균
   // (클리닉이 동일 공식으로 계산하므로 있으면 재사용)
@@ -107,21 +106,28 @@ export default async function SquadSection({
       )}
 
       {/* 실전 가치 요약 (구단가치 대체) */}
-      <section className="panel mt-4 flex items-center gap-4 px-5 py-4">
-        <div className="min-w-0 flex-1">
-          <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
-            스쿼드 실전 가치
-          </p>
-          <div className="mt-1.5">
-            <VerdictStamp verdict={squadVerdict} size="lg" showLiner />
+      <section className="panel mt-4 px-5 py-4">
+        <div className="flex items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
+              스쿼드 실전 가치
+            </p>
+            <div className="mt-1.5">
+              <VerdictStamp verdict={squadVerdict} size="lg" showLiner />
+            </div>
+          </div>
+          <div className="flex-none text-right">
+            <p className="text-[13px] text-muted">실사용 평점</p>
+            <p className="scoreboard text-3xl font-bold text-accent">
+              {squadRating.toFixed(2)}
+              <span className="ml-0.5 text-base font-semibold text-muted">/10</span>
+            </p>
           </div>
         </div>
-        <div className="flex-none text-right">
-          <p className="text-[13px] text-muted">실사용 평점</p>
-          <p className="scoreboard text-3xl font-bold text-accent">
-            {squadRating.toFixed(2)}
-          </p>
-        </div>
+        <p className="mt-2 text-[12px] leading-relaxed text-muted">
+          시세·오버롤이 아니라 <b className="text-ink">실제 경기 인게임 평점</b>을 출전 수로
+          가중 평균한 값(10점 만점). 많이 쓴 선수일수록 크게 반영돼요.
+        </p>
       </section>
 
       {/* 내 픽 vs 랭커 픽 — 매일 갱신되는 인기 TOP10 픽과 겹치는 카드 수 (재방문 훅) */}

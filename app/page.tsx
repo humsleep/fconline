@@ -51,6 +51,13 @@ const FEATURES = [
     href: "/meta",
   },
   {
+    tag: "메타 리포트 · 매일 갱신",
+    title: "이번 주 뜨는 카드 요약",
+    desc: "포지션별 대세 카드 TOP5와 오늘 급상승·신규 진입 카드를 한 장으로. 감이 아니라 데이터로.",
+    hint: "메타 리포트 보기 →",
+    href: "/report/weekly",
+  },
+  {
     tag: "커뮤니티 · 배틀",
     title: "자랑하고, 모으고, 겨룬다",
     desc: "스쿼드 자랑과 평가, 클럽원 모집, 투표로 겨루는 스쿼드 배틀.",
@@ -118,19 +125,13 @@ export default function Home() {
         <HomeDashboard />
       </section>
 
-      {/* 데일리 신선 콘텐츠 — 급상승 + 영상 (각 항목은 데이터 없으면 자체 미표시) */}
+      {/* 오늘의 급상승 — 매일 바뀌는 데이터 훅 (없으면 자체 미표시) */}
       <Suspense fallback={null}>
         <TodayMover />
       </Suspense>
-      <Suspense fallback={null}>
-        <YoutubeStrip title="🎮 FC온라인 인기 영상" channels={FCONLINE_CHANNELS} />
-      </Suspense>
-      <Suspense fallback={null}>
-        <YoutubeStrip title="⚽ 축구 소식" channels={FOOTBALL_CHANNELS} />
-      </Suspense>
 
-      {/* 기능 */}
-      <section className="mt-8 pb-12 md:pb-16">
+      {/* 기능 — 사이트 핵심 도구를 영상 콘텐츠보다 먼저 노출 (발견성 우선) */}
+      <section className="mt-8">
         <h2 className="scoreboard text-xs font-semibold tracking-[0.25em] text-muted">
           여기서 할 수 있는 것
         </h2>
@@ -168,6 +169,16 @@ export default function Home() {
           })}
         </div>
       </section>
+
+      {/* 데일리 신선 콘텐츠 — 관련 영상 (각 항목은 데이터 없으면 자체 미표시) */}
+      <div className="pb-12 md:pb-16">
+        <Suspense fallback={null}>
+          <YoutubeStrip title="🎮 FC온라인 인기 영상" channels={FCONLINE_CHANNELS} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <YoutubeStrip title="⚽ 축구 소식" channels={FOOTBALL_CHANNELS} />
+        </Suspense>
+      </div>
     </div>
   );
 }

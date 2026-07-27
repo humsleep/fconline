@@ -286,7 +286,10 @@ export function diagnoseSquad(
   }
 
   // 4) 랭커 커버리지 낮음 (비교 신뢰도 경고)
-  if (rankerCoverage < 0.3) {
+  // 커버리지 0은 "랭커 평점 비교를 애초에 쓰지 않는" 정상 경로(ranker-stats엔 평점 없음)라
+  // 경고하지 않는다 — 아래 선수 카드가 골·패스% 실스탯 비교를 따로 보여주므로 모순 방지.
+  // 일부만 매칭된(0<cov<0.3) 경우에만 신뢰도 경고.
+  if (rankerCoverage > 0 && rankerCoverage < 0.3) {
     issues.push({
       kind: 'low-ranker-coverage',
       severity: 'low',

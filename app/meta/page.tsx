@@ -38,9 +38,12 @@ export default async function MetaPage() {
       </p>
       <Link
         href="/report/weekly"
-        className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-accent hover:underline"
+        className="panel mt-3 flex min-h-11 items-center justify-between gap-2 px-4 py-2.5 transition-colors hover:border-accent"
       >
-        📊 메타 리포트 (급상승·대세 요약) →
+        <span className="text-sm font-semibold text-ink">
+          📊 메타 리포트 — 급상승·대세 카드 요약
+        </span>
+        <span className="scoreboard flex-none text-sm font-bold text-accent">보기 →</span>
       </Link>
 
       {/* 선수 이름으로 도감 바로 검색 */}
