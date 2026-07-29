@@ -1,5 +1,12 @@
 # DEVLOG
 
+## 2026-07-29 — [장애·후속] Disk IO 부하 감소 — 비로그인 요청 auth 왕복 제거
+
+- **실제 근본 원인 확인**: Supabase는 일시정지가 아니라 **NANO 인스턴스가 Disk IO Budget 소진** → DB 스로틀링 → `getUser()` 지연 → 미들웨어 504. (일시정지 가설 정정)
+- **수정**: 미들웨어가 매 요청 `supabase.auth.getUser()`(auth=DB 왕복)를 호출하던 것을, `sb-*-auth-token` 세션 쿠키가 있을 때만 호출하도록 게이트. 비로그인·크롤러(트래픽 대부분)는 왕복 skip → NANO Disk IO 주요 소모원 제거. 동작 불변(세션 없으면 어차피 유저 없음). PR #67
+- 검증: `tsc` 0 · **154 PASS**
+- **⚠️ 운영자 조치(P0, 계정)**: ① 배포 후 Supabase Reports→Database에서 IO 회복 확인 ② AI Assistant/Query Performance로 비싼 쿼리 점검 ③ 트래픽이 실제로 크면 컴퓨트 NANO→Micro/Small 업그레이드 검토
+
 ## 2026-07-29 — [장애] 미들웨어 Supabase auth 504 방어 (사이트 전체 다운)
 
 - **증상**: 프로덕션 `504 GATEWAY_TIMEOUT` / `MIDDLEWARE_INVOCATION_TIMEOUT` → 사이트 접속·로그인 모두 실패. 코드는 2일간 무변경 → 런타임(Supabase 도달 불가) 원인
