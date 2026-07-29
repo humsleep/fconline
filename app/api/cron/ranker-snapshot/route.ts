@@ -94,5 +94,33 @@ export async function GET(req: Request) {
     summary[`type_${matchtype}`] = warmed.size;
   }
 
-  return Response.json({ ok: true, warmed: summary });
+  // 보관기간 정리 — 캐시 테이블 무한 증가 방지(Disk + 무료 500MB 한도 + IO).
+  // 핫패스는 최근 매치/스냅샷만 읽으므로 오래된 행은 삭제해도 안전
+  // (오래된 매치는 조회 시 넥슨에서 재캐시됨). best-effort, 실패해도 크론 성공.
+  const retention: Record<string, number> = {};
+  const day = 24 * 60 * 60 * 1000;
+  try {
+    const cutoff = new Date(Date.now() - 90 * day).toISOString();
+    const { count } = await db
+      .from('match_cache')
+      .delete({ count: 'estimated' })
+      .lt('match_date', cutoff);
+    retention.match_cache_deleted = count ?? 0;
+  } catch {
+    retention.match_cache_deleted = -1;
+  }
+  try {
+    const snapCutoff = new Date(Date.now() - 60 * day)
+      .toISOString()
+      .slice(0, 10); // snapshot_date는 date 타입
+    const { count } = await db
+      .from('ranker_stats_snapshot')
+      .delete({ count: 'estimated' })
+      .lt('snapshot_date', snapCutoff);
+    retention.ranker_snapshot_deleted = count ?? 0;
+  } catch {
+    retention.ranker_snapshot_deleted = -1;
+  }
+
+  return Response.json({ ok: true, warmed: summary, retention });
 }

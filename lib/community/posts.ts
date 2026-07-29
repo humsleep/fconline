@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import type { PostType } from './post-types';
 
@@ -39,9 +40,11 @@ export async function listPosts(opts?: {
   const offset = opts?.offset ?? 0;
   try {
     const supabase = await createClient();
+    // count: 'estimated' — 매 요청 정확한 COUNT(*) 스캔 대신 플래너 추정치.
+    // 페이지네이션 표시엔 추정치로 충분하고, 작은 결과셋은 여전히 정확.
     let q = supabase
       .from('community_posts')
-      .select(COLUMNS, { count: 'exact' })
+      .select(COLUMNS, { count: 'estimated' })
       .order('status', { ascending: false }) // open이 먼저
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -81,16 +84,20 @@ export async function listComments(postId: string): Promise<CommunityComment[]> 
   }
 }
 
-export async function getPost(id: string): Promise<CommunityPost | null> {
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from('community_posts')
-      .select(COLUMNS)
-      .eq('id', id)
-      .maybeSingle();
-    return (data as CommunityPost) ?? null;
-  } catch {
-    return null;
+// React.cache — 같은 렌더 안 중복 호출 dedupe.
+// PostDetail은 generateMetadata + 본문에서 getPost(id)를 두 번 호출 → 1 쿼리로 합침.
+export const getPost = cache(
+  async (id: string): Promise<CommunityPost | null> => {
+    try {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from('community_posts')
+        .select(COLUMNS)
+        .eq('id', id)
+        .maybeSingle();
+      return (data as CommunityPost) ?? null;
+    } catch {
+      return null;
+    }
   }
-}
+);
