@@ -71,7 +71,8 @@ export default async function UserPage({
   if (view === "market") redirect(`/market/${encodeURIComponent(nickname)}`);
 
   // 넥슨 팬아웃(매치 30건 + 배지 + 등급)을 유발하는 SSR — IP rate limit 선차단
-  const rl = limitNexonFanout(await headers(), "user-page");
+  const hdrs = await headers();
+  const rl = limitNexonFanout(hdrs, "user-page");
   if (!rl.ok) return <TooManyRequests nickname={nickname} />;
   const matchType =
     MATCH_TABS.find((t) => t.type === Number(type))?.type ?? MATCH_TABS[0].type;
@@ -101,8 +102,9 @@ export default async function UserPage({
     return <ErrorState err={err} nickname={nickname} />;
   }
 
-  // 검색된 구단주 기록 → sitemap 색인 시드 (best-effort, 렌더 안 막음)
-  logNicknameSearch(basic.nickname);
+  // 검색된 구단주 기록 → sitemap 색인 시드 (best-effort, 렌더 안 막음).
+  // 봇 UA는 제외 → 크롤러 재크롤이 유발하던 불필요한 쓰기 IO 제거.
+  logNicknameSearch(basic.nickname, hdrs.get("user-agent"));
 
   const divisionCards = await Promise.all(
     divisions.slice(0, 3).map(async (d) => ({
