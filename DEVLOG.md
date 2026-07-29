@@ -1,5 +1,11 @@
 # DEVLOG
 
+## 2026-07-29 — [IO 점검②] search_log 봇 쓰기 제외 + 코드 IO 감사
+
+- **search_log 쓰기 절감**: `/user/[nickname]`(동적 SSR)이 성공 렌더마다 `logNicknameSearch` upsert. 크롤러가 sitemap의 `/user/*`를 재크롤하며 유발하던 무의미한 쓰기 → 봇 UA 정규식으로 제외. 사람 검색만 시드 유지. PR #69
+- **코드 IO 감사(운영자 Query Performance 교차확인용)**: ①미들웨어 auth(최대 지속 드레인)=#67 해결 ②search_log=#69 해결 ③`match_cache` R/W: 읽기 인덱스 정상·쓰기는 미스에만(필요)이나 **payload jsonb 무기한 보관→테이블 무한증가**가 장기 IO 부담(보관기간 정리 검토 여지) ④일일 크론 ranker-snapshot=일1회 버스트(지속 아님) ⑤`/`,`/meta`,`/player`,`/report/weekly`=ISR `revalidate=3600`로 매요청 DB 안침
+- 검증: `tsc` 0 · **154 PASS**
+
 ## 2026-07-29 — [장애·후속] Disk IO 부하 감소 — 비로그인 요청 auth 왕복 제거
 
 - **실제 근본 원인 확인**: Supabase는 일시정지가 아니라 **NANO 인스턴스가 Disk IO Budget 소진** → DB 스로틀링 → `getUser()` 지연 → 미들웨어 504. (일시정지 가설 정정)
