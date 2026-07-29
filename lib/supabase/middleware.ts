@@ -22,6 +22,14 @@ export async function updateSession(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return supabaseResponse;
 
+  // 세션 쿠키가 없으면 갱신할 세션도 없다 → auth 서버(DB) 왕복을 통째로 건너뛴다.
+  // 전적 사이트 트래픽 대부분(비로그인·크롤러)이 여기 해당 → NANO 인스턴스의
+  // Disk IO 소모를 크게 줄인다. 로그인 사용자는 sb-*-auth-token 쿠키가 있어 그대로 갱신됨.
+  const hasSessionCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'));
+  if (!hasSessionCookie) return supabaseResponse;
+
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll() {
