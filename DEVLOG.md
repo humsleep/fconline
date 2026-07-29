@@ -1,5 +1,13 @@
 # DEVLOG
 
+## 2026-07-29 — [장애] 미들웨어 Supabase auth 504 방어 (사이트 전체 다운)
+
+- **증상**: 프로덕션 `504 GATEWAY_TIMEOUT` / `MIDDLEWARE_INVOCATION_TIMEOUT` → 사이트 접속·로그인 모두 실패. 코드는 2일간 무변경 → 런타임(Supabase 도달 불가) 원인
+- **근본 원인**: `lib/supabase/middleware.ts`가 거의 모든 경로에서 `await supabase.auth.getUser()`를 timeout·catch 없이 호출. Supabase Auth 불통 시(무료 플랜 자동 일시정지 등) 미들웨어 한도까지 매달려 전 경로 504 — 비로그인 전적 검색·진단까지 다운
+- **수정**: `getUser()`를 3초 `Promise.race` timeout + try/catch로 감쌈. 세션 갱신 best-effort화 → 인증 불통이면 로그아웃 상태로 정상 진행, 사이트는 생존. Supabase 정상 시 동작 불변
+- 검증: `tsc` 0 · **154 PASS**. (샌드박스 build 실패는 차단된 Google Fonts fetch 뿐 — 본 변경 무관). PR #65
+- **⚠️ 운영자 조치(P0, 계정)**: 로그인 자체 복구는 Supabase 프로젝트 정상화 필요 — 대시보드에서 일시정지면 **Restore**, 아니면 프로젝트 장애/키 확인
+
 ## 2026-07-27 — [주간 회의] 메타 리포트 발견성 + FC Scope 스코어 설명 + 클리닉 모순 수정
 
 - 주간 개선 회의(4렌즈 수렴): 발견성·명료성·정확성 3건 묶음
