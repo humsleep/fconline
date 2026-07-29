@@ -18,21 +18,33 @@ function keyOf(postId: string): string | null {
 async function counts(vsKey: string): Promise<{ a: number; b: number }> {
   const db = getAdmin();
   if (!db) return { a: 0, b: 0 };
-  const { data } = await db.from("vs_votes").select("pick").eq("vs_key", vsKey);
-  let a = 0;
-  let b = 0;
-  for (const r of data ?? []) {
-    if (r.pick === "A") a++;
-    else if (r.pick === "B") b++;
-  }
-  return { a, b };
+  // 전체 투표 행을 가져와 JS로 세지 않고 head 카운트 2개로 집계 —
+  // 행 payload 전송 없이 vs_key 인덱스만 타서 IO/전송량을 줄인다(인기글일수록 이득).
+  const [ra, rb] = await Promise.all([
+    db
+      .from("vs_votes")
+      .select("*", { count: "exact", head: true })
+      .eq("vs_key", vsKey)
+      .eq("pick", "A"),
+    db
+      .from("vs_votes")
+      .select("*", { count: "exact", head: true })
+      .eq("vs_key", vsKey)
+      .eq("pick", "B"),
+  ]);
+  return { a: ra.count ?? 0, b: rb.count ?? 0 };
 }
 
 export async function GET(req: Request) {
   const postId = new URL(req.url).searchParams.get("postId") ?? "";
   const vsKey = keyOf(postId);
   if (!vsKey) return NextResponse.json({ error: "invalid" }, { status: 400 });
-  return NextResponse.json(await counts(vsKey));
+  // 짧은 edge 캐시 — 인기글에서 GET이 매 조회마다 DB를 치지 않게(≤10s 지연 허용).
+  return NextResponse.json(await counts(vsKey), {
+    headers: {
+      "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
+    },
+  });
 }
 
 export async function POST(req: Request) {
