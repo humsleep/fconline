@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-07-29 — [IO 전수감사③] 미사용 인덱스 제거 + retention + 커뮤니티 읽기 경량화
+
+- 병렬 3-렌즈 전수 감사(API 라우트 / 서버 페이지 / lib·넥슨 계층). 결론: IO 문제는 seq scan이 아니라 **쓰기 증폭 + 무제한 성장 + 캐시 안 된 per-request 읽기**.
+- **정량(콜드 `/user` 1회)**: 넥슨 ~36콜(직렬), Supabase 읽기 ~2, **쓰기 = match_cache 30행 jsonb 배치 upsert(~1–2.5MB)** + search_log 1. 워ム: match_cache 30행 full jsonb 읽기(~1–2.5MB).
+- **적용(PR #71)**: ①`match_cache_ouids_idx`(GIN, 미사용) DROP → 30-insert마다의 쓰기 증폭 제거(최대 단일 이득) ②`ranker_stats_snapshot(match_type,snapshot_date)` 인덱스 추가 → 스쿼드뷰 seq scan 제거 ③크론 retention(match_cache 90d/snapshot 60d) → 무한 증가·500MB 한도 방지 ④커뮤니티 목록 `count:exact→estimated`·`getPost` React.cache dedupe·배틀 GET head카운트+10s edge캐시
+- ⚠️ **0017 마이그레이션은 SQL Editor 실행 필요**(GIN DROP이 쓰기-IO 핵심)
+- 검증: `tsc` 0 · **154 PASS**
+- **업그레이드 판단**: 지속 IO 드레인 1·2위(미들웨어 auth #67, search_log 봇 #69)+이번 쓰기증폭/성장 원인이 대부분 코드/스키마발 → **먼저 무료 유지하고 배포+0017 후 IO 관측**. 이후에도 baseline 초과하거나 DB가 500MB 근접하면 **Pro($25/mo, 8GB·no-pause·Micro 컴퓨트)** 로. 남은 후보: match/[matchId] ISR, match_cache slim payload(projection), 커뮤니티 write precheck/RLS 중복 제거
+
 ## 2026-07-29 — [IO 점검②] search_log 봇 쓰기 제외 + 코드 IO 감사
 
 - **search_log 쓰기 절감**: `/user/[nickname]`(동적 SSR)이 성공 렌더마다 `logNicknameSearch` upsert. 크롤러가 sitemap의 `/user/*`를 재크롤하며 유발하던 무의미한 쓰기 → 봇 UA 정규식으로 제외. 사람 검색만 시드 유지. PR #69
