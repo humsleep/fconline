@@ -18,15 +18,36 @@ export interface PickRow {
 /** 랭커 스냅샷이 워밍되는 매치 유형 (cron: ranker-snapshot). 그 외엔 데이터 없음. */
 export const SNAPSHOT_MATCH_TYPES = [50, 52] as const;
 
+type PicksResult = { date: string | null; byLine: Map<string, PickRow[]> };
+
+// 인스턴스 로컬 1시간 메모 — 스냅샷은 일 단위 데이터라 매 요청 300+400×3행 스캔이 낭비.
+// TTL을 페이지 ISR(revalidate=3600)과 맞춰 추가 staleness 0. 키는 (matchType,withDelta) 몇 개뿐.
+const PICKS_TTL_MS = 3_600_000;
+const picksMemo = new Map<string, { at: number; val: PicksResult }>();
+
 /**
- * 채택일의 라인별 픽 랭킹을 스냅샷에서 로드.
+ * 채택일의 라인별 픽 랭킹을 스냅샷에서 로드 (1시간 인스턴스 캐시).
  * @param matchType 기본 50 (공식경기) → /meta 기존 동작 보존
  * @param withDelta 기본 true. false면 전일 비교(추가 DB 호출) 생략
  */
 export async function loadPicks(
   matchType: number = 50,
   withDelta: boolean = true
-): Promise<{ date: string | null; byLine: Map<string, PickRow[]> }> {
+): Promise<PicksResult> {
+  const key = `${matchType}:${withDelta}`;
+  const now = Date.now();
+  const hit = picksMemo.get(key);
+  if (hit && now - hit.at < PICKS_TTL_MS) return hit.val;
+  const val = await loadPicksUncached(matchType, withDelta);
+  // 콜드/에러(date=null)는 캐시하지 않아 다음 요청에서 재시도
+  if (val.date !== null) picksMemo.set(key, { at: now, val });
+  return val;
+}
+
+async function loadPicksUncached(
+  matchType: number = 50,
+  withDelta: boolean = true
+): Promise<PicksResult> {
   const empty = { date: null, byLine: new Map<string, PickRow[]>() };
   const db = getAdmin();
   if (!db) return empty;

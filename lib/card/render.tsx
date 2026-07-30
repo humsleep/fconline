@@ -29,8 +29,15 @@ export interface CardData {
   footerUrl: string;
 }
 
+// 카드 이미지 캐시 기본값 — 하루(엣지). 콘텐츠가 하루보다 자주 안 바뀌므로
+// satori+resvg 재래스터를 24×↓. 불변 콘텐츠(끝난 매치)는 호출부에서 immutable 전달.
+const DEFAULT_CARD_CACHE = 'public, s-maxage=86400, stale-while-revalidate=604800';
+
 // 전광판 타이포그래피 카드 — 사진 임베드 없이 색+숫자로 승부(안정·고속).
-export async function renderCard(data: CardData): Promise<ImageResponse> {
+export async function renderCard(
+  data: CardData,
+  opts?: { cacheControl?: string }
+): Promise<ImageResponse> {
   const badges = (data.badges ?? []).slice(0, 3);
   const stampHex = data.stamp ? HEX[data.stamp.color] : HEX.lime;
 
@@ -170,8 +177,8 @@ export async function renderCard(data: CardData): Promise<ImageResponse> {
       width: W,
       height: H,
       headers: {
-        // 공유 직후 반복 조회(크롤러·재공유)를 엣지 캐시로 흡수
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        // 공유 직후 반복 조회(크롤러·재공유)를 엣지 캐시로 흡수(기본 1일)
+        "Cache-Control": opts?.cacheControl ?? DEFAULT_CARD_CACHE,
       },
       fonts: font
         ? [{ name: "NotoKR", data: font, weight: 700, style: "normal" }]
