@@ -1,5 +1,16 @@
 # DEVLOG
 
+## 2026-07-30 — [디스크/WAL 장애 대응] slim payload + circuit breaker + 진단 스크립트
+
+- 웹채팅 장애 핸드오프 이관. 근본원인: Micro(t3a.micro) IO/CPU 버스트 크레딧 고갈 → 체크포인트 지연 → WAL이 8GB 디스크 천장 도달 → 크래시 루프. 자력복구 Healthy. 조치: 컴퓨트 SMALL+ 업그레이드(운영자 대시보드) + 배치 WAL 최적화(코드).
+- **§6 감사 결론**: 별도 "수집 배치" 없음 — WAL 생성원은 앱의 `match_cache` jsonb 쓰기(콜드 `/user` 뷰당 최대 30행) + 일일 크론. 나머지는 supabase-js(autocommit)라 idle-in-tx 위험 없음, 전체갱신(TRUNCATE) 패턴 없음.
+- **slim payload (PR #74)**: match_cache에 원본 넥슨 match-detail(~30–80KB) 대신 소비자가 실제 읽는 필드만 저장(`lib/nexon/slim.ts`). 필드명·구조 동일 부분집합 → 리더 무변경, 구 데이터 호환. 신규 쓰기부터 적용, 구 행은 retention으로 소멸. 단위테스트 +21(full/slim 집계 출력 동일 검증) → **175 PASS**.
+- **circuit breaker (PR #74)**: `lib/supabase/circuit.ts` `guardDb()` — 연속 실패 시 fast-fail로 "재연결 폭풍"(장애 로그 초당 5~10건) 차단, half-open 자동복구. match_cache R/W·service_flags·search_log에 적용.
+- **진단 스크립트 (PR #73)**: `scripts/diagnostics.sql` (§8, WAL/디스크/슬롯/idle-tx/vacuum/미사용인덱스/체크포인트).
+- **파티셔닝 retention — 채택 안 함(분석 결과 역효과)**: match_cache는 PK가 `match_id`이고 핫 리드가 match_id 단건 조회인데, match_date 레인지 파티셔닝은 파티션 pruning이 안 돼(WHERE에 match_date 없음) 전 파티션 스캔 → **핫 리드 회귀**. 날짜 retention은 이미 #71 DELETE로 성장 억제 중이라 충분. ranker_stats_snapshot도 소형이라 불필요. → **DELETE retention 유지**가 정답.
+- **spend cap**: 유지(8GB 천장) + slim payload·retention으로 용량 관리.
+- ⚠️ 미적용 SQL: `0017`(GIN DROP + ranker 인덱스) — DB Healthy 후 SQL Editor 실행.
+
 ## 2026-07-29 — [IO 전수감사③] 미사용 인덱스 제거 + retention + 커뮤니티 읽기 경량화
 
 - 병렬 3-렌즈 전수 감사(API 라우트 / 서버 페이지 / lib·넥슨 계층). 결론: IO 문제는 seq scan이 아니라 **쓰기 증폭 + 무제한 성장 + 캐시 안 된 per-request 읽기**.
