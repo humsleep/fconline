@@ -46,7 +46,8 @@ export async function GET(
         },
       ],
       footerUrl: "fcscope",
-    });
+    // 끝난 매치는 영구 불변 → 1년 immutable(재래스터 사실상 0)
+    }, { cacheControl: "public, s-maxage=31536000, immutable" });
   } catch {
     return new Response("error", { status: 500 });
   }

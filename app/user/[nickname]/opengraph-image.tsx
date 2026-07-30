@@ -165,8 +165,8 @@ export default async function OgImage({
     {
       ...size,
       headers: {
-        // 카톡/디스코드 크롤러 반복 조회 → 엣지 캐시로 흡수 (넥슨 호출 증폭 방지)
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        // 카톡/디스코드 크롤러 반복 조회 → 엣지 캐시로 흡수 (넥슨 호출·재래스터 증폭 방지, 1일)
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
       },
       fonts: font
         ? [{ name: "NotoKR", data: font, weight: 700 as const, style: "normal" as const }]

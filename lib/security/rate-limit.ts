@@ -45,8 +45,10 @@ export function rateLimit(
 ): RateLimitResult {
   const now = Date.now();
 
-  // 주기적 스윕(최대 60초마다) — 만료 버킷 제거로 무한 성장 방지
-  if (now - lastSweep > 60_000) {
+  // 주기적 스윕(최대 60초마다) + 크기 상한 안전장치 — 만료 버킷 제거로 무한 성장 방지.
+  // 분산 다-IP 폭주 시 스윕 주기(60초) 사이 무한 증가하지 않도록, 상한 초과 시 즉시 스윕.
+  const MAX_BUCKETS = 50_000;
+  if (now - lastSweep > 60_000 || buckets.size > MAX_BUCKETS) {
     for (const [k, b] of buckets) if (b.resetAt <= now) buckets.delete(k);
     lastSweep = now;
   }

@@ -333,7 +333,8 @@ export async function renderSquadCard(
     width: W,
     height: H,
     headers: {
-      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      // 스쿼드는 저장 후 거의 안 바뀜 → 1일 엣지 캐시로 무거운 22-이미지 래스터 재실행 억제
+      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
     },
     fonts: font ? [{ name: "NotoKR", data: font, weight: 700, style: "normal" }] : undefined,
   });
