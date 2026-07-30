@@ -1,5 +1,13 @@
 # DEVLOG
 
+## 2026-07-30 — [서버 CPU/메모리 감사] 이미지 캐시 TTL·picks 메모·rate-limit 상한
+
+- 앱 전체 서버(Vercel 함수) CPU/메모리 2-렌즈 병렬 감사. 결론: **CPU 1위 = `next/og` 이미지 래스터(satori+resvg)**, 메모리 최대 상주 = 선수 인덱스(~12–15MB, spid.json 런타임 fetch·인스턴스 1회 memo). 진짜 누수 없음.
+- **적용(PR #76, 동작 보존)**: ① 카드/OG 이미지 캐시 TTL 1h→1일, **매치 카드는 immutable(1년)** — 반복 래스터 대폭↓ ② `loadPicks` 1시간 인스턴스 메모(스냅샷=일 단위, TTL=ISR과 동일 → staleness 0) — squad/meta/report 렌더마다의 300+400×3행 스캔 제거 ③ rate-limit 버킷 Map 5만 상한(다-IP 폭주 방어)
+- 검증: `tsc` 0 · **175 PASS**
+- **미적용 후보(별도 판단)**: 선수 인덱스 `seasonById` 맵 제거(~3–4MB/인스턴스, 시즌명 온디맨드) · 카드 폰트 번들화(매-렌더 fetch 제거) · squad 카드 element 이중 빌드 1회화 · `toDataUri` 동시성 캡(피크 메모리↓)
+- 이미 잘 관리됨(수정 금지): 넥슨 순차 큐(값 미보유)·pause 30s·circuit 스칼라·React cache(요청 스코프)·정적 데이터(수십KB)
+
 ## 2026-07-30 — [디스크/WAL 장애 대응] slim payload + circuit breaker + 진단 스크립트
 
 - 웹채팅 장애 핸드오프 이관. 근본원인: Micro(t3a.micro) IO/CPU 버스트 크레딧 고갈 → 체크포인트 지연 → WAL이 8GB 디스크 천장 도달 → 크래시 루프. 자력복구 Healthy. 조치: 컴퓨트 SMALL+ 업그레이드(운영자 대시보드) + 배치 WAL 최적화(코드).
