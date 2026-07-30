@@ -12,14 +12,15 @@ export interface MaxDivision {
   achievementDate: string; // UTC
 }
 
+// optional(?) 표시된 필드는 어떤 소비자도 읽지 않아 match_cache slim 저장 시 생략됨.
 export interface MatchDetailSummary {
-  seasonId: number;
+  seasonId?: number;
   matchResult: '승' | '무' | '패' | string;
   matchEndType: number; // 0 정상 | 1 몰수승 | 2 몰수패
-  systemPause: number;
+  systemPause?: number;
   foul: number;
-  injury: number;
-  redCards: number;
+  injury?: number;
+  redCards?: number;
   yellowCards: number;
   dribble: number;
   cornerKick: number;
@@ -34,7 +35,7 @@ export interface Shoot {
   effectiveShootTotal: number;
   goalTotal: number;
   goalTotalDisplay: number;
-  ownGoal: number;
+  ownGoal?: number;
   shootHeading: number;
   goalHeading: number;
   shootFreekick: number;
@@ -52,11 +53,11 @@ export interface ShootDetail {
   goalTime: number;
   x: number;
   y: number;
-  type: number;
+  type?: number;
   result: number;
   spId: number;
-  spGrade: number;
-  spLevel: number;
+  spGrade?: number;
+  spLevel?: number;
   spIdAssist?: number;
   assistX?: number;
   assistY?: number;
@@ -67,23 +68,23 @@ export interface ShootDetail {
 export interface Pass {
   passTry: number;
   passSuccess: number;
-  shortPassTry: number;
+  shortPassTry?: number;
   shortPassSuccess: number;
   longPassTry: number;
-  longPassSuccess: number;
+  longPassSuccess?: number;
   throughPassTry: number;
   throughPassSuccess: number;
   lobbedThroughPassTry: number;
-  lobbedThroughPassSuccess: number;
-  bouncingLobPassTry: number;
-  bouncingLobPassSuccess: number;
-  drivenGroundPassTry: number;
-  drivenGroundPassSuccess: number;
+  lobbedThroughPassSuccess?: number;
+  bouncingLobPassTry?: number;
+  bouncingLobPassSuccess?: number;
+  drivenGroundPassTry?: number;
+  drivenGroundPassSuccess?: number;
 }
 
 export interface Defence {
   blockTry: number;
-  blockSuccess: number;
+  blockSuccess?: number;
   tackleTry: number;
   tackleSuccess: number;
 }
@@ -97,25 +98,25 @@ export interface PlayerStatus {
   passSuccess: number;
   dribbleTry: number;
   dribbleSuccess: number;
-  ballPossesionTry: number; // 오타가 공식 스펙
-  ballPossesionSuccess: number;
-  aerialTry: number;
-  aerialSuccess: number;
-  blockTry: number;
-  block: number;
+  ballPossesionTry?: number; // 오타가 공식 스펙
+  ballPossesionSuccess?: number;
+  aerialTry?: number;
+  aerialSuccess?: number;
+  blockTry?: number;
+  block?: number;
   tackleTry: number;
   tackle: number;
   intercept: number;
-  defending: number;
-  yellowCards: number;
-  redCards: number;
+  defending?: number;
+  yellowCards?: number;
+  redCards?: number;
   spRating: number;
 }
 
 export interface MatchPlayer {
   spId: number;
   spPosition: number;
-  spGrade: number;
+  spGrade?: number;
   status: PlayerStatus;
 }
 

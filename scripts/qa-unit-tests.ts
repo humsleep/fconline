@@ -26,6 +26,8 @@ import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
+import { slimMatchDetail } from '../lib/nexon/slim';
+import { aggregatePlayers } from '../lib/nexon/player-stats';
 import { squadCardTree } from '../lib/card/squad-card';
 import { POST_TYPES, isPostType } from '../lib/community/post-types';
 import type { Squad } from '../lib/squad/store';
@@ -476,6 +478,56 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   eq(playstyleOf(base), null, 'playstyle: 신호 약하면 null');
   // 우선순위: 득점이 다른 조건보다 우선
   eq(playstyleOf({ ...base, goal: 0.5, passTry: 20, passSuccess: 19, assist: 0.5 })?.label, '결정력형', 'playstyle: 득점 우선순위');
+}
+
+// ── match_cache slim payload projection ──
+{
+  // 모든 필드(사용/미사용)를 채운 리치 fixture — slim 후에도 소비자가 읽는 값이
+  // 보존되고, 미사용 필드만 제거되는지 검증한다.
+  const rich: MatchDetail = {
+    matchId: 'slim1', matchDate: '2026-01-01T00:00:00', matchType: 50,
+    matchInfo: [
+      {
+        ouid: 'ME', nickname: 'me',
+        matchDetail: { seasonId: 1, matchResult: '승', matchEndType: 0, systemPause: 0, foul: 3, injury: 0, redCards: 0, yellowCards: 1, dribble: 12, cornerKick: 4, possession: 55, offsideCount: 2, averageRating: 7.4, controller: 'keyboard' },
+        shoot: { shootTotal: 10, effectiveShootTotal: 6, goalTotal: 3, goalTotalDisplay: 3, ownGoal: 0, shootHeading: 2, goalHeading: 1, shootFreekick: 1, goalFreekick: 0, shootInPenalty: 7, goalInPenalty: 3, shootOutPenalty: 3, goalOutPenalty: 0, shootPenaltyKick: 0, goalPenaltyKick: 0 },
+        shootDetail: [{ goalTime: 1200, x: 0.8, y: 0.5, type: 1, result: 3, spId: 101, spGrade: 5, spLevel: 30, spIdAssist: 102, assistX: 0.6, assistY: 0.4, hitPost: false, inPenalty: true }],
+        pass: { passTry: 300, passSuccess: 270, shortPassTry: 200, shortPassSuccess: 190, longPassTry: 30, longPassSuccess: 20, throughPassTry: 10, throughPassSuccess: 7, lobbedThroughPassTry: 3, lobbedThroughPassSuccess: 2, bouncingLobPassTry: 1, bouncingLobPassSuccess: 1, drivenGroundPassTry: 5, drivenGroundPassSuccess: 4 },
+        defence: { blockTry: 4, blockSuccess: 2, tackleTry: 15, tackleSuccess: 9 },
+        player: [{ spId: 101, spPosition: 20, spGrade: 5, status: { goal: 2, assist: 1, shoot: 5, effectiveShoot: 3, passTry: 40, passSuccess: 36, dribbleTry: 8, dribbleSuccess: 6, ballPossesionTry: 50, ballPossesionSuccess: 45, aerialTry: 3, aerialSuccess: 2, blockTry: 1, block: 0, tackleTry: 2, tackle: 1, intercept: 3, defending: 4, yellowCards: 0, redCards: 0, spRating: 8.1 } }],
+      } as never,
+      { ouid: 'OPP', nickname: 'opp', matchDetail: { matchResult: '패', matchEndType: 0, foul: 5, yellowCards: 2, dribble: 8, cornerKick: 2, possession: 45, offsideCount: 1, averageRating: 6.5, controller: 'gamepad' }, shoot: { shootTotal: 6, effectiveShootTotal: 2, goalTotal: 1, goalTotalDisplay: 1, shootHeading: 0, goalHeading: 0, shootFreekick: 0, goalFreekick: 0, shootInPenalty: 4, goalInPenalty: 1, shootOutPenalty: 2, goalOutPenalty: 0, shootPenaltyKick: 0, goalPenaltyKick: 0 }, shootDetail: [{ goalTime: 800, x: 0.7, y: 0.5, result: 3, spId: 201, hitPost: false, inPenalty: true }], pass: { passTry: 250, passSuccess: 210, shortPassSuccess: 180, longPassTry: 25, throughPassTry: 8, throughPassSuccess: 5, lobbedThroughPassTry: 2 }, defence: { blockTry: 3, tackleTry: 12, tackleSuccess: 7 }, player: [{ spId: 201, spPosition: 20, status: { goal: 1, assist: 0, shoot: 3, effectiveShoot: 2, passTry: 30, passSuccess: 25, dribbleTry: 5, dribbleSuccess: 3, tackleTry: 1, tackle: 0, intercept: 1, spRating: 6.9 } }] } as never,
+    ],
+  } as MatchDetail;
+
+  const slim = slimMatchDetail(rich);
+
+  // 소비자가 읽는 값은 원본과 동일해야 함(집계 출력 비교 — 강한 보증)
+  eq(summarizeMatch(slim, 'ME'), summarizeMatch(rich, 'ME'), 'slim: summarizeMatch 동일');
+  eq(aggregateReport([slim], 'ME'), aggregateReport([rich], 'ME'), 'slim: aggregateReport 동일');
+  eq(aggregatePlayers([slim], 'ME'), aggregatePlayers([rich], 'ME'), 'slim: aggregatePlayers 동일');
+  eq(aggregatePlaystyle([slim], 'ME'), aggregatePlaystyle([rich], 'ME'), 'slim: aggregatePlaystyle 동일');
+
+  const me = slim.matchInfo[0];
+  // 유지되어야 하는 대표 필드
+  eq(me.matchDetail.controller, 'keyboard', 'slim: matchDetail.controller 유지');
+  eq(me.shoot.goalTotalDisplay, 3, 'slim: shoot.goalTotalDisplay 유지');
+  eq(me.shootDetail[0].result, 3, 'slim: shootDetail.result 유지');
+  eq(me.shootDetail.length, 1, 'slim: shootDetail 배열 전체 유지');
+  eq(me.pass.throughPassSuccess, 7, 'slim: pass.throughPassSuccess 유지');
+  eq(me.defence.blockTry, 4, 'slim: defence.blockTry 유지');
+  eq(me.player[0].status.spRating, 8.1, 'slim: player.status.spRating 유지');
+  eq(me.player.length, 1, 'slim: player 배열 유지');
+  // 제거되어야 하는 미사용 필드
+  ok(me.matchDetail.seasonId === undefined, 'slim: matchDetail.seasonId 제거');
+  ok(me.shoot.ownGoal === undefined, 'slim: shoot.ownGoal 제거');
+  ok(me.shootDetail[0].type === undefined, 'slim: shootDetail.type 제거');
+  ok(me.shootDetail[0].spGrade === undefined, 'slim: shootDetail.spGrade 제거');
+  ok(me.pass.shortPassTry === undefined, 'slim: pass.shortPassTry 제거');
+  ok(me.defence.blockSuccess === undefined, 'slim: defence.blockSuccess 제거');
+  ok(me.player[0].spGrade === undefined, 'slim: player.spGrade 제거');
+  ok(me.player[0].status.block === undefined, 'slim: player.status.block 제거');
+  ok(me.player[0].status.defending === undefined, 'slim: player.status.defending 제거');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

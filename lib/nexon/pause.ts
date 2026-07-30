@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getAdmin } from '@/lib/supabase/admin';
+import { guardDb } from '@/lib/supabase/circuit';
 
 /**
  * 넥슨 kill-switch — 운영자가 /admin에서 배포 없이 넥슨 팬아웃을 즉시 정지/재개.
@@ -21,18 +22,13 @@ export async function isNexonPaused(): Promise<boolean> {
   if (cached && now - cached.at < TTL_MS) return cached.paused;
 
   let paused = cached?.paused ?? false; // 조회 실패 시 마지막 알려진 값 유지(초기엔 false)
-  try {
-    const db = getAdmin();
-    if (db) {
-      const { data } = await db
-        .from('service_flags')
-        .select('enabled')
-        .eq('key', 'nexon_paused')
-        .maybeSingle();
-      paused = Boolean(data?.enabled);
-    }
-  } catch {
-    // fail-open: 플래그를 못 읽으면 넥슨 호출을 막지 않는다.
+  const db = getAdmin();
+  if (db) {
+    // 서킷 브레이커 경유 — DB 불통 시 res=null → 마지막 알려진 값 유지(fail-open).
+    const res = await guardDb(() =>
+      db.from('service_flags').select('enabled').eq('key', 'nexon_paused').maybeSingle()
+    );
+    if (res) paused = Boolean((res.data as { enabled?: boolean } | null)?.enabled);
   }
   cached = { paused, at: now };
   return paused;

@@ -1,7 +1,9 @@
 import 'server-only';
 
 import { getAdmin } from '@/lib/supabase/admin';
+import { guardDb } from '@/lib/supabase/circuit';
 import { getMatchDetail } from './api';
+import { slimMatchDetail } from './slim';
 import type { MatchDetail } from './types';
 
 function toIso(raw: string): string {
@@ -11,7 +13,7 @@ function toIso(raw: string): string {
 /**
  * 매치 상세 — Supabase 영구 캐시 우선.
  * 경기 결과는 불변이므로 한 번 저장하면 넥슨 재호출이 필요 없다.
- * Supabase 미설정/장애 시 넥슨 직접 호출로 자연 강등.
+ * Supabase 미설정/장애 시 넥슨 직접 호출로 자연 강등(서킷 브레이커 fast-fail 포함).
  */
 export async function getMatchDetailCached(
   matchid: string
@@ -19,35 +21,28 @@ export async function getMatchDetailCached(
   const db = getAdmin();
 
   if (db) {
-    try {
-      const { data } = await db
-        .from('match_cache')
-        .select('payload')
-        .eq('match_id', matchid)
-        .maybeSingle();
-      if (data?.payload) return data.payload as MatchDetail;
-    } catch {
-      // 캐시 조회 실패는 무시하고 원본 호출
-    }
+    const res = await guardDb(() =>
+      db.from('match_cache').select('payload').eq('match_id', matchid).maybeSingle()
+    );
+    const payload = (res?.data as { payload?: MatchDetail } | null)?.payload;
+    if (payload) return payload;
   }
 
   const detail = await getMatchDetail(matchid);
 
   if (db) {
-    try {
-      await db.from('match_cache').upsert(
+    await guardDb(() =>
+      db.from('match_cache').upsert(
         {
           match_id: detail.matchId,
           match_type: detail.matchType,
           match_date: toIso(detail.matchDate),
           ouids: detail.matchInfo?.map((e) => e.ouid) ?? [],
-          payload: detail,
+          payload: slimMatchDetail(detail),
         },
         { onConflict: 'match_id' }
-      );
-    } catch {
-      // 저장 실패해도 응답에는 영향 없음
-    }
+      )
+    );
   }
 
   return detail;
@@ -67,16 +62,12 @@ export async function getMatchDetailsBatch(
   const byId = new Map<string, MatchDetail>();
 
   if (db) {
-    try {
-      const { data } = await db
-        .from('match_cache')
-        .select('match_id, payload')
-        .in('match_id', ids);
-      for (const row of data ?? []) {
-        byId.set(row.match_id as string, row.payload as MatchDetail);
-      }
-    } catch {
-      // 캐시 조회 실패 → 전부 미스로 처리
+    const res = await guardDb(() =>
+      db.from('match_cache').select('match_id, payload').in('match_id', ids)
+    );
+    const rows = (res?.data as { match_id: string; payload: MatchDetail }[] | null) ?? [];
+    for (const row of rows) {
+      byId.set(row.match_id, row.payload);
     }
   }
 
@@ -94,20 +85,18 @@ export async function getMatchDetailsBatch(
   }
 
   if (db && fetched.length > 0) {
-    try {
-      await db.from('match_cache').upsert(
+    await guardDb(() =>
+      db.from('match_cache').upsert(
         fetched.map((d) => ({
           match_id: d.matchId,
           match_type: d.matchType,
           match_date: toIso(d.matchDate),
           ouids: d.matchInfo?.map((e) => e.ouid) ?? [],
-          payload: d,
+          payload: slimMatchDetail(d),
         })),
         { onConflict: 'match_id' }
-      );
-    } catch {
-      // 저장 실패해도 응답에는 영향 없음
-    }
+      )
+    );
   }
 
   return ids
