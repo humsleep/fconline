@@ -6,6 +6,8 @@ import { useUser } from "@/lib/supabase/useUser";
 import { forgetMySquad, loadMySquads, MAX_MY_SQUADS, type MySquad } from "@/app/components/MySquadPicker";
 import { POST_TYPES } from "@/lib/community/post-types";
 import { getFavorites, toggleFavorite, getStreak, type Streak } from "@/lib/client/local-prefs";
+import FormSparkline from "@/app/components/FormSparkline";
+import type { FormPoint } from "@/lib/form-trend";
 
 const RECENT_KEY = "fcscope-recent-searches";
 
@@ -39,6 +41,7 @@ export default function MyPage() {
   const [posts, setPosts] = useState<MyPost[]>([]);
   const [serverSquads, setServerSquads] = useState<ServerSquad[]>([]);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [snapshots, setSnapshots] = useState<FormPoint[]>([]);
   const [squads, setSquads] = useState<MySquad[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -70,6 +73,7 @@ export default function MyPage() {
         setPosts(Array.isArray(d.posts) ? d.posts : []);
         setServerSquads(Array.isArray(d.squads) ? d.squads : []);
         setSnapshot(d.snapshot ?? null);
+        setSnapshots(Array.isArray(d.snapshots) ? d.snapshots : []);
       })
       .catch(() => {})
       .finally(() => setFetched(true));
@@ -221,6 +225,9 @@ export default function MyPage() {
           </p>
         </section>
       )}
+
+      {/* 폼 추세 스파크라인 — "나 나아지고 있나?" 재방문 훅 (표본 3일+부터) */}
+      <FormSparkline snapshots={snapshots} />
 
       {/* 내 스쿼드 */}
       <section className="panel mt-3 p-4 sm:p-5">
