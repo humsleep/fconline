@@ -1,5 +1,16 @@
 # DEVLOG
 
+## 2026-07-31 — [주간 회의] 커뮤니티 유형 발견성 + 폼 추세 스파크라인 + 검색 힌트
+
+- 주간 개선 회의(4렌즈 병렬: 모바일 발견성 / 첫방문 사용성 / 재방문·즐거움 / 정확성). 인프라 소방 몇 주 후 첫 기능 회의.
+- **P0 발견성(Lens1)**: `app/community/page.tsx` 유형 필터 칩이 글 5개 미만이면 통째로 숨겨져, 하단탭으로 온 콜드스타트 사용자가 스쿼드 배틀·클럽원 모집 등 7개 유형 존재를 못 봄. 표시 gate 제거 → 칩 상시 렌더(TabChip 44px·scrollbar-hide 재사용). Playwright 390px 확인.
+- **P1 재방문(Lens3)**: 폼 추세 스파크라인 — 승률·평점은 이미 `VisitRecorder`가 매일 스냅샷 중이라 **마이그레이션 없이** 구현. `/api/profile` `limit(2)→limit(14)` + `snapshots[]` 추가(delta 하위호환), `lib/form-trend.ts`(순수, risingStreak/isPeak/sparklinePoints) + `app/components/FormSparkline.tsx`(라임 승률·골드 평점 SVG + 🔥연속상승/🏆최고기록 배지) → `/me`. "내가 나아지고 있나?" 훅.
+- **첫방문(Lens2)**: 검색창 placeholder에 예시("(예: 밍벨로)") 추가.
+- **정확성(Lens4)**: 최근 2주 최적화 배치(slim payload·circuit breaker·picks memo·이미지 TTL·미들웨어 auth 게이트) 전수 감사 → 회귀·크래시 **없음**. slim payload 필드 전수 대조 완결. 유일 지적: `lib/security/rate-limit.ts` 50k 상한이 실제로 캡 안 함(저심각, 5만 distinct IP/60초에서만 CPU 증폭) → 다음 주 후보.
+- 검증: `tsc` 0 · **192 PASS**(+17) · build ✓ · 390px 오버플로 0. PR #78
+- **다음 주 후보**: ①rate-limit 상한 실제 캡(oldest-resetAt eviction) ②라이벌 H2H 공유 카드(마이그레이션 X) ③FC 스코어 추세(score 컬럼 마이그레이션 필요).
+- ⚠️ **미실행 마이그레이션(운영자, SQL Editor)**: `0017_io_optimization.sql`(GIN DROP + ranker 인덱스) — 이번 주 변경과 무관하나 아직 대기 중.
+
 ## 2026-07-30 — [서버 CPU/메모리 감사] 이미지 캐시 TTL·picks 메모·rate-limit 상한
 
 - 앱 전체 서버(Vercel 함수) CPU/메모리 2-렌즈 병렬 감사. 결론: **CPU 1위 = `next/og` 이미지 래스터(satori+resvg)**, 메모리 최대 상주 = 선수 인덱스(~12–15MB, spid.json 런타임 fetch·인스턴스 1회 memo). 진짜 누수 없음.
