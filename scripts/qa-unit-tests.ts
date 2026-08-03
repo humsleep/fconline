@@ -22,6 +22,7 @@ import { topPickIdsByLine, isTopPick } from '../lib/meta/picks';
 import { matchScore, recentScore, scoreTier } from '../lib/nexon/score';
 import { parseFeed } from '../lib/youtube/feed';
 import { playstyleOf } from '../lib/nexon/playstyle';
+import { risingStreak, isPeak, sparklinePoints } from '../lib/form-trend';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -528,6 +529,41 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   ok(me.player[0].spGrade === undefined, 'slim: player.spGrade 제거');
   ok(me.player[0].status.block === undefined, 'slim: player.status.block 제거');
   ok(me.player[0].status.defending === undefined, 'slim: player.status.defending 제거');
+}
+
+// ── 폼 추세(form-trend) ──────────────────────────────────────
+{
+  // risingStreak: 마지막 값 기준 연속 상승
+  eq(risingStreak([50, 55, 60]), 2, 'risingStreak: 2연속 상승');
+  eq(risingStreak([60, 55]), 0, 'risingStreak: 하락이면 0');
+  eq(risingStreak([50, 55, 55]), 0, 'risingStreak: 동률은 상승 아님');
+  eq(risingStreak([40, 50, 45, 48, 52]), 2, 'risingStreak: 마지막 구간만 카운트');
+  eq(risingStreak([70]), 0, 'risingStreak: 표본 1개면 0');
+  eq(risingStreak([]), 0, 'risingStreak: 빈 배열 0');
+
+  // isPeak: 마지막이 최고치(평평 제외)
+  ok(isPeak([50, 55, 60]), 'isPeak: 마지막이 최고');
+  ok(isPeak([60, 50, 60]), 'isPeak: 동률 최고 포함');
+  ok(!isPeak([60, 55, 58]), 'isPeak: 최고 아니면 false');
+  ok(!isPeak([55, 55, 55]), 'isPeak: 전부 동일(평평)은 false');
+  ok(!isPeak([80]), 'isPeak: 표본 1개면 false');
+
+  // sparklinePoints: 개수·범위·정규화
+  const pts = sparklinePoints([0, 50, 100], 200, 40);
+  eq(pts.split(' ').length, 3, 'sparklinePoints: 점 개수 = 값 개수');
+  const xs = pts.split(' ').map((p) => Number(p.split(',')[0]));
+  eq(xs[0], 0, 'sparklinePoints: 첫 x=0');
+  eq(xs[2], 200, 'sparklinePoints: 마지막 x=w');
+  const ys = pts.split(' ').map((p) => Number(p.split(',')[1]));
+  ok(ys[2] < ys[0], 'sparklinePoints: 큰 값일수록 y 작음(위로)');
+  eq(sparklinePoints([5], 200, 40), '', 'sparklinePoints: 표본<2면 빈 문자열');
+  ok(
+    sparklinePoints([50, 50, 50], 200, 40).split(' ').every((p) => {
+      const y = Number(p.split(',')[1]);
+      return Math.abs(y - 20) < 0.01; // 평평 → 중앙(h/2)
+    }),
+    'sparklinePoints: 평평하면 중앙 수평선'
+  );
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

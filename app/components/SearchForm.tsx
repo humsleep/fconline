@@ -87,7 +87,7 @@ export default function SearchForm({
             setValue(e.target.value);
             if (error) setError(false);
           }}
-          placeholder="구단주명 검색"
+          placeholder="구단주명 검색 (예: 밍벨로)"
           aria-label="구단주명 검색"
           aria-invalid={error || undefined}
           autoComplete="off"

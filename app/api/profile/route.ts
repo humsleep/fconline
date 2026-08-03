@@ -44,7 +44,7 @@ export async function GET() {
     // 미존재 — 빈 목록
   }
 
-  // 지난 방문 대비 delta — 최근 2개 스냅샷(RLS로 본인 것만)
+  // 지난 방문 대비 delta + 폼 추세 — 최근 14개 스냅샷(RLS로 본인 것만)
   let snapshot: {
     winRate: number;
     avgRating: number;
@@ -53,12 +53,14 @@ export async function GET() {
     deltaRating: number | null;
     prevDate: string | null;
   } | null = null;
+  // 오래된→최신 순서. "am I improving?" 스파크라인용 (마이그레이션 불필요 — 기존 컬럼 재사용)
+  let snapshots: { date: string; winRate: number; avgRating: number }[] = [];
   try {
     const { data: snaps } = await supabase
       .from('user_snapshots')
       .select('snapshot_date, win_rate, avg_rating, played')
       .order('snapshot_date', { ascending: false })
-      .limit(2);
+      .limit(14);
     if (snaps && snaps.length > 0) {
       const cur = snaps[0];
       const prev = snaps[1] ?? null;
@@ -70,12 +72,20 @@ export async function GET() {
         deltaRating: prev ? Math.round((Number(cur.avg_rating) - Number(prev.avg_rating)) * 100) / 100 : null,
         prevDate: prev ? (prev.snapshot_date as string) : null,
       };
+      // 응답은 오래된→최신으로 뒤집어 그래프가 좌→우 시간축이 되게
+      snapshots = [...snaps]
+        .reverse()
+        .map((s) => ({
+          date: s.snapshot_date as string,
+          winRate: s.win_rate,
+          avgRating: Number(s.avg_rating),
+        }));
     }
   } catch {
     // 테이블 미존재 — null
   }
 
-  return NextResponse.json({ profile: data ?? null, posts, squads, snapshot });
+  return NextResponse.json({ profile: data ?? null, posts, squads, snapshot, snapshots });
 }
 
 /** 닉네임 등록/변경 (upsert). */

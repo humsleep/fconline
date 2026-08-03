@@ -76,22 +76,23 @@ export default async function CommunityBoard({
         </div>
       </div>
 
-      {/* 유형 필터 — 한 줄 가로 스크롤 (sticky) */}
-      {(type !== null || count >= 5) && (
-        <div className="sticky top-14 z-30 mt-3 border-b border-line/60 bg-bg/90 backdrop-blur">
-          <div className="scrollbar-hide flex gap-1.5 overflow-x-auto px-4 py-2.5">
-            <TabChip label="전체" href={tabHref(null)} active={!type} />
-            {POST_TYPE_ORDER.map((t) => (
-              <TabChip
-                key={t}
-                label={`${POST_TYPES[t].emoji} ${POST_TYPES[t].label}`}
-                href={tabHref(t)}
-                active={type === t}
-              />
-            ))}
-          </div>
+      {/* 유형 필터 — 한 줄 가로 스크롤 (sticky).
+          항상 렌더한다 — 글이 적어도(콜드 스타트) 하단탭으로 들어온 사용자가
+          스쿼드 배틀·클럽원 모집 등 유형이 존재함을 발견해야 하기 때문.
+          ("좋은 기능을 숨기는 게 최악" — 표시 gate 제거) */}
+      <div className="sticky top-14 z-30 mt-3 border-b border-line/60 bg-bg/90 backdrop-blur">
+        <div className="scrollbar-hide flex gap-1.5 overflow-x-auto px-4 py-2.5">
+          <TabChip label="전체" href={tabHref(null)} active={!type} />
+          {POST_TYPE_ORDER.map((t) => (
+            <TabChip
+              key={t}
+              label={`${POST_TYPES[t].emoji} ${POST_TYPES[t].label}`}
+              href={tabHref(t)}
+              active={type === t}
+            />
+          ))}
         </div>
-      )}
+      </div>
 
       {/* 유형 설명 */}
       {type && (
