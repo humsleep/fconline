@@ -443,7 +443,7 @@ async function MatchSection({
       <PerfDiagnosisPanel summaries={summaries} />
 
       {/* 라이벌 — 자주 만난 상대 H2H */}
-      {rivals.length > 0 && <RivalsPanel rivals={rivals} />}
+      {rivals.length > 0 && <RivalsPanel rivals={rivals} nickname={nickname} />}
 
       {/* 경기 리스트 — 카드 개봉처럼 순차 리빌 */}
       <ul className="mt-4 space-y-1.5">
@@ -500,7 +500,7 @@ function PerfDiagnosisPanel({ summaries }: { summaries: MatchSummary[] }) {
   );
 }
 
-function RivalsPanel({ rivals }: { rivals: Rival[] }) {
+function RivalsPanel({ rivals, nickname }: { rivals: Rival[]; nickname: string }) {
   return (
     <section className="panel mt-2 p-4">
       <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
@@ -558,6 +558,14 @@ function RivalsPanel({ rivals }: { rivals: Rival[] }) {
       <p className="mt-2 text-[12px] text-muted">
         최근 불러온 경기 기준 · 2회 이상 만난 상대만 · 탭하면 그 구단주 전적으로 이동
       </p>
+      {/* 라이벌 카드 공유 — 천적/호구 서사로 지목·저격 → 지목당한 사람이 검색 유입(바이럴 훅) */}
+      <div className="mt-3">
+        <ShareCardButton
+          url={`/api/card/rival/${encodeURIComponent(nickname)}`}
+          filename={`fcscope-rival-${nickname}.png`}
+          label="⚔️ 라이벌 카드 저장 · 공유"
+        />
+      </div>
     </section>
   );
 }

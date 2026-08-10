@@ -59,6 +59,7 @@ export async function GET() {
     const { data: snaps } = await supabase
       .from('user_snapshots')
       .select('snapshot_date, win_rate, avg_rating, played')
+      .eq('user_id', user.id) // RLS로도 본인만 보이지만, posts/squads와 동일하게 명시적 소유자 필터(방어)
       .order('snapshot_date', { ascending: false })
       .limit(14);
     if (snaps && snaps.length > 0) {
