@@ -1,5 +1,15 @@
 # DEVLOG
 
+## 2026-08-09 — [인스타 런칭 P1·P2] GA4 퍼널 측정 + 라이브 검색 칩 + 홍보 QR
+
+- 인스타 홍보 대비 나머지 세 항목.
+- **P1 캠페인 측정**: `lib/client/analytics.ts` `track()`(GA4 커스텀 이벤트, `NEXT_PUBLIC_GA_ID` 미설정 시 no-op) + `captureUtm()`(랜딩 utm_* → localStorage + `campaign_landing`). `AnalyticsInit` layout 1회 마운트. `SearchForm`→`track('search',{from})`(닉네임 본문 PII 미전송), `ShareCardButton`→`track('card_share',{card})`. → IG→검색→카드공유 퍼널 GA4 측정.
+- **P1 착지 라이브**: `RecentSearches`(서버, 홈) — `search_log`(last_seen desc) 최근 검색 구단주 칩. 표본<3 숨김. 홈 ISR 1h라 시간당 ~1쿼리. `getRecentSearches()` 리더(guardDb, 실패 시 []).
+- **P2 홍보 QR**: `/qr` 운영자 도구 — 유입 소스별 UTM 프리셋(인스타 프로필/스토리/게시물·오프라인) QR 생성(클라 `qrcode`). robots 색인 제외.
+- 검증: `tsc` 0 · **202 PASS** · build ✓(`/qr` 정적) · Playwright 390px `/`·`/qr` 오버플로 0 · QR 데이터URL 렌더 · GA 미설정 시 gtag 에러 없음. PR #86
+- **의도적 보류**: 시즌 테마 카드 디자인 — 주관적 디자인 결정이라 추측 대신 별도 디자인 패스로 분리.
+- **⚠️ 운영자 조치**: GA4 측정을 실제로 보려면 Vercel 환경변수 `NEXT_PUBLIC_GA_ID` 설정 필요(미설정 시 이벤트는 조용히 무시). 인스타 링크엔 `?utm_source=instagram&utm_medium=bio` 등을 붙여 배포.
+
 ## 2026-08-08 — [인스타 런칭 P0] 인앱 웹뷰 로그인 안내 + 공유 카드 유입 CTA
 
 - 인스타그램 홍보 대비. 유입 퍼널: IG 링크 → 모바일 착지 → 검색 → 카드 생성 → 스토리 자랑+친구 태그 → 친구 유입 → 반복.
