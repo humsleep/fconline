@@ -2,6 +2,7 @@ import { getMatchDetailCached } from "@/lib/nexon/cached";
 import { getMatchTypeName } from "@/lib/nexon/meta";
 import { verdictFromMatch } from "@/lib/verdict";
 import { renderCard } from "@/lib/card/render";
+import { limitNexonFanout } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,14 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ matchId: string }> }
 ) {
+  // 캐시 미스 시 넥슨 호출 + match_cache 쓰기 유발 — 임의 matchId 반복 조회 방어
+  const rl = limitNexonFanout(req.headers, "card");
+  if (!rl.ok)
+    return new Response("rate limited", {
+      status: 429,
+      headers: { "Retry-After": String(rl.retryAfter) },
+    });
+
   const { matchId } = await params;
   const me = new URL(req.url).searchParams.get("me") ?? undefined;
 

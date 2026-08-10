@@ -102,7 +102,8 @@ export default function SquadBuilder() {
   // 검색 디바운스 (패널이 항상 열려 있으므로 query만 의존)
   useEffect(() => {
     const q = query.trim();
-    if (q.length < 1) {
+    if (q.length < 2) {
+      // 서버가 2자 미만은 빈 결과 → 헛된 요청 방지 (선수명은 보통 2자 이상)
       setResults([]);
       setSearching(false); // 입력 삭제 시 스피너 고착 방지
       setExpanded(null);

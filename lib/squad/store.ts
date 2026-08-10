@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 
 import { getAdmin } from '@/lib/supabase/admin';
 import { resolvePlayer } from '@/lib/nexon/players';
@@ -75,7 +76,9 @@ export async function saveSquad(input: {
   }
 }
 
-export async function getSquad(id: string): Promise<Squad | null> {
+// React cache()로 같은 요청(generateMetadata + 페이지 본문)의 중복 단건 조회를 1회로.
+// /community 의 getPost 와 동일 패턴 — squad 뷰마다 2회 나가던 SELECT를 1회로 줄인다.
+export const getSquad = cache(async (id: string): Promise<Squad | null> => {
   const db = getAdmin();
   if (!db) return null;
   try {
@@ -96,7 +99,7 @@ export async function getSquad(id: string): Promise<Squad | null> {
   } catch {
     return null;
   }
-}
+});
 
 /** 로그인 계정에 귀속된 내 스쿼드 목록(최신순) — /me 크로스기기 표시용. */
 export async function listUserSquads(

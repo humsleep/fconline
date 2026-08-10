@@ -19,7 +19,8 @@ export default function PlayerSearch() {
 
   useEffect(() => {
     const query = q.trim();
-    if (query.length < 1) {
+    if (query.length < 2) {
+      // 서버가 2자 미만은 빈 결과 → 헛된 요청 방지 (선수명은 보통 2자 이상)
       setHits([]);
       return;
     }

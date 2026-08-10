@@ -1,6 +1,4 @@
-import { getUserMatches } from "@/lib/nexon/api";
-import { getMatchDetailsBatch } from "@/lib/nexon/cached";
-import { NexonApiError } from "@/lib/nexon/client";
+import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import {
   aggregateReport,
   reportInsights,
@@ -30,15 +28,8 @@ export default async function ReportSection({
   ouid: string;
   matchType: number;
 }) {
-  let matchIds: string[] = [];
-  let listOk = true;
-  try {
-    matchIds = await getUserMatches(ouid, matchType, MATCH_COUNT);
-  } catch (err) {
-    if (!(err instanceof NexonApiError)) throw err;
-    listOk = false;
-  }
-  const details = await getMatchDetailsBatch(matchIds);
+  // getRecentMatchDetails(React cache)로 HeroBadges·타 섹션과 요청 내 조회 공유
+  const { listOk, details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT);
   const report = aggregateReport(details, ouid);
 
   if (report.played === 0) {

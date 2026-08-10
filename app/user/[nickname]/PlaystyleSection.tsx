@@ -1,6 +1,4 @@
-import { getUserMatches } from "@/lib/nexon/api";
-import { getMatchDetailsBatch } from "@/lib/nexon/cached";
-import { NexonApiError } from "@/lib/nexon/client";
+import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import ShotMap, { detectGoalCode, type ShotMapShot } from "@/app/components/ShotMap";
 import {
   aggregatePlaystyle,
@@ -24,13 +22,8 @@ export default async function PlaystyleSection({
   ouid: string;
   matchType: number;
 }) {
-  let matchIds: string[] = [];
-  try {
-    matchIds = await getUserMatches(ouid, matchType, MATCH_COUNT);
-  } catch (err) {
-    if (!(err instanceof NexonApiError)) throw err;
-  }
-  const details = await getMatchDetailsBatch(matchIds);
+  // getRecentMatchDetails(React cache)로 HeroBadges·타 섹션과 요청 내 조회 공유
+  const { details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT);
   const result = analyzePlaystyle(aggregatePlaystyle(details, ouid));
 
   // 누적 슛 히트맵 — 최근 경기 내 내 슛 위치 (아키타입 시각 근거)

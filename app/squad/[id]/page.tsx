@@ -8,6 +8,9 @@ import { SITE_URL } from "@/lib/site";
 import SquadPitch, { type Coord, type FilledSlot } from "../SquadPitch";
 import SeasonMix from "../SeasonMix";
 
+// 스쿼드 행은 저장 후 거의 불변 → ISR 1일. 크롤/재방문이 매번 DB를 때리지 않게 한다.
+export const revalidate = 86400;
+
 export async function generateMetadata({
   params,
 }: {

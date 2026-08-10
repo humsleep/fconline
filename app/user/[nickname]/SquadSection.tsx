@@ -1,8 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getUserMatches } from "@/lib/nexon/api";
-import { getMatchDetailsBatch } from "@/lib/nexon/cached";
-import { NexonApiError } from "@/lib/nexon/client";
+import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import { getPositionLabel } from "@/lib/nexon/meta";
 import { aggregatePlayers, type PlayerAggregate } from "@/lib/nexon/player-stats";
 import { getPlayerNames } from "@/lib/nexon/players";
@@ -27,14 +25,9 @@ export default async function SquadSection({
   matchType: number;
   nickname: string;
 }) {
-  let matchIds: string[] = [];
-  try {
-    matchIds = await getUserMatches(ouid, matchType, MATCH_COUNT);
-  } catch (err) {
-    if (!(err instanceof NexonApiError)) throw err;
-  }
-
-  const details = await getMatchDetailsBatch(matchIds);
+  // HeroBadges와 동일 요청 내에서 getRecentMatchDetails(React cache)로 공유 →
+  // 기본 탭(type=50) 뷰에서 매치 목록·상세 배치 조회 중복(넥슨+Supabase)을 0으로.
+  const { details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT);
   const all = aggregatePlayers(details, ouid);
   const players = all.filter((p) => p.games >= MIN_GAMES).slice(0, MAX_CARDS);
 

@@ -2,15 +2,24 @@ import { getMaxDivisions, getOuid } from "@/lib/nexon/api";
 import { getDivisionName, getMatchTypeName, divisionTierColor } from "@/lib/nexon/meta";
 import { renderCard } from "@/lib/card/render";
 import { formatAchievementDate } from "@/lib/format";
+import { limitNexonFanout } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /** 계급 인증 카드 — 이미 조회하는 maxdivision을 주역으로. 디시 '계급 인증글' 바이럴 포맷. */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ nickname: string }> }
 ) {
+  // 넥슨 조회 유발 — 형제 카드 라우트와 동일 IP rate limit (임의 닉 반복 조회 방어)
+  const rl = limitNexonFanout(req.headers, "card");
+  if (!rl.ok)
+    return new Response("rate limited", {
+      status: 429,
+      headers: { "Retry-After": String(rl.retryAfter) },
+    });
+
   const { nickname } = await params;
   let decoded: string;
   try {
