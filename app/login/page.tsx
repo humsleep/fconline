@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { safeNextPath } from '@/lib/security/safe-redirect';
+import { isInAppBrowser, inAppBrowserName } from '@/lib/client/in-app-browser';
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -12,6 +13,7 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inApp, setInApp] = useState<string | null>(null);
   const next = safeNextPath(searchParams.get('next'));
   const hasError = searchParams.get('error');
   const reason = searchParams.get('reason');
@@ -21,6 +23,12 @@ function LoginContent() {
     if (hasError === 'auth_failed')
       setError('로그인에 실패했습니다. 다시 시도해주세요.');
   }, [hasError]);
+
+  // 인스타/페북 인앱 웹뷰는 구글 OAuth를 막음 → 외부 브라우저 열기 안내
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    if (isInAppBrowser(ua)) setInApp(inAppBrowserName(ua));
+  }, []);
 
   useEffect(() => {
     if (!configured) return;
@@ -71,6 +79,15 @@ function LoginContent() {
           <p className="mt-3 rounded-lg bg-accent/10 px-3 py-2 text-sm font-semibold text-accent">
             글을 쓰려면 로그인이 필요해요
           </p>
+        )}
+        {inApp && (
+          <div className="mt-4 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-left text-sm">
+            <p className="font-bold text-gold">⚠️ {inApp} 앱 안에서는 구글 로그인이 막혀요</p>
+            <p className="mt-1 leading-relaxed text-muted">
+              우측 상단 <b className="text-ink">⋯ 메뉴 → “외부 브라우저로 열기”</b>(또는 Chrome·Safari로 열기)로
+              접속하면 로그인이 됩니다. 전적 검색·카드·랭커 메타는 지금 이대로도 모두 이용할 수 있어요.
+            </p>
+          </div>
         )}
         <p className="mt-2 text-sm text-muted">
           클럽 모집·커뮤니티 참여에는 로그인이 필요합니다. 전적 검색·진단은

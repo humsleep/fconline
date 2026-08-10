@@ -23,6 +23,7 @@ import { matchScore, recentScore, scoreTier } from '../lib/nexon/score';
 import { parseFeed } from '../lib/youtube/feed';
 import { playstyleOf } from '../lib/nexon/playstyle';
 import { risingStreak, isPeak, sparklinePoints } from '../lib/form-trend';
+import { isInAppBrowser, inAppBrowserName } from '../lib/client/in-app-browser';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -564,6 +565,26 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
     }),
     'sparklinePoints: 평평하면 중앙 수평선'
   );
+}
+
+// ── 인앱 웹뷰 감지 (in-app-browser) ──────────────────────────
+{
+  const IG = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605 Instagram 300.0';
+  const FB = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537 FBAN/EMA;FBAV/400';
+  const KAKAO = 'Mozilla/5.0 (iPhone) AppleWebKit/605 KAKAOTALK 10.0.0';
+  const CHROME = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605 CriOS/120 Mobile';
+  const SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605 Version/17 Safari';
+
+  ok(isInAppBrowser(IG), 'in-app: 인스타 감지');
+  ok(isInAppBrowser(FB), 'in-app: 페북 감지');
+  ok(isInAppBrowser(KAKAO), 'in-app: 카톡 감지');
+  ok(!isInAppBrowser(CHROME), 'in-app: 크롬은 아님');
+  ok(!isInAppBrowser(SAFARI), 'in-app: 사파리는 아님');
+  ok(!isInAppBrowser(null), 'in-app: null 안전');
+  ok(!isInAppBrowser(''), 'in-app: 빈 문자열 안전');
+  eq(inAppBrowserName(IG), '인스타그램', 'in-app: 이름 인스타');
+  eq(inAppBrowserName(KAKAO), '카카오톡', 'in-app: 이름 카톡');
+  eq(inAppBrowserName(CHROME), '앱', 'in-app: 미지정 폴백');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

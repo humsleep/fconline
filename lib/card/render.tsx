@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { loadKoreanFont } from "./font";
 import type { VerdictColor } from "@/lib/verdict";
+import { SITE_HOST } from "@/lib/site";
 
 // 9:16 세로 카드 (모바일 커뮤니티 업로드 최적 비율)
 const W = 1080;
@@ -42,7 +43,8 @@ export async function renderCard(
   const stampHex = data.stamp ? HEX[data.stamp.color] : HEX.lime;
 
   const fontText =
-    "FC SCOPE FC온라인 데이터 랩 " +
+    "FC SCOPE FC온라인 데이터 랩 내 전적도 검색 " +
+    SITE_HOST +
     data.kicker +
     data.title +
     (data.subtitle ?? "") +
@@ -165,9 +167,10 @@ export async function renderCard(
               color: "#8fa0b5",
             }}
           >
-            <span>FC온라인 데이터 랩</span>
+            {/* 리포스트된 카드가 곧 광고 — 실제 도메인 + "너도 검색" 유입 CTA */}
+            <span>내 전적도 검색 →</span>
             <span style={{ color: "#c8f542", fontWeight: 700 }}>
-              {data.footerUrl}
+              {SITE_HOST}
             </span>
           </div>
         </div>
