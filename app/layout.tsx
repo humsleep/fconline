@@ -7,6 +7,7 @@ import MobileTabBar from "./components/MobileTabBar";
 import ThemeToggle from "./components/ThemeToggle";
 import AuthButton from "./components/AuthButton";
 import NoticeBanner from "./components/NoticeBanner";
+import AnalyticsInit from "./components/AnalyticsInit";
 import { SITE_URL } from "@/lib/site";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
@@ -167,6 +168,7 @@ export default function RootLayout({
 
         <MobileTabBar />
         <Analytics />
+        <AnalyticsInit />
         {gaId && (
           <>
             <Script

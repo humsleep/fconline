@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { track } from "@/lib/client/analytics";
 
 const RECENT_KEY = "fcscope-recent-searches";
 const RECENT_MAX = 5;
@@ -63,6 +64,8 @@ export default function SearchForm({
     }
     setError(false);
     rememberSearch(nickname);
+    // 퍼널 측정: 검색 발생(닉네임 본문은 개인정보라 전송하지 않음 — 위치만)
+    track("search", { from: isLg ? "hero" : "nav" });
     startTransition(() => {
       router.push(`/user/${encodeURIComponent(nickname)}`);
     });
