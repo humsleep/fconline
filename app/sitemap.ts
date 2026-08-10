@@ -11,7 +11,11 @@ export const revalidate = 86400;
 const MAX_SQUADS = 2000;
 const MAX_POSTS = 2000;
 const MAX_PLAYERS = 8000; // 실선수 대표 카드 (사이트맵 5만 URL 상한 내)
-const MAX_USERS = 5000; // 최근 검색된 구단주 프로필
+// 최근 검색된 구단주 프로필. /user 는 동적 SSR이라 크롤 1회당 넥슨 ~36콜 + match_cache
+// 최대 30쓰기를 유발 → 수천 개를 sitemap으로 광고하면 크롤 패스마다 Supabase 쓰기가 폭증한다.
+// 가장 최근 활동 프로필만 노출해 크롤 증폭을 억제(나머지는 인바운드 링크로 자연 색인).
+// 부하 대비 SEO 상충 지점 — 값만 올리면 커버리지↑/부하↑로 되돌릴 수 있는 튜닝 노브.
+const MAX_USERS = 500;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [

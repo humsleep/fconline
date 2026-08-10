@@ -51,6 +51,17 @@ export function rateLimit(
   if (now - lastSweep > 60_000 || buckets.size > MAX_BUCKETS) {
     for (const [k, b] of buckets) if (b.resetAt <= now) buckets.delete(k);
     lastSweep = now;
+    // 만료 정리 후에도 상한 초과(분산 다-IP 폭주)면 실제로 축출한다 — 안 그러면
+    // 신선한 버킷이 안 지워져 map이 무한 성장하고, 상한 초과가 유지돼 매 호출이
+    // O(n) 전체 스캔을 반복한다. Map은 삽입 순서 보존 + 창 길이가 균일하므로
+    // 앞(=먼저 삽입=가장 곧 만료)부터 지우면 활성 리미터 영향이 최소가 된다.
+    if (buckets.size > MAX_BUCKETS) {
+      let excess = buckets.size - MAX_BUCKETS;
+      for (const k of buckets.keys()) {
+        buckets.delete(k);
+        if (--excess <= 0) break;
+      }
+    }
   }
 
   const b = buckets.get(bucketKey);
