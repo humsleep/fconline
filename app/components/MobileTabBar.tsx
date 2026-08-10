@@ -42,7 +42,10 @@ const TABS = [
   {
     href: "/meta",
     label: "픽 랭킹",
-    match: (p: string) => p.startsWith("/meta"),
+    // 메타 데이터 패밀리(픽 랭킹 /meta · 메타 리포트 /report · 선수 도감 /player)를 한 탭으로.
+    // /report/weekly 는 구글 유입 착지 페이지라 활성 표시가 없으면 '고아 페이지'로 느껴짐.
+    match: (p: string) =>
+      p.startsWith("/meta") || p.startsWith("/report") || p.startsWith("/player"),
     icon: (
       <>
         <path d="M5 20V10M12 20V4M19 20v-7" />
