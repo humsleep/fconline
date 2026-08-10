@@ -32,3 +32,22 @@ export function logNicknameSearch(nickname: string, userAgent?: string | null): 
     )
   );
 }
+
+/**
+ * 최근 검색된 구단주명 — 홈 "지금 검색되는" 라이브 칩(첫인상 활력).
+ * last_seen 내림차순. 실패/미설정/서킷오픈 시 빈 배열(렌더 안 막음).
+ * 홈은 ISR(revalidate=3600)이라 1시간 1쿼리 — 부하 무시 가능.
+ */
+export async function getRecentSearches(limit = 12): Promise<string[]> {
+  const db = getAdmin();
+  if (!db) return [];
+  const res = await guardDb(() =>
+    db
+      .from('search_log')
+      .select('nickname, last_seen')
+      .order('last_seen', { ascending: false })
+      .limit(limit)
+  );
+  if (!res || res.error || !res.data) return [];
+  return res.data.map((r) => r.nickname as string).filter(Boolean);
+}

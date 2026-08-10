@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import SearchForm from "./components/SearchForm";
 import FocusSearchCard from "./components/FocusSearchCard";
 import HomeDashboard from "./components/HomeDashboard";
+import RecentSearches from "./components/RecentSearches";
 import TodayMover from "./components/TodayMover";
 import YoutubeStrip from "./components/YoutubeStrip";
 import { FCONLINE_CHANNELS, FOOTBALL_CHANNELS } from "@/lib/youtube/channels";
@@ -123,6 +124,11 @@ export default function Home() {
 
         {/* 개인화 대시보드 — 방문 스트릭 + 즐겨찾기 (재방문 훅, localStorage) */}
         <HomeDashboard />
+
+        {/* 지금 검색되는 구단주 — 첫인상 활력 (서버, 데이터 없으면 미표시) */}
+        <Suspense fallback={null}>
+          <RecentSearches />
+        </Suspense>
       </section>
 
       {/* 오늘의 급상승 — 매일 바뀌는 데이터 훅 (없으면 자체 미표시) */}

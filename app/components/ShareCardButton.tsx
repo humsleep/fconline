@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@/lib/client/analytics";
+
+/** /api/card/<type>/... → <type> (측정용 카드 종류 라벨). 못 찾으면 'unknown'. */
+function cardType(url: string): string {
+  return url.match(/\/api\/card\/([^/?]+)/)?.[1] ?? "unknown";
+}
 
 /**
  * 결과를 9:16 PNG 카드로 저장/공유 (회의 핵심 CTA "이미지 저장 원탭").
- * 모바일: Web Share로 카톡·디시 등에 파일 공유. 미지원 시 다운로드.
+ * 모바일: Web Share로 인스타 스토리·카톡 등에 파일 공유. 미지원 시 다운로드.
  */
 export default function ShareCardButton({
   url,
@@ -20,6 +26,8 @@ export default function ShareCardButton({
   async function onClick() {
     if (busy) return;
     setBusy(true);
+    // 퍼널 측정: 카드 공유 시도(카드 종류별). 바이럴 루프 전환 지표.
+    track("card_share", { card: cardType(url) });
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error("card fetch failed");
