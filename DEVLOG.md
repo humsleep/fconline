@@ -1,5 +1,18 @@
 # DEVLOG
 
+## 2026-08-08 — [부하·남용 방어] rate-limit 공백 차단 + 크롤 증폭 완화 + 요청당 중복 조회 제거
+
+- 운영자 요청: 봇/크롤러/공격이 Vercel·Supabase에 일으키는 부하 방어 + 내부 낭비 제거. **SEO 크롤(저비용 페이지)은 유지.** 공격 표면·내부 부하 2-렌즈 병렬 감사.
+- **rate-limit 메모리 캡 실제화**(`lib/security/rate-limit.ts`): 5만 상한이 만료 버킷만 지워 분산 다-IP 폭주 시 map 무한 성장 + 매 호출 O(n) 재스캔 → 상한 초과 시 oldest-resetAt 실제 축출.
+- **카드 라우트 rate-limit 보강**: `card/rank`·`card/match`·`card/squad`에 `limitNexonFanout` 누락 → 임의 닉/matchId 반복으로 캐시미스 넥슨+DB쓰기 유발 가능했음. 형제 카드와 동일 버킷.
+- **`players/search` 방어**: IP rate-limit + `q≥2자`(1자는 2MB 인덱스 전체 매칭 CPU 소모) + 결과 24 cap. 클라(메타/스쿼드빌더)도 2자 발동으로 정렬.
+- **sitemap `MAX_USERS` 5000→500**: `/user`는 동적 SSR(콜드 크롤 1회당 넥슨 ~36콜+match_cache 최대 30쓰기)라 수천 광고 시 크롤 패스마다 Supabase 쓰기 폭증. 최근 활동만 노출(나머지 인바운드 링크 색인), 저비용 ISR 페이지는 유지. **튜닝 노브.**
+- **섹션 중복 조회 제거**: SquadSection/Playstyle/Report가 HeroBadges의 `getRecentMatchDetails`(`cache()`) 우회 → 기본 탭 뷰마다 30행 match_cache SELECT 중복. 공유 조회로 라우팅.
+- **`getSquad` `cache()` + `/squad/[id]` ISR(1일)**: metadata+본문 2회 SELECT→1회, 불변 행 매요청 조회→엣지 캐시.
+- 검증: `tsc` 0 · **192 PASS** · build ✓ · players/search 1자→빈결과·40/분 초과→429 확인.
+- **⚠️ 운영자 대시보드(코드 불가 — 서버리스 in-memory 리미터는 분산 공격에 약함)**: ①Vercel WAF rate-limit 규칙(`/api/card/*`·`/api/players/search`·`/api/squad/from-user`·`/api/profile/verify` 공격적, `/user/*`·OG 중간) ②검증 크롤러 allowlist(Googlebot/Naver Yeti는 rate-limit 예외 → SEO 보호) ③Attack Challenge Mode(공격 시만) ④Vercel 함수호출·Supabase write Spend/Usage 캡+알림.
+- **정상 방어 확인(수정 불필요)**: 크론 `CRON_SECRET` fail-closed, admin `isAdminEmail` fail-closed, 커뮤니티 쓰기 auth+RLS 간격제한, 이미지 프록시 param 검증+미들웨어 제외, ISR 페이지.
+
 ## 2026-08-07 — [주간 회의] 라이벌 H2H 공유 카드 + 메타 패밀리 탭 활성화 + 콜드 조회 안내
 
 - 주간 개선 회의(4렌즈 병렬: 모바일 발견성 / 첫방문 / 재방문·즐거움 / 정확성).
