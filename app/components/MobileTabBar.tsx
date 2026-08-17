@@ -8,7 +8,10 @@ const TABS = [
   {
     href: "/?focus=1",
     label: "전적 검색",
-    match: (p: string) => p === "/",
+    // 검색 결과 패밀리(전적 /user · 매치 /match · 이적시장 /market)에서도 활성.
+    // 모든 검색이 /user로 착지하는데 활성 탭이 없으면 '여기가 어디' 앵커가 사라진다.
+    match: (p: string) =>
+      p === "/" || p.startsWith("/user") || p.startsWith("/match") || p.startsWith("/market"),
     icon: (
       <>
         <circle cx="11" cy="11" r="6.5" />
