@@ -24,6 +24,7 @@ import { parseFeed } from '../lib/youtube/feed';
 import { playstyleOf } from '../lib/nexon/playstyle';
 import { risingStreak, isPeak, sparklinePoints } from '../lib/form-trend';
 import { isInAppBrowser, inAppBrowserName } from '../lib/client/in-app-browser';
+import { streakLabel, hasStreakHighlight } from '../lib/nexon/streak-card';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -585,6 +586,26 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   eq(inAppBrowserName(IG), '인스타그램', 'in-app: 이름 인스타');
   eq(inAppBrowserName(KAKAO), '카카오톡', 'in-app: 이름 카톡');
   eq(inAppBrowserName(CHROME), '앱', 'in-app: 미지정 폴백');
+}
+
+// ── 연승/폼 하이라이트 (streak-card) ─────────────────────────
+{
+  const base = { currentStreak: 0, bestWinStreak: 0, momentum: 0, winRate: 50 };
+  eq(streakLabel({ ...base, currentStreak: 5 }).text, '5연승 중', 'streak: 5연승');
+  eq(streakLabel({ ...base, currentStreak: 5 }).color, 'gold', 'streak: 5연승 gold');
+  eq(streakLabel({ ...base, currentStreak: 3 }).color, 'lime', 'streak: 3연승 lime');
+  eq(streakLabel({ ...base, currentStreak: -3 }).text, '3연패 중', 'streak: 3연패 텍스트');
+  eq(streakLabel({ ...base, currentStreak: -3 }).color, 'lose', 'streak: 3연패 lose');
+  eq(streakLabel({ ...base, momentum: 25 }).text, '폼 상승 중', 'streak: 모멘텀 상승');
+  eq(streakLabel({ ...base, momentum: -25 }).color, 'lose', 'streak: 모멘텀 하락 lose');
+  eq(streakLabel(base).text, '안정적인 폼', 'streak: 사건 없으면 안정');
+  ok(['▲', '▼', '◆'].includes(streakLabel(base).icon), 'streak: icon은 카드 안전 기호');
+
+  ok(hasStreakHighlight({ ...base, currentStreak: 2 }), 'highlight: 2연승 노출');
+  ok(hasStreakHighlight({ ...base, currentStreak: -2 }), 'highlight: 2연패 노출');
+  ok(hasStreakHighlight({ ...base, momentum: 20 }), 'highlight: 모멘텀 노출');
+  ok(!hasStreakHighlight(base), 'highlight: 사건 없으면 숨김');
+  ok(!hasStreakHighlight({ ...base, currentStreak: 1 }), 'highlight: 1연승은 숨김');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

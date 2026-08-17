@@ -112,6 +112,25 @@ export default function Home() {
           <SearchForm size="lg" />
         </div>
 
+        {/* 가치 칩 — 첫 3초 안에 "뭘 얻는지" + 닉네임 없이도 누를 곳. 늘 노출(데이터 무관).
+            모바일 폴드 아래로 밀리던 핵심 기능을 히어로에 즉시 표면화(발견성·첫방문). */}
+        <div className="rise rise-3 relative mt-3 flex w-full max-w-md flex-wrap justify-center gap-1.5">
+          {[
+            { label: "⚽ 전적·슛맵", href: "/?focus=1" },
+            { label: "🛡️ 스쿼드 빌더", href: "/squad" },
+            { label: "📊 픽 랭킹", href: "/meta" },
+            { label: "🔥 메타 리포트", href: "/report/weekly" },
+          ].map((c) => (
+            <Link
+              key={c.href}
+              href={c.href}
+              className="scoreboard inline-flex min-h-9 items-center rounded-full bg-surface-2 px-3 py-1.5 text-sm font-semibold text-ink transition-colors hover:bg-accent hover:text-accent-ink"
+            >
+              {c.label}
+            </Link>
+          ))}
+        </div>
+
         {/* 데모 구단주 — 검색할 닉네임이 없어도 바로 가치 체험 */}
         {DEMO_NICKNAME && (
           <Link

@@ -24,6 +24,7 @@ import RefreshButton from "@/app/components/RefreshButton";
 import FavoriteButton from "@/app/components/FavoriteButton";
 import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import { computeMatchPerfStats, diagnoseMatchPerf } from "@/lib/match/diagnosis";
+import { streakLabel, hasStreakHighlight } from "@/lib/nexon/streak-card";
 import { logNicknameSearch } from "@/lib/search-log";
 import { SITE_URL } from "@/lib/site";
 import { TONE_BG, TONE_DOT, TONE_TEXT } from "@/lib/diagnosis/tone";
@@ -331,6 +332,9 @@ async function MatchSection({
   // FC Scope 스코어 — 최근 경기 퍼포먼스 대표 점수 (정체성·매세션 재확인 훅)
   const score = recentScore(summaries);
   const tier = scoreTier(score);
+  // 연승/폼 하이라이트 — 살아있고 소멸하는 값(재방문·자랑 훅). 사건이 있을 때만 배너.
+  const perf = computeMatchPerfStats(summaries);
+  const streak = streakLabel(perf);
   // 본인 방문 스냅샷 기록용 평균 평점 (0 제외)
   const ratings = summaries.map((m) => m.me.rating).filter((r) => r > 0);
   const avgRating = ratings.length
@@ -355,6 +359,46 @@ async function MatchSection({
           잠시 후 새로고침하면 나머지도 반영됩니다.
         </p>
       )}
+      {/* 연승/폼 하이라이트 배너 — 사건 있을 때만(죽은 배너 방지). 카드로 자랑 → 유입 */}
+      {hasStreakHighlight(perf) && (
+        <section
+          className={`panel mt-4 flex items-center gap-3 px-4 py-3 ${
+            streak.color === "lose" ? "border-lose/40" : "border-win/40"
+          }`}
+        >
+          <span className="flex-none text-2xl" aria-hidden>
+            {perf.currentStreak <= -2 ? "🥶" : "🔥"}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p
+              className={`scoreboard text-lg font-bold ${
+                streak.color === "gold"
+                  ? "text-gold"
+                  : streak.color === "lose"
+                    ? "text-lose"
+                    : "text-win"
+              }`}
+            >
+              {streak.text}
+            </p>
+            <p className="text-[13px] text-muted">
+              {perf.currentStreak >= 2
+                ? "이 기세 이어가자 — 폼 카드로 자랑하기"
+                : perf.currentStreak <= -2
+                  ? "반등을 노려보자"
+                  : "폼이 올라오는 중"}
+            </p>
+          </div>
+          <div className="flex-none">
+            <ShareCardButton
+              url={`/api/card/streak/${encodeURIComponent(nickname)}`}
+              filename={`fcscope-streak-${nickname}.png`}
+              label="🔥 폼 카드"
+            />
+          </div>
+        </section>
+      )}
+
       {/* 폼 전광판 */}
       <section className="panel mt-4 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
