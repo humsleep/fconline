@@ -25,6 +25,7 @@ import { playstyleOf } from '../lib/nexon/playstyle';
 import { risingStreak, isPeak, sparklinePoints } from '../lib/form-trend';
 import { isInAppBrowser, inAppBrowserName } from '../lib/client/in-app-browser';
 import { streakLabel, hasStreakHighlight } from '../lib/nexon/streak-card';
+import { toNewBp, BP_REDENOM } from '../lib/nexon/bp';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -303,25 +304,27 @@ const NOW = Date.parse('2026-07-15T12:00:00Z');
 const trade = (daysAgo: number, value: number, grade = 1, spid = 251000001): TradeRecord =>
   ({ tradeDate: new Date(NOW - daysAgo * 86400000).toISOString(), saleSn: `${daysAgo}-${value}-${spid}`, spid, grade, value }) as TradeRecord;
 
-// 큰손 흑자: 1경 이상 지출 + 그 이상 수입 (요즘 시세 스케일)
+// 화폐개혁(옛 1억 BP = 새 1 BP) 후 새 화폐 스케일. computeMarketStats는 이미 환산된
+// 값(getUserTrades 경계에서 /1e8)을 받으므로 테스트도 새 스케일 값으로 구성.
+// 큰손 흑자: 1억(새 화폐, = GYEONG) 이상 지출 + 그 이상 수입.
 const whale = computeMarketStats(
-  [trade(1, 7e15, 8), trade(2, 5e15, 9)],
-  [trade(0, 9e15), trade(3, 5e15)],
+  [trade(1, 7e7, 8), trade(2, 5e7, 9)],
+  [trade(0, 9e7), trade(3, 5e7)],
   NOW
 );
-eq(diagnoseMarket(whale).type?.id, 't-whale-surplus', '큰손 흑자 유형 판정(1경+)');
+eq(diagnoseMarket(whale).type?.id, 't-whale-surplus', '큰손 흑자 유형 판정(1억+ 새 화폐)');
 ok(diagnoseMarket(whale).notes.length > 0 && diagnoseMarket(whale).notes.length <= 4, '코멘트 1~4개');
 
-// 1경 미만은 큰손 아님 — 새 스케일 회귀 방지 (5000조 지출은 whale 미달)
+// 1억(새 화폐) 미만은 큰손 아님 — 재denomination 회귀 방지 (5,000만 지출은 whale 미달)
 const midSpender = computeMarketStats(
-  [trade(1, 3e15), trade(2, 2e15)],
-  [trade(0, 1e15)],
+  [trade(1, 3e7), trade(2, 2e7)],
+  [trade(0, 1e7)],
   NOW
 );
 ok(
   diagnoseMarket(midSpender).type?.id !== 't-whale-surplus' &&
     diagnoseMarket(midSpender).type?.id !== 't-whale-deficit',
-  '5000조 지출은 큰손 유형 아님(1경 기준)'
+  '5,000만(새 화폐) 지출은 큰손 유형 아님(1억 기준)'
 );
 
 // 빈 데이터 → 진단 없음
@@ -332,8 +335,8 @@ const tiny = computeMarketStats([trade(0, 5000)], [], NOW);
 ok(diagnoseMarket(tiny).type !== null, '소액 1건도 유형 폴백 매칭');
 
 // 지표 계산 검증
-eq(whale.totalBuy, 1.2e16, 'totalBuy 합산');
-eq(whale.net, 2e15, 'net 계산');
+eq(whale.totalBuy, 1.2e8, 'totalBuy 합산');
+eq(whale.net, 2e7, 'net 계산');
 eq(whale.highGradeBuys, 2, '8강 이상 영입 수');
 eq(tiny.daysSinceLast, 0, 'daysSinceLast 오늘 = 0');
 
@@ -606,6 +609,18 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   ok(hasStreakHighlight({ ...base, momentum: 20 }), 'highlight: 모멘텀 노출');
   ok(!hasStreakHighlight(base), 'highlight: 사건 없으면 숨김');
   ok(!hasStreakHighlight({ ...base, currentStreak: 1 }), 'highlight: 1연승은 숨김');
+}
+
+// ── 화폐개혁 환산 (bp.toNewBp) ───────────────────────────────
+{
+  eq(BP_REDENOM, 100_000_000, 'BP_REDENOM = 1억');
+  eq(toNewBp(100_000_000), 1, '옛 1억 BP → 새 1 BP');
+  eq(toNewBp(1e12), 1e4, '옛 1조 → 새 1만 (JO↔만)');
+  eq(toNewBp(1e16), 1e8, '옛 1경 → 새 1억 (GYEONG↔억)');
+  eq(toNewBp(50_000_000), 0.5, '옛 5,000만 → 새 0.5 (소수 허용)');
+  eq(toNewBp(0), 0, '0 안전');
+  eq(toNewBp(null), 0, 'null 안전');
+  eq(toNewBp(undefined), 0, 'undefined 안전');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
