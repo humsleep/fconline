@@ -9,7 +9,8 @@ import type { MatchDetail } from '../lib/nexon/types';
 import { pickKeyPlayers, topSeason } from '../lib/squad/card-badges';
 import { getFormation, formationsByLine } from '../lib/squad/formations';
 import { aggregateReport, reportInsights, computeWeekly } from '../lib/nexon/report';
-import { summarizeMatch, aggregate, topRivals } from '../lib/nexon/summary';
+import { summarizeMatch, aggregate, topRivals, pickNemesis } from '../lib/nexon/summary';
+import type { Rival } from '../lib/nexon/summary';
 import { verdictFromRating, verdictFromMatch } from '../lib/verdict';
 import { rateLimit, clientIp } from '../lib/security/rate-limit';
 import { hashIp, clientIpFrom } from '../lib/security/ip-hash';
@@ -621,6 +622,25 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   eq(toNewBp(0), 0, '0 안전');
   eq(toNewBp(null), 0, 'null 안전');
   eq(toNewBp(undefined), 0, 'undefined 안전');
+}
+
+// ── 천적 선정 (pickNemesis) ──────────────────────────────────
+{
+  const R = (nickname: string, win: number, lose: number, games = win + lose): Rival =>
+    ({ nickname, win, draw: 0, lose, games, goalsFor: 0, goalsAgainst: 0 });
+  eq(pickNemesis([R('A', 2, 5)])?.nickname, 'A', 'nemesis: 2승5패는 천적');
+  eq(pickNemesis([R('A', 4, 5)]), null, 'nemesis: 1점차는 천적 아님(diff>-2)');
+  eq(pickNemesis([R('A', 1, 1, 2)]), null, 'nemesis: 3경기 미만 제외');
+  eq(pickNemesis([R('A', 3, 3)]), null, 'nemesis: 동률은 천적 아님');
+  // 가장 크게 지는 상대 우선
+  eq(pickNemesis([R('A', 2, 5), R('B', 1, 6)])?.nickname, 'B', 'nemesis: 최대 열세 우선');
+  // 동률 열세면 최다 대전
+  eq(
+    pickNemesis([R('A', 2, 5, 7), R('B', 3, 6, 12)])?.nickname,
+    'B',
+    'nemesis: 동일 열세면 최다 대전'
+  );
+  eq(pickNemesis([]), null, 'nemesis: 빈 배열 null');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

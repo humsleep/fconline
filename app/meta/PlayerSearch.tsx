@@ -17,6 +17,17 @@ export default function PlayerSearch() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // ?q= 프리필 — 전적 not-found("손흥민")에서 선수 도감으로 넘어온 유입을 바로 검색.
+  // useSearchParams 대신 window로 읽어 ISR/Suspense 영향 없음. 마운트 1회.
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("q");
+      if (p && p.trim().length >= 2) setQ(p.trim());
+    } catch {
+      // 무시
+    }
+  }, []);
+
   useEffect(() => {
     const query = q.trim();
     if (query.length < 2) {

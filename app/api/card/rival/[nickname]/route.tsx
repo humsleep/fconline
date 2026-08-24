@@ -1,6 +1,6 @@
 import { getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
-import { summarizeMatch, topRivals, type MatchSummary, type Rival } from "@/lib/nexon/summary";
+import { summarizeMatch, topRivals, pickNemesis, type MatchSummary, type Rival } from "@/lib/nexon/summary";
 import { renderCard } from "@/lib/card/render";
 import { limitNexonFanout } from "@/lib/security/rate-limit";
 
@@ -24,9 +24,7 @@ function pickRival(rivals: Rival[], vs: string | null): Rival | null {
     const hit = rivals.find((r) => r.nickname === vs);
     if (hit) return hit;
   }
-  const nemesis = rivals
-    .filter((r) => r.games >= 3 && r.win - r.lose <= -2)
-    .sort((a, b) => a.win - a.lose - (b.win - b.lose))[0];
+  const nemesis = pickNemesis(rivals);
   if (nemesis) return nemesis;
   const prey = rivals
     .filter((r) => r.games >= 3 && r.win - r.lose >= 2)

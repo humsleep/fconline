@@ -9,7 +9,7 @@ import { DEMO_NICKNAME } from "@/lib/demo";
 import { getMaxDivisions, getOuid, getUserBasic } from "@/lib/nexon/api";
 import { isMaintenance, isNotConfigured, isPaused, isRateLimited, isTimeout, isUserNotFound } from "@/lib/nexon/client";
 import { MATCH_TABS, getDivisionName, getMatchTypeName } from "@/lib/nexon/meta";
-import { aggregate, summarizeMatch, topRivals, type MatchSummary, type Rival } from "@/lib/nexon/summary";
+import { aggregate, summarizeMatch, topRivals, pickNemesis, type MatchSummary, type Rival } from "@/lib/nexon/summary";
 import { matchScore, recentScore, scoreTier } from "@/lib/nexon/score";
 import { formatAchievementDate, formatMatchDate } from "@/lib/format";
 import SquadSection from "./SquadSection";
@@ -329,6 +329,8 @@ async function MatchSection({
   const rec = aggregate(summaries);
   const recent10 = summaries.slice(0, 10);
   const rivals = topRivals(summaries);
+  // 천적 — 매 방문 최근 경기로 재계산되는 살아있는 H2H(복수전 재방문 훅). 있을 때만 배너.
+  const nemesis = pickNemesis(rivals);
   // FC Scope 스코어 — 최근 경기 퍼포먼스 대표 점수 (정체성·매세션 재확인 훅)
   const score = recentScore(summaries);
   const tier = scoreTier(score);
@@ -366,8 +368,10 @@ async function MatchSection({
             streak.color === "lose" ? "border-lose/40" : "border-win/40"
           }`}
         >
+          {/* 이모지·부제는 streak.color(라벨과 동일 소스)로 판단 — currentStreak만 보면
+              momentum 하락(연승 (-2,2)) 케이스에서 "폼 하락 중"+🔥+"상승 중" 모순이 났음 */}
           <span className="flex-none text-2xl" aria-hidden>
-            {perf.currentStreak <= -2 ? "🥶" : "🔥"}
+            {streak.color === "lose" ? "🥶" : "🔥"}
           </span>
           <div className="min-w-0 flex-1">
             <p
@@ -382,10 +386,10 @@ async function MatchSection({
               {streak.text}
             </p>
             <p className="text-[13px] text-muted">
-              {perf.currentStreak >= 2
-                ? "이 기세 이어가자 — 폼 카드로 자랑하기"
-                : perf.currentStreak <= -2
-                  ? "반등을 노려보자"
+              {streak.color === "lose"
+                ? "반등을 노려보자"
+                : perf.currentStreak >= 2
+                  ? "이 기세 이어가자 — 폼 카드로 자랑하기"
                   : "폼이 올라오는 중"}
             </p>
           </div>
@@ -398,6 +402,9 @@ async function MatchSection({
           </div>
         </section>
       )}
+
+      {/* 천적 복수전 배너 — 폴드 아래 묻혀 있던 nemesis를 상단 이벤트로 승격 (재방문·저격 훅) */}
+      {nemesis && <RevengeBanner rival={nemesis} nickname={nickname} />}
 
       {/* 폼 전광판 */}
       <section className="panel mt-4 px-5 py-4">
@@ -502,6 +509,31 @@ async function MatchSection({
         ))}
       </ul>
     </>
+  );
+}
+
+/** 천적 복수전 배너 — "당신의 천적 OOO, 아직 N점 뒤" + 저격 공유 카드(?vs=). */
+function RevengeBanner({ rival, nickname }: { rival: Rival; nickname: string }) {
+  const gap = rival.lose - rival.win; // 뒤진 점수
+  return (
+    <section className="panel mt-4 flex items-center gap-3 border-lose/40 px-4 py-3">
+      <span className="flex-none text-2xl" aria-hidden>🎯</span>
+      <div className="min-w-0 flex-1">
+        <p className="scoreboard text-lg font-bold text-lose">
+          천적 {rival.nickname}
+        </p>
+        <p className="text-[13px] text-muted">
+          {rival.win}승 {rival.lose}패 · 아직 <b className="text-ink">{gap}점</b> 뒤 — 복수하러 가자
+        </p>
+      </div>
+      <div className="flex-none">
+        <ShareCardButton
+          url={`/api/card/rival/${encodeURIComponent(nickname)}?vs=${encodeURIComponent(rival.nickname)}`}
+          filename={`fcscope-rival-${nickname}.png`}
+          label="🎯 복수전 카드"
+        />
+      </div>
+    </section>
   );
 }
 
@@ -813,10 +845,18 @@ function ErrorState({ err, nickname }: { err: unknown; nickname: string }) {
         // 오타 회복: 닉네임 프리필 재검색 (재입력 마찰 제거)
         <div className="mt-8 w-full max-w-md">
           <SearchForm size="lg" defaultValue={nickname} />
+          {/* 선수명 의도로 막다른 길에 온 경우 — 선수 도감으로 넘겨 발견성 회복
+              (구단주 검색이 "손흥민" 같은 선수명이면 여기로 오게 됨) */}
+          <Link
+            href={`/meta?q=${encodeURIComponent(nickname)}`}
+            className="mt-3 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent underline underline-offset-2"
+          >
+            혹시 선수를 찾으세요? ‘{nickname}’ 선수 도감에서 검색 →
+          </Link>
           {DEMO_NICKNAME && (
             <Link
               href={`/user/${encodeURIComponent(DEMO_NICKNAME)}`}
-              className="mt-3 inline-block text-sm text-muted underline underline-offset-2"
+              className="mt-2 inline-block text-sm text-muted underline underline-offset-2"
             >
               또는 예시 리포트 구경하기 →
             </Link>
