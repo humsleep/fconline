@@ -117,18 +117,27 @@ export default function Home() {
         <div className="rise rise-3 relative mt-3 flex w-full max-w-md flex-wrap justify-center gap-1.5">
           {[
             { label: "⚽ 전적·슛맵", href: "/?focus=1" },
+            { label: "🔎 선수 검색", href: "/meta" },
             { label: "🛡️ 스쿼드 빌더", href: "/squad" },
             { label: "📊 픽 랭킹", href: "/meta" },
             { label: "🔥 메타 리포트", href: "/report/weekly" },
-          ].map((c) => (
-            <Link
-              key={c.href}
-              href={c.href}
-              className="scoreboard inline-flex min-h-9 items-center rounded-full bg-surface-2 px-3 py-1.5 text-sm font-semibold text-ink transition-colors hover:bg-accent hover:text-accent-ink"
-            >
-              {c.label}
-            </Link>
-          ))}
+          ].map((c) => {
+            // 터치 타깃 44px(min-h-11) — 이전 min-h-9(36px)는 접근성 규칙 위반이었음
+            const cls =
+              "scoreboard inline-flex min-h-11 items-center rounded-full bg-surface-2 px-3 py-1.5 text-sm font-semibold text-ink transition-colors hover:bg-accent hover:text-accent-ink";
+            // 전적 칩은 히어로 검색창으로 스크롤+포커스. 홈에서 /?focus=1 은 같은 라우트 쿼리
+            // 변경이라 SearchForm이 remount 안 돼 focus effect가 안 돌아 '먹통'이 됨 →
+            // FEATURES 카드와 동일하게 FocusSearchCard(onClick)로 처리.
+            return c.href === "/?focus=1" ? (
+              <FocusSearchCard key={c.label} className={cls}>
+                {c.label}
+              </FocusSearchCard>
+            ) : (
+              <Link key={c.label} href={c.href} className={cls}>
+                {c.label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* 데모 구단주 — 검색할 닉네임이 없어도 바로 가치 체험 */}

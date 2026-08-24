@@ -90,6 +90,17 @@ export function topRivals(summaries: MatchSummary[], limit = 6): Rival[] {
     .slice(0, limit);
 }
 
+/**
+ * 천적 — 3경기 이상 만났고 2승 이상 뒤진 상대 중 가장 크게 지고 있는 1명.
+ * 동률이면 최다 대전. 없으면 null. (RivalsPanel 인라인 규칙 + rival 카드 pickRival과 공용)
+ */
+export function pickNemesis(rivals: Rival[]): Rival | null {
+  const cands = rivals
+    .filter((r) => r.games >= 3 && r.win - r.lose <= -2)
+    .sort((a, b) => a.win - a.lose - (b.win - b.lose) || b.games - a.games);
+  return cands[0] ?? null;
+}
+
 export function aggregate(matches: MatchSummary[]): RecordSummary {
   const played = matches.length;
   let win = 0;

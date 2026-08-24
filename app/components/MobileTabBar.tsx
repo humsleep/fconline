@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// 탭 4개: 검색(홈 히어로 포커스) · 스쿼드 · 커뮤니티 · 픽 랭킹
+// 탭 5개: 전적 검색(홈 히어로 포커스) · 스쿼드 · 커뮤니티 · 픽 랭킹 · 내 정보
 const TABS = [
   {
     href: "/?focus=1",
