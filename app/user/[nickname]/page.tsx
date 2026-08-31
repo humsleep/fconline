@@ -25,6 +25,7 @@ import FavoriteButton from "@/app/components/FavoriteButton";
 import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import { computeMatchPerfStats, diagnoseMatchPerf } from "@/lib/match/diagnosis";
 import { streakLabel, hasStreakHighlight } from "@/lib/nexon/streak-card";
+import { weeklyRecap } from "@/lib/nexon/weekly";
 import { logNicknameSearch } from "@/lib/search-log";
 import { SITE_URL } from "@/lib/site";
 import { TONE_BG, TONE_DOT, TONE_TEXT } from "@/lib/diagnosis/tone";
@@ -331,6 +332,8 @@ async function MatchSection({
   const rivals = topRivals(summaries);
   // 천적 — 매 방문 최근 경기로 재계산되는 살아있는 H2H(복수전 재방문 훅). 있을 때만 배너.
   const nemesis = pickNemesis(rivals);
+  // 이번 주 성적표 — 매주 돌아올 정기 결산 훅(추가 조회 0, 최근 7일 윈도잉).
+  const week = weeklyRecap(summaries);
   // FC Scope 스코어 — 최근 경기 퍼포먼스 대표 점수 (정체성·매세션 재확인 훅)
   const score = recentScore(summaries);
   const tier = scoreTier(score);
@@ -361,6 +364,9 @@ async function MatchSection({
           잠시 후 새로고침하면 나머지도 반영됩니다.
         </p>
       )}
+      {/* 이번 주 성적표 — 매주 돌아올 정기 결산(주 3경기 이상일 때만). 공유 카드로 자랑 */}
+      {week.games >= 3 && <WeeklyRecapBanner week={week} nickname={nickname} />}
+
       {/* 연승/폼 하이라이트 배너 — 사건 있을 때만(죽은 배너 방지). 카드로 자랑 → 유입 */}
       {hasStreakHighlight(perf) && (
         <section
@@ -509,6 +515,43 @@ async function MatchSection({
         ))}
       </ul>
     </>
+  );
+}
+
+/** 이번 주 성적표 배너 — 최근 7일 W-L-D·평균 스코어 요약 + 주간 카드 공유(정기 재방문 훅). */
+function WeeklyRecapBanner({
+  week,
+  nickname,
+}: {
+  week: import("@/lib/nexon/weekly").WeeklyRecap;
+  nickname: string;
+}) {
+  const good = week.winRate >= 50;
+  return (
+    <section className="panel mt-4 flex items-center gap-3 border-accent/30 px-4 py-3">
+      <span className="flex-none text-2xl" aria-hidden>📅</span>
+      <div className="min-w-0 flex-1">
+        <p className="scoreboard text-[12px] font-bold tracking-[0.2em] text-muted">
+          이번 주 성적표 · 최근 7일 {week.games}경기
+        </p>
+        <p className="mt-0.5 text-lg font-bold">
+          <span className={good ? "text-win" : "text-lose"}>
+            {week.win}승 {week.draw}무 {week.lose}패
+          </span>
+          <span className="ml-2 text-sm font-semibold text-muted">
+            승률 {week.winRate}% · 평균 <span className="text-gold">{week.avgScore.toFixed(1)}</span>
+            {week.bestStreak >= 2 && <span className="ml-1 text-win">· 🔥{week.bestStreak}연승</span>}
+          </span>
+        </p>
+      </div>
+      <div className="flex-none">
+        <ShareCardButton
+          url={`/api/card/weekly/${encodeURIComponent(nickname)}`}
+          filename={`fcscope-weekly-${nickname}.png`}
+          label="📅 주간 카드"
+        />
+      </div>
+    </section>
   );
 }
 
