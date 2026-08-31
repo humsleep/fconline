@@ -94,6 +94,18 @@ export default async function SquadSection({
 
   return (
     <>
+      {/* 이 스쿼드를 빌더로 바로 열기 — 빌더는 닉네임 임포트를 지원하지만 그동안 이 화면에서
+          진입 경로가 없었다(숨은 기능). ?owner= 딥링크로 한 탭에 연결. */}
+      <Link
+        href={`/squad?owner=${encodeURIComponent(nickname)}`}
+        className="panel mt-4 flex min-h-11 items-center justify-between gap-2 px-4 py-2.5 transition-colors hover:border-accent"
+      >
+        <span className="text-sm font-semibold text-ink">
+          🛡️ 이 스쿼드 그대로 빌더로 열기
+        </span>
+        <span className="scoreboard flex-none text-sm font-bold text-accent">열기 →</span>
+      </Link>
+
       {clinic && (
         <SquadClinic result={clinic} names={names} matches={details.length} />
       )}

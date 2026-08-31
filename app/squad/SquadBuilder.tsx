@@ -92,6 +92,17 @@ export default function SquadBuilder() {
     })();
   }, [searchParams]);
 
+  // ?owner={nickname} — 전적 페이지 "이 스쿼드 빌더로 열기"에서 딥링크 진입.
+  // 이미 있는 loadMySquad(/api/squad/from-user)를 재사용 (닉 인자로 setState 레이스 회피).
+  useEffect(() => {
+    const owner = searchParams.get("owner");
+    if (!owner || loadedRef.current) return;
+    loadedRef.current = true;
+    setMineNick(owner);
+    void loadMySquad(owner);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // 모바일(검색 패널이 피치 아래에 쌓이는 폭) 여부
   const isStacked = () =>
     typeof window !== "undefined" &&
@@ -289,8 +300,8 @@ export default function SquadBuilder() {
     }
   }
 
-  async function loadMySquad() {
-    const nick = mineNick.trim();
+  async function loadMySquad(nickArg?: string) {
+    const nick = (nickArg ?? mineNick).trim();
     if (!nick || mineLoading) return;
     setMineLoading(true);
     setError("");
@@ -425,7 +436,7 @@ export default function SquadBuilder() {
             aria-label="구단주명"
           />
           <button
-            onClick={loadMySquad}
+            onClick={() => loadMySquad()}
             disabled={mineLoading || !mineNick.trim()}
             className="scoreboard h-11 flex-none rounded-lg bg-surface-2 px-3 text-sm font-bold text-ink transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-40"
           >

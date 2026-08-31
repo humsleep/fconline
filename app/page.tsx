@@ -116,11 +116,14 @@ export default function Home() {
             모바일 폴드 아래로 밀리던 핵심 기능을 히어로에 즉시 표면화(발견성·첫방문). */}
         <div className="rise rise-3 relative mt-3 flex w-full max-w-md flex-wrap justify-center gap-1.5">
           {[
+            // 5칸을 서로 다른 목적지로 — 이전엔 선수 검색·픽 랭킹이 둘 다 /meta라 중복.
+            // 선수 검색은 픽 랭킹(/meta) 안 검색창 + not-found CTA로 도달, 대신 히어로엔
+            // 없던 뚜렷한 기능(스쿼드 배틀)을 노출해 제품 폭을 넓힌다.
             { label: "⚽ 전적·슛맵", href: "/?focus=1" },
-            { label: "🔎 선수 검색", href: "/meta" },
             { label: "🛡️ 스쿼드 빌더", href: "/squad" },
-            { label: "📊 픽 랭킹", href: "/meta" },
+            { label: "📊 픽 랭킹·선수", href: "/meta" },
             { label: "🔥 메타 리포트", href: "/report/weekly" },
+            { label: "⚔️ 스쿼드 배틀", href: "/community?type=squad_battle" },
           ].map((c) => {
             // 터치 타깃 44px(min-h-11) — 이전 min-h-9(36px)는 접근성 규칙 위반이었음
             const cls =

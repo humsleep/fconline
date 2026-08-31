@@ -27,6 +27,7 @@ import { risingStreak, isPeak, sparklinePoints } from '../lib/form-trend';
 import { isInAppBrowser, inAppBrowserName } from '../lib/client/in-app-browser';
 import { streakLabel, hasStreakHighlight } from '../lib/nexon/streak-card';
 import { toNewBp, BP_REDENOM } from '../lib/nexon/bp';
+import { weeklyRecap } from '../lib/nexon/weekly';
 import type { MatchSummary } from '../lib/nexon/summary';
 import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
@@ -641,6 +642,44 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
     'nemesis: 동일 열세면 최다 대전'
   );
   eq(pickNemesis([]), null, 'nemesis: 빈 배열 null');
+}
+
+// ── 주간 결산 (weeklyRecap) ──────────────────────────────────
+{
+  const NOW = Date.parse('2026-08-31T12:00:00Z');
+  const wm = (daysAgo: number, result: '승' | '무' | '패', myGoals = 1, oppGoals = 0, forfeit = false): MatchSummary => ({
+    matchId: `${daysAgo}-${result}-${myGoals}`,
+    matchDate: new Date(NOW - daysAgo * 86400000).toISOString().replace('Z', ''),
+    matchType: 50,
+    result,
+    forfeit,
+    me: { nickname: 'me', goals: myGoals, possession: 50, rating: 7 },
+    opponent: { nickname: 'opp', goals: oppGoals },
+  });
+
+  // 최근 7일 윈도잉: 8일 전 경기는 제외
+  const r = weeklyRecap([wm(1, '승', 3, 1), wm(2, '승', 2, 0), wm(3, '패', 0, 2), wm(8, '승', 5, 0)], NOW);
+  eq(r.games, 3, 'weekly: 7일 밖(8일 전) 제외');
+  eq(r.win, 2, 'weekly: 승 집계');
+  eq(r.lose, 1, 'weekly: 패 집계');
+  eq(r.winRate, 67, 'weekly: 승률 반올림(2/3)');
+  eq(r.goalsFor, 5, 'weekly: 득점 합(3+2+0)');
+  eq(r.goalsAgainst, 3, 'weekly: 실점 합(1+0+2)');
+
+  // 연승은 시간순으로 계산 (최신순 입력이어도)
+  const streak = weeklyRecap([wm(1, '승'), wm(2, '승'), wm(3, '승'), wm(4, '패')], NOW);
+  eq(streak.bestStreak, 3, 'weekly: 주간 최다 연승(시간순)');
+
+  // 빈 주
+  const empty = weeklyRecap([wm(10, '승'), wm(20, '패')], NOW);
+  eq(empty.games, 0, 'weekly: 최근 7일 경기 없으면 0');
+  eq(empty.winRate, 0, 'weekly: 빈 주 승률 0');
+  eq(empty.best, null, 'weekly: 빈 주 최고 경기 null');
+
+  // 몰수는 최고 경기 후보에서 제외(집계엔 포함)
+  const ff = weeklyRecap([wm(1, '승', 9, 0, true), wm(2, '승', 2, 1, false)], NOW);
+  eq(ff.games, 2, 'weekly: 몰수도 경기수 포함');
+  ok(ff.best !== null && ff.best.matchId === '2-승-2', 'weekly: 최고 경기는 몰수 제외');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
