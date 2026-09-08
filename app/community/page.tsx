@@ -10,6 +10,7 @@ import {
   type PostType,
 } from '@/lib/community/post-types';
 import { formatRelativeKr } from '@/lib/format';
+import BlockedAuthor from '@/app/components/BlockedAuthor';
 
 export const metadata: Metadata = {
   title: '커뮤니티',
@@ -126,7 +127,8 @@ export default async function CommunityBoard({
               const commentCount = p.comment_count ?? 0;
               const preview = p.body.replace(/\s+/g, ' ').trim();
               return (
-                <li key={p.id}>
+                <BlockedAuthor key={p.id} authorId={p.author_id}>
+                <li>
                   <Link
                     href={`/community/${p.id}`}
                     className="panel block p-4 transition active:scale-[0.99] hover:border-accent"
@@ -214,6 +216,7 @@ export default async function CommunityBoard({
                     </div>
                   </Link>
                 </li>
+                </BlockedAuthor>
               );
             })}
           </ul>

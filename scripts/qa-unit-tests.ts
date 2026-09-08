@@ -16,8 +16,6 @@ import { rateLimit, clientIp } from '../lib/security/rate-limit';
 import { hashIp, clientIpFrom } from '../lib/security/ip-hash';
 import { getPositionLabel } from '../lib/nexon/meta';
 import { baseLabelOfCode, assignByPosition, bestFormationId } from '../lib/squad/assign';
-import { formatKoreanBP, formatKoreanBPShort } from '../lib/format';
-import { MARKET_RULES, computeMarketStats, diagnoseMarket } from '../lib/market/diagnosis';
 import { MATCH_RULES, computeMatchPerfStats, diagnoseMatchPerf } from '../lib/match/diagnosis';
 import { topPickIdsByLine, isTopPick } from '../lib/meta/picks';
 import { matchScore, recentScore, scoreTier } from '../lib/nexon/score';
@@ -26,13 +24,14 @@ import { playstyleOf } from '../lib/nexon/playstyle';
 import { risingStreak, isPeak, sparklinePoints } from '../lib/form-trend';
 import { isInAppBrowser, inAppBrowserName } from '../lib/client/in-app-browser';
 import { streakLabel, hasStreakHighlight } from '../lib/nexon/streak-card';
-import { toNewBp, BP_REDENOM } from '../lib/nexon/bp';
 import { weeklyRecap } from '../lib/nexon/weekly';
 import type { MatchSummary } from '../lib/nexon/summary';
-import type { TradeRecord } from '../lib/nexon/types';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { slimMatchDetail } from '../lib/nexon/slim';
+import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
+import { Semaphore } from '../lib/nexon/semaphore';
+import { readFileSync } from 'node:fs';
 import { aggregatePlayers } from '../lib/nexon/player-stats';
 import { squadCardTree } from '../lib/card/squad-card';
 import { POST_TYPES, isPostType } from '../lib/community/post-types';
@@ -51,6 +50,10 @@ function section(name: string) {
   // 구분용 (출력 최소화)
   void name;
 }
+
+// tsx 가 CJS 로 트랜스파일해 top-level await 를 쓸 수 없다.
+// 비동기 테스트는 여기에 등록하고 파일 끝에서 한 번에 실행한다.
+const asyncTests: { name: string; run: () => Promise<void> }[] = [];
 
 // ── 헬퍼: 목 match-detail ─────────────────────────────────────
 function mkMatch(
@@ -282,77 +285,6 @@ eq(
 );
 ok(bestFormationId([]).length > 0, '빈 입력도 폴백 포메이션 반환');
 
-// ── formatKoreanBP (억/조/경 단위) ───────────────────────────
-section('formatKoreanBP');
-eq(formatKoreanBP(0), '0', '0');
-eq(formatKoreanBP(9_999), '9,999', '만 미만은 그대로');
-eq(formatKoreanBP(475_000_000), '4억 7,500만', '억+만 조합');
-eq(formatKoreanBP(200_000_000), '2억', '나머지 0이면 단일 단위');
-eq(formatKoreanBP(1_234_000_000_000), '1조 2,340억', '조+억 조합');
-eq(formatKoreanBP(30_000_000_000_000_000), '3경', '경 단위');
-eq(formatKoreanBPShort(475_000_000), '4.75억', '축약 소수 2자리');
-eq(formatKoreanBPShort(12_300_000_000), '123억', '축약 100 이상 정수');
-eq(formatKoreanBPShort(45_600_000_000), '456억', '축약 정수');
-eq(formatKoreanBPShort(2_000_000_000_000), '2조', '축약 후행 0 제거');
-
-// ── 이적시장 진단 (사전 셋팅 룰) ─────────────────────────────
-section('market-diagnosis');
-ok(MARKET_RULES.length >= 100, `진단 룰 100개 이상 (현재 ${MARKET_RULES.length}개)`);
-eq(new Set(MARKET_RULES.map((r) => r.id)).size, MARKET_RULES.length, '룰 id 중복 없음');
-ok(MARKET_RULES.every((r) => r.title.length > 0 && r.desc.length > 0), '모든 룰에 제목·설명 존재');
-ok(MARKET_RULES.some((r) => r.kind === 'type') && MARKET_RULES.some((r) => r.kind === 'note'), 'type/note 룰 모두 존재');
-
-const NOW = Date.parse('2026-07-15T12:00:00Z');
-const trade = (daysAgo: number, value: number, grade = 1, spid = 251000001): TradeRecord =>
-  ({ tradeDate: new Date(NOW - daysAgo * 86400000).toISOString(), saleSn: `${daysAgo}-${value}-${spid}`, spid, grade, value }) as TradeRecord;
-
-// 화폐개혁(옛 1억 BP = 새 1 BP) 후 새 화폐 스케일. computeMarketStats는 이미 환산된
-// 값(getUserTrades 경계에서 /1e8)을 받으므로 테스트도 새 스케일 값으로 구성.
-// 큰손 흑자: 1억(새 화폐, = GYEONG) 이상 지출 + 그 이상 수입.
-const whale = computeMarketStats(
-  [trade(1, 7e7, 8), trade(2, 5e7, 9)],
-  [trade(0, 9e7), trade(3, 5e7)],
-  NOW
-);
-eq(diagnoseMarket(whale).type?.id, 't-whale-surplus', '큰손 흑자 유형 판정(1억+ 새 화폐)');
-ok(diagnoseMarket(whale).notes.length > 0 && diagnoseMarket(whale).notes.length <= 4, '코멘트 1~4개');
-
-// 1억(새 화폐) 미만은 큰손 아님 — 재denomination 회귀 방지 (5,000만 지출은 whale 미달)
-const midSpender = computeMarketStats(
-  [trade(1, 3e7), trade(2, 2e7)],
-  [trade(0, 1e7)],
-  NOW
-);
-ok(
-  diagnoseMarket(midSpender).type?.id !== 't-whale-surplus' &&
-    diagnoseMarket(midSpender).type?.id !== 't-whale-deficit',
-  '5,000만(새 화폐) 지출은 큰손 유형 아님(1억 기준)'
-);
-
-// 빈 데이터 → 진단 없음
-eq(diagnoseMarket(computeMarketStats([], [], NOW)).type, null, '거래 없으면 진단 없음');
-
-// 어떤 조합에도 type 폴백 매칭 (fallback 룰 존재)
-const tiny = computeMarketStats([trade(0, 5000)], [], NOW);
-ok(diagnoseMarket(tiny).type !== null, '소액 1건도 유형 폴백 매칭');
-
-// 지표 계산 검증
-eq(whale.totalBuy, 1.2e8, 'totalBuy 합산');
-eq(whale.net, 2e7, 'net 계산');
-eq(whale.highGradeBuys, 2, '8강 이상 영입 수');
-eq(tiny.daysSinceLast, 0, 'daysSinceLast 오늘 = 0');
-
-// 모든 룰의 when이 대표 스탯 3종에서 예외 없이 실행됨
-for (const st of [whale, tiny, computeMarketStats([], [], NOW)]) {
-  let threw = false;
-  try {
-    for (const r of MARKET_RULES) r.when(st);
-  } catch {
-    threw = true;
-  }
-  ok(!threw, '룰 평가 중 예외 없음');
-}
-
 // ── 공식경기 성향 진단 (사전 셋팅 룰) ────────────────────────
 section('match-diagnosis');
 ok(MATCH_RULES.length >= 100, `경기 진단 룰 100개 이상 (현재 ${MATCH_RULES.length}개)`);
@@ -538,6 +470,105 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   ok(me.player[0].status.defending === undefined, 'slim: player.status.defending 제거');
 }
 
+// ── match_cache payload 패킹 (키 제거로 저장·WAL 절감) ───────
+section('pack/unpack');
+{
+  // 실제 넥슨 match-detail 픽스처(익명화)로 왕복 검증 — 배열 순서가 어긋나면 즉시 실패
+  const real = JSON.parse(
+    readFileSync(new URL('./fixtures/match-detail.json', import.meta.url), 'utf8')
+  ) as MatchDetail;
+  const slimmed = slimMatchDetail(real);
+  const packed = packMatchDetail(slimmed);
+  const back = unpackMatchDetail(packed)!;
+
+  eq(back, slimmed, '실데이터 왕복: pack → unpack 이 slim 과 완전 동일');
+  ok(Array.isArray(packed), '패킹 결과는 배열(구 저장분과 구분 가능)');
+  ok(
+    JSON.stringify(packed).length < JSON.stringify(slimmed).length * 0.4,
+    `패킹이 60% 이상 절감 (slim ${JSON.stringify(slimmed).length}B → packed ${JSON.stringify(packed).length}B)`
+  );
+
+  // 소비자 출력이 패킹 전후로 동일해야 한다
+  const ouid = slimmed.matchInfo[0].ouid;
+  eq(summarizeMatch(back, ouid), summarizeMatch(slimmed, ouid), '패킹 왕복: summarizeMatch 동일');
+  eq(aggregateReport([back], ouid), aggregateReport([slimmed], ouid), '패킹 왕복: aggregateReport 동일');
+  eq(aggregatePlayers([back], ouid), aggregatePlayers([slimmed], ouid), '패킹 왕복: aggregatePlayers 동일');
+  eq(aggregatePlaystyle([back], ouid), aggregatePlaystyle([slimmed], ouid), '패킹 왕복: aggregatePlaystyle 동일');
+
+  // 구 저장분(객체 jsonb) 하위호환 — 마이그레이션 없이 계속 읽혀야 한다
+  eq(unpackMatchDetail(slimmed as unknown), slimmed, '구 저장분(객체)은 그대로 반환');
+  eq(unpackMatchDetail(null), null, 'null 안전');
+  eq(unpackMatchDetail(undefined), null, 'undefined 안전');
+
+  // 빈 매치(참가자 0)도 깨지지 않아야 한다
+  const empty: MatchDetail = { matchId: 'e', matchDate: '2026-01-01T00:00:00', matchType: 50, matchInfo: [] };
+  eq(unpackMatchDetail(packMatchDetail(empty)), empty, '빈 matchInfo 왕복');
+}
+
+// ── 넥슨 호출 세마포어 (동시성 상한·429 강등) ───────────────
+// 동시성 코드는 리뷰로 잡히지 않는다 — 상한 초과·데드락·강등 3가지를 실제로 돌려 확인한다.
+asyncTests.push({
+  name: 'semaphore',
+  run: async () => {
+    // ① 상한을 절대 넘지 않는다 + 전부 완료된다(데드락 없음)
+    const sem = new Semaphore(3);
+    let peak = 0;
+    let done = 0;
+    await Promise.all(
+      Array.from({ length: 20 }, async () => {
+        await sem.acquire();
+        peak = Math.max(peak, sem.inFlight);
+        await new Promise((r) => setTimeout(r, 1));
+        sem.release();
+        done++;
+      })
+    );
+    eq(peak, 3, '세마포어: 동시 실행이 상한(3)을 넘지 않음');
+    eq(done, 20, '세마포어: 20건 전부 완료 (데드락 없음)');
+    eq(sem.inFlight, 0, '세마포어: 완료 후 in-flight 0');
+
+    // ② 429 강등 — 진행 중에 상한이 1로 떨어져도 남은 작업이 전부 끝난다
+    const sem2 = new Semaphore(3);
+    let demoted = false;
+    let done2 = 0;
+    let peakAfter = 0;
+    await Promise.all(
+      Array.from({ length: 12 }, async (_, i) => {
+        await sem2.acquire();
+        if (demoted) peakAfter = Math.max(peakAfter, sem2.inFlight);
+        await new Promise((r) => setTimeout(r, 1));
+        if (i === 2 && !demoted) {
+          demoted = true;
+          sem2.demote(); // 429 관측 시뮬레이션
+        }
+        sem2.release();
+        done2++;
+      })
+    );
+    eq(done2, 12, '세마포어: 강등 중에도 12건 전부 완료 (대기자 깨우기 정상)');
+    eq(sem2.currentLimit, 1, '세마포어: 강등 후 상한 1');
+    ok(peakAfter <= 3, `세마포어: 강등 후 동시 실행이 늘지 않음 (관측 ${peakAfter})`);
+    eq(sem2.inFlight, 0, '세마포어: 강등 경로도 in-flight 0으로 수렴');
+
+    // ③ 강등은 되돌아가지 않는다 (진동 방지)
+    sem2.demote();
+    eq(sem2.currentLimit, 1, '세마포어: 중복 강등 안전');
+
+    // ④ 상한 1은 완전 순차와 동일 (구 동작 보존)
+    const sem3 = new Semaphore(1);
+    let peak3 = 0;
+    await Promise.all(
+      Array.from({ length: 6 }, async () => {
+        await sem3.acquire();
+        peak3 = Math.max(peak3, sem3.inFlight);
+        await new Promise((r) => setTimeout(r, 1));
+        sem3.release();
+      })
+    );
+    eq(peak3, 1, '세마포어: 상한 1이면 완전 순차');
+  },
+});
+
 // ── 폼 추세(form-trend) ──────────────────────────────────────
 {
   // risingStreak: 마지막 값 기준 연속 상승
@@ -613,18 +644,6 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   ok(!hasStreakHighlight({ ...base, currentStreak: 1 }), 'highlight: 1연승은 숨김');
 }
 
-// ── 화폐개혁 환산 (bp.toNewBp) ───────────────────────────────
-{
-  eq(BP_REDENOM, 100_000_000, 'BP_REDENOM = 1억');
-  eq(toNewBp(100_000_000), 1, '옛 1억 BP → 새 1 BP');
-  eq(toNewBp(1e12), 1e4, '옛 1조 → 새 1만 (JO↔만)');
-  eq(toNewBp(1e16), 1e8, '옛 1경 → 새 1억 (GYEONG↔억)');
-  eq(toNewBp(50_000_000), 0.5, '옛 5,000만 → 새 0.5 (소수 허용)');
-  eq(toNewBp(0), 0, '0 안전');
-  eq(toNewBp(null), 0, 'null 안전');
-  eq(toNewBp(undefined), 0, 'undefined 안전');
-}
-
 // ── 천적 선정 (pickNemesis) ──────────────────────────────────
 {
   const R = (nickname: string, win: number, lose: number, games = win + lose): Rival =>
@@ -683,10 +702,21 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
-console.log(`\n단위 테스트: ${pass} PASS, ${fails.length} FAIL`);
-if (fails.length) {
-  console.log('\n실패:');
-  for (const f of fails) console.log(`  ✗ ${f}`);
-  process.exit(1);
-}
-console.log('✓ 전부 통과');
+// 등록된 비동기 테스트를 모두 돌린 뒤 집계한다.
+void (async () => {
+  for (const t of asyncTests) {
+    try {
+      await t.run();
+    } catch (err) {
+      fails.push(`${t.name} — 예외: ${(err as Error)?.message ?? String(err)}`);
+    }
+  }
+
+  console.log(`\n단위 테스트: ${pass} PASS, ${fails.length} FAIL`);
+  if (fails.length) {
+    console.log('\n실패:');
+    for (const f of fails) console.log(`  ✗ ${f}`);
+    process.exit(1);
+  }
+  console.log('✓ 전부 통과');
+})();

@@ -18,12 +18,14 @@ const CONF_LABEL: Record<PlaystyleResult["confidence"], string> = {
 export default async function PlaystyleSection({
   ouid,
   matchType,
+  cacheOnly = false,
 }: {
   ouid: string;
   matchType: number;
+  cacheOnly?: boolean;
 }) {
   // getRecentMatchDetails(React cache)로 HeroBadges·타 섹션과 요청 내 조회 공유
-  const { details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT);
+  const { details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT, cacheOnly);
   const result = analyzePlaystyle(aggregatePlaystyle(details, ouid));
 
   // 누적 슛 히트맵 — 최근 경기 내 내 슛 위치 (아키타입 시각 근거)

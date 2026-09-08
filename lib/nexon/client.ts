@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { isNexonPaused } from './pause';
+import { nexonSemaphore } from './semaphore';
 
 const BASE = 'https://open.api.nexon.com';
 
@@ -50,9 +51,6 @@ export function isPaused(err: unknown): boolean {
 /** 캐시 정책: 초 단위 revalidate 또는 불변 데이터(match-detail)용 'immutable' */
 type CachePolicy = number | 'immutable';
 
-// 넥슨 API는 병렬 호출에 민감(429 빈발 사례 확인) → 인스턴스 내 순차 큐
-let queue: Promise<unknown> = Promise.resolve();
-
 export function nexonFetch<T>(
   path: string,
   params: Record<string, string | number | undefined>,
@@ -91,6 +89,8 @@ export function nexonFetch<T>(
     }
 
     if (!res.ok) {
+      // 429 → 이 인스턴스는 순차로 강등(자동 복귀 없음)
+      if (res.status === 429) nexonSemaphore.demote();
       let code = `HTTP${res.status}`;
       let message = `넥슨 API 오류 (HTTP ${res.status})`;
       try {
@@ -108,18 +108,17 @@ export function nexonFetch<T>(
     return res.json() as Promise<T>;
   };
 
-  // kill-switch는 순차 큐 '진입 전'에 검사한다(임계경로에 Supabase 왕복을 넣지 않음).
+  // kill-switch는 세마포어 '진입 전'에 검사한다(임계경로에 Supabase 왕복을 넣지 않음).
   // 정지 상태면 넥슨을 아예 호출하지 않고 PAUSED로 단락.
   return (async () => {
     if (await isNexonPaused()) {
       throw new NexonApiError('넥슨 조회가 일시 중단되었습니다', 503, 'PAUSED');
     }
-    // 앞선 요청의 성공/실패와 무관하게 순차 실행
-    const result = queue.then(run, run);
-    queue = result.then(
-      () => undefined,
-      () => undefined
-    );
-    return result;
+    await nexonSemaphore.acquire();
+    try {
+      return await run();
+    } finally {
+      nexonSemaphore.release();
+    }
   })();
 }

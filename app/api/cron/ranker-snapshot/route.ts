@@ -99,13 +99,32 @@ export async function GET(req: Request) {
   // (오래된 매치는 조회 시 넥슨에서 재캐시됨). best-effort, 실패해도 크론 성공.
   const retention: Record<string, number> = {};
   const day = 24 * 60 * 60 * 1000;
+  // match_cache 보관기간 90일 → 30일.
+  // 실측(2026-09-04) 1,663MB / 31만 행까지 자라 디스크 IO 장애를 두 차례 유발했다.
+  // 오래된 매치는 조회 시 넥슨에서 재캐시되므로 삭제해도 기능 손실이 없다.
+  //
+  // ⚠️ 한 번에 지우면 WAL 이 폭증한다(과거 WAL 디스크 천장 크래시 이력).
+  //    5,000행씩 나눠 지우고, 한 실행당 상한을 둬 며칠에 걸쳐 수렴시킨다.
   try {
-    const cutoff = new Date(Date.now() - 90 * day).toISOString();
-    const { count } = await db
-      .from('match_cache')
-      .delete({ count: 'estimated' })
-      .lt('match_date', cutoff);
-    retention.match_cache_deleted = count ?? 0;
+    const cutoff = new Date(Date.now() - 30 * day).toISOString();
+    const BATCH = 5_000;
+    const MAX_PER_RUN = 50_000;
+    let deleted = 0;
+    while (deleted < MAX_PER_RUN) {
+      const { data: doomed } = await db
+        .from('match_cache')
+        .select('match_id')
+        .lt('match_date', cutoff)
+        .limit(BATCH);
+      const ids = (doomed ?? []).map((r) => r.match_id as string);
+      if (ids.length === 0) break;
+      const { error } = await db.from('match_cache').delete().in('match_id', ids);
+      if (error) break;
+      deleted += ids.length;
+      if (ids.length < BATCH) break;
+      await new Promise((r) => setTimeout(r, 200)); // 체크포인트 숨돌리기
+    }
+    retention.match_cache_deleted = deleted;
   } catch {
     retention.match_cache_deleted = -1;
   }
@@ -120,6 +139,30 @@ export async function GET(req: Request) {
     retention.ranker_snapshot_deleted = count ?? 0;
   } catch {
     retention.ranker_snapshot_deleted = -1;
+  }
+
+  // search_log — sitemap 은 최근 500개만 쓴다. 오래 방치된 닉네임은 색인 가치가 없다.
+  try {
+    const cutoff = new Date(Date.now() - 180 * day).toISOString();
+    const { count } = await db
+      .from('search_log')
+      .delete({ count: 'estimated' })
+      .lt('last_seen', cutoff);
+    retention.search_log_deleted = count ?? 0;
+  } catch {
+    retention.search_log_deleted = -1;
+  }
+
+  // user_snapshots — 마이페이지는 최근 14개만 읽는다(스파크라인).
+  try {
+    const cutoff = new Date(Date.now() - 180 * day).toISOString().slice(0, 10);
+    const { count } = await db
+      .from('user_snapshots')
+      .delete({ count: 'estimated' })
+      .lt('snapshot_date', cutoff);
+    retention.user_snapshots_deleted = count ?? 0;
+  } catch {
+    retention.user_snapshots_deleted = -1;
   }
 
   return Response.json({ ok: true, warmed: summary, retention });

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { headers } from "next/headers";
 import { rateLimit, clientIp } from "@/lib/security/rate-limit";
 import { getMaxDivisions, getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
-import { getMatchDetailCached } from "@/lib/nexon/cached";
+import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { getDivisionName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
 import { SITE_HOST } from "@/lib/site";
@@ -58,15 +58,14 @@ export default async function OgImage({
     const official = divisions.find((d) => d.matchType === 50) ?? divisions[0];
     if (official) division = await getDivisionName(official.division);
 
+    // OG 이미지는 정의상 크롤러·링크 미리보기 봇만 가져간다.
+    // 기존엔 매치 10건을 한 건씩(N+1) 조회해 DB 왕복 10회 + 캐시 미스 시 넥슨 10콜이 붙었다.
+    // 배치 + 캐시 전용으로 DB 1왕복·넥슨 0콜. 캐시가 비면 요약 없이 등급/레벨만 그린다.
     const ids = await getUserMatches(ouid, 50, 10).catch(() => [] as string[]);
     const summaries: MatchSummary[] = [];
-    for (const id of ids) {
-      try {
-        const s = summarizeMatch(await getMatchDetailCached(id), ouid);
-        if (s) summaries.push(s);
-      } catch {
-        // skip
-      }
+    for (const detail of await getMatchDetailsBatch(ids, true)) {
+      const s = summarizeMatch(detail, ouid);
+      if (s) summaries.push(s);
     }
     if (summaries.length > 0) {
       rec = aggregate(summaries);

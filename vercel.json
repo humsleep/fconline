@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/ranker-snapshot",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/push-weekly",
+      "schedule": "0 12 * * 0"
+    },
+    {
+      "path": "/api/cron/push-meta",
+      "schedule": "0 9 * * 5"
     }
   ]
 }

@@ -1,5 +1,177 @@
 # DEVLOG
 
+## 2026-09-08 — [저장소 분리] iOS 앱을 별도 저장소로, 웹은 백엔드만
+
+- **iOS 앱 소스를 이 저장소에서 분리**했다. 웹(Next.js)과 앱(SwiftUI)은 릴리스 주기·리뷰 절차·언어가
+  전부 달라 한 저장소에 두면 웹 배포마다 앱 diff 를, 앱 심사마다 웹 diff 를 끌고 다니게 된다.
+  - 이동 대상: `native/`(SwiftUI 앱 + WidgetKit), `mobile/`(폐기된 Capacitor 셸 → `legacy-capacitor/`),
+    `docs/NATIVE-APP.md`·`APP-STORE.md`·`SETUP-CHECKLIST.md`·`COUNCIL-2026-09-NATIVE.md`,
+    `scripts/build-player-index.mjs`(앱 번들용 인덱스 생성).
+  - **Capacitor 셸이 웹에 남긴 분기도 전부 제거**: `lib/client/native.ts`, `app/components/NativeBridge.tsx`,
+    `<html data-native>` 인라인 스크립트와 CSS 블록, 탭 햅틱, 네이티브 공유 시트 분기,
+    로그인의 앱 전용 Google/Apple 경로, 마이페이지 앱 버전 표기, `NEXT_PUBLIC_ADMOB_BANNER_IOS`.
+    완전 네이티브 전환 이후로는 실행되지 않는 코드였다(앱은 웹뷰를 쓰지 않는다).
+- **웹에 남는 앱 백엔드**(앱이 실제로 호출한다 — 지우면 앱이 죽는다):
+  `app/api/v1/*`(11 라우트), `lib/api/v1.ts`, `lib/push/*` + 푸시 크론 2종 + `device_tokens`(0018),
+  `lib/supabase/server.ts` 의 Bearer JWT 수용, `app/api/me/delete/`,
+  `app/.well-known/apple-app-site-association/`, `app/app-ads.txt/`.
+  관련 env(`APPLE_TEAM_ID`·`APNS_*`·`ADMOB_PUBLISHER_ID`·`NEXT_PUBLIC_IOS_BUNDLE_ID`)도 그대로 유지.
+- 로그인 페이지의 `ensureAgreed()` 리팩터와 약관·개인정보 동의 버전 2 는 웹 자체 변경이라 유지.
+- 검증: `tsc` 0 · 229 PASS · web build ✓ · iOS 저장소 단독 build ✓.
+
+## 2026-09-05 — [DB 정리 완료] match_cache 1,664MB → 93MB + 죽은 스키마 제거
+
+- **match_cache 정리 실행 완료**: 1,664MB / 314,502행 → **93MB / 23,347행 (-94%)**.
+  진단 결과 TOAST(payload)가 1,574MB(95%), 죽은 행은 1,061개뿐 → bloat 아니라 "행 수 × payload" 문제.
+  30일 초과가 92.7%라 **한 행씩 DELETE + VACUUM FULL 대신 남길 7%만 새 테이블로 복사 후 원본 DROP**.
+  단일 트랜잭션·수십 초·잠금은 drop/rename 순간뿐. DROP 이 공간을 즉시 회수해 VACUUM FULL 불필요.
+  (LIKE 대신 명시적 DDL — LIKE 는 인덱스 이름을 바꿔 이름 기반 검증이 깨진다. RLS 는 수동 재활성화 필수)
+- **죽은 스키마 제거**(마이그레이션 0019, 코드 전수 확인 기반):
+  - `match_cache.ouids` — 저장만 하고 조회하는 쿼리가 없다(0017 에서 같은 이유로 GIN 인덱스 제거했던 컬럼).
+    매 저장마다 쓰이므로 순손실이라 쓰기 코드도 함께 제거.
+  - `ouid_cache` — 참조 코드 0(닉네임→ouid 는 Next 데이터 캐시가 담당).
+  - `club_posts` — community_posts 통합 후 잔재. 참조 코드 0.
+- 정상 상태 전망: 30일 보관 + 배열 패킹으로 행당 4,555B → 약 1,200B → **30MB 안팎 유지**.
+  Supabase 무료 한도 500MB 대비 충분한 여유.
+- 검증: `tsc` 0 · **229 PASS** · build ✓.
+
+## 2026-09-05 — [효율화 일괄] 크롤 팬아웃 제거 · 넥슨 동시 3 · 반복 쓰기 차단
+
+"무의미한 데이터 증설보다 효율적인 프로세스" 요구로 전 경로를 감사하고 9건을 고쳤다.
+
+**넥슨 호출 (가장 비싼 자원)**
+- **동시 실행 상한 3 도입**(`lib/nexon/semaphore.ts`). 기존 완전 순차 → 라이브 실측으로 조정:
+  실제 30경기 콜드 조회가 **약 9,000ms → 2,883ms(비200 0건)**. Vercel은 실행 시간 과금이라 비용도 함께 감소.
+  429 관측 시 해당 인스턴스는 동시 1로 **영구 강등**(자동 복귀 없음 — 진동 방지). 세마포어는 단위 테스트 9종으로 검증
+  (상한 초과 없음·데드락 없음·강등 중 전건 완료·상한 1 순차 동일).
+- **크롤러는 캐시 전용**(`lib/security/bot.ts` + `getRecentMatchDetails(…, cacheOnly)`).
+  sitemap이 프로필 500개를 `daily`로 광고해 크롤 1패스가 넥슨 수천 콜 + `match_cache` 쓰기를 유발하던 것을 0으로.
+  sitemap 닉네임은 `search_log`(사람 검색만 기록)에서 오므로 캐시가 대개 따뜻해 색인 품질 손실은 작다.
+- **공유 카드 5종도 캐시 전용**. 링크 미리보기 봇이 카드 1장마다 넥슨 ~23콜을 쓰던 것을 ~3콜로.
+
+**반복 쓰기**
+- `search_log`: 같은 닉네임 1시간 내 재기록 스킵(인스턴스 로컬 스로틀). 인기 프로필의 조회수만큼 쓰기가 발생하던 문제.
+- `VisitRecorder`: 본인 전적 조회마다 POST(인증+프로필조회+upsert) → **하루 1회**로 제한(KST 날짜 키).
+- 보관기간 추가: `search_log` 180일, `user_snapshots` 180일(크론).
+
+**캐시 설정 오류**
+- `/api/v1/player-index`가 `force-dynamic`+`revalidate` 동시 지정 → force-dynamic이 이겨 **매 요청 6.5MB 인덱스 재빌드**.
+  force-dynamic 제거로 하루 1회 ISR.
+- `/api/v1/match/:id` 엣지 캐시 1시간 → **1년**(끝난 경기는 불변).
+- `/player/[spid]` 재검증 1시간 → 24시간(랭커 스냅샷이 일 1회 갱신, sitemap에 8,000개).
+
+**N+1 조회**
+- `/user/[nickname]/opengraph-image` — 매치 10건을 **한 건씩** 조회하고 있었다(DB 왕복 10회 + 캐시 미스 시 넥슨 10콜).
+  OG 이미지는 정의상 크롤러·링크 미리보기 봇만 가져가는 경로다. 배치 + 캐시 전용으로 **DB 1왕복·넥슨 0콜**.
+
+- 검증: `tsc` 0 · **229 PASS**(+9 세마포어) · build ✓.
+- AGENTS.md의 "병렬 호출 금지, 순차 큐잉" 원칙을 실측 근거와 함께 갱신(코드와 지침 불일치 해소).
+
+## 2026-09-04 — [match_cache 최적화] payload 배열 패킹으로 저장·WAL 74% 절감
+
+- 운영자 DB 실측 **1,663MB / 313,532행**(전체 DB의 99.8%). 나머지 13개 테이블 합이 4MB.
+- **원인 계측**(실제 매치 1건, 라이브 API): 원본 19,559B → slim 10,950B.
+  그중 **JSON 키 이름이 8,088B(74%)**. 한 경기에 선수 36명 × 14개 키가 반복되기 때문.
+- **`lib/nexon/pack.ts` 신설** — slim payload 를 고정 순서 배열로 패킹. **10,950B → 2,862B(-74%)**.
+  - jsonb 컬럼 유지 → **마이그레이션 불필요**. `unpackMatchDetail` 이 구 저장분(객체)도 그대로 읽는다.
+  - 첫 원소가 포맷 버전이라 이후 필드 추가 가능. 배열 순서는 상수 배열로 문서화.
+  - 단건·배치 두 경로 모두 적용(`lib/nexon/cached.ts`).
+- **WAL 효과가 본질**: 콜드 조회 1회가 30행을 쓴다. 행당 10.9KB → 2.9KB.
+  과거 두 차례 장애(WAL 디스크 천장, Disk IO 소진)가 모두 이 쓰기 증폭에서 시작했다.
+- 검증: 실제 넥슨 match-detail 픽스처(익명화, `scripts/fixtures/match-detail.json`)로 **왕복 동일성** +
+  소비자 4종(summarize/report/players/playstyle) 출력 동일 + 구 저장분 호환 + 빈 매치 안전.
+  **220 PASS**(+11). tsc 0 · build ✓.
+- 대안 비교(실측): 배열패킹 2,862B / slim+gzip 1,874B / 패킹+gzip 1,115B.
+  gzip 계열은 bytea·base64 인코딩 계층이 필요하고 jsonb 디버깅성을 잃어, 절감폭 대비 위험이 커 배열 패킹 채택.
+- `scripts/cleanup-match-cache.sql` 에 용량 분해 진단(⓪) 추가.
+
+## 2026-09-04 — [A안] 이적시장 기능 제거 + match_cache 보관기간 90→30일 배치화
+
+- **이적시장 전면 제거**(운영자 A안 결정). 넥슨 `user/trade` 가 `ouid` 를 무시하고 API 키 소유자 본인 거래만 반환 →
+  타인 닉네임에 붙일 수 있는 데이터가 아니었고, 운영자 개인 거래 내역이 모든 검색 결과에 노출되고 있었다.
+  - 삭제: `app/market/[nickname]/*`, `app/api/v1/user/[nickname]/market`, `lib/market/diagnosis.ts`(룰 100+),
+    `lib/nexon/bp.ts`, `getUserTrades`, `TradeRecord`, `formatKoreanBP`/`Short`, `scripts/market-calibration.mjs`,
+    앱 `MarketView.swift`·`BPFormat.swift`·`Route.market`·`MarketResponse`.
+  - 수정: `HeroBadges` 를 공식경기 배지 전용으로 재작성, `/user` 이적시장 탭·리다이렉트 제거,
+    `MobileTabBar` 매칭에서 `/market` 제외, `refresh` 무효화 경로 정리, v1 user 응답에서 `marketType` 제거.
+  - `RuleTone` 타입은 `lib/diagnosis/tone.ts` 로 이전(공식경기 진단이 계속 사용).
+  - 테스트 250 → **209 PASS**(이적시장·화폐·BP 포맷 테스트 41개 제거). tsc 0 · web build ✓ · iOS build ✓.
+- **match_cache 용량 대응**: 운영자 실측 **1,663MB / 313,532행**(무료 한도 500MB의 3배, 과거 IO·WAL 장애 원인).
+  크론 보관기간 90→30일로 단축하고, 한 번에 지우던 DELETE 를 5,000행 배치 + 실행당 5만 행 상한으로 변경
+  (첫 정리가 단일 트랜잭션으로 WAL 을 폭증시키지 않도록 며칠에 걸쳐 수렴).
+  즉시 정리용 `scripts/cleanup-match-cache.sql`(단계별 삭제 + `vacuum full`) 제공.
+- 마이그레이션 검증 결과: **0001~0017 전부 적용 확인**, 0018(device_tokens)만 미실행.
+
+## 2026-09-04 — [🔴 라이브 검증] 화폐개혁 환산 오류 수정 + `user/trade` 가 ouid 를 무시함 발견
+
+운영자가 제공한 라이브 넥슨 키로 실데이터를 처음 검증. **두 건의 심각한 문제**를 확인했다.
+
+### ① 화폐 환산이 개혁 이후 거래에 잘못 적용되고 있었다 (수정 완료)
+- 넥슨 화폐개혁 시행일은 **2026-08-20**(공지 확인). 넥슨은 거래 시점의 값을 그대로 보관하므로
+  **개혁 후 거래는 이미 새 화폐**로 기록된다. 기존 코드는 날짜와 무관하게 전부 `/1e8` → 최근 거래가 1억배 축소.
+- 라이브 실측 경계: `2026-08-18 raw=116,000,000,000,000`(옛) vs `2026-08-21 raw=14,600,000`(새).
+- `toNewBp(value, tradeDate)` 로 날짜 분기. 날짜 미상/파싱 실패는 보수적으로 개혁 전 취급.
+- 검증: 250 PASS(+7, 경계·이중환산 방지 케이스 포함).
+
+### ② `user/trade` 가 `ouid` 파라미터를 무시한다 (🔴 미해결, 운영자 결정 필요)
+- **존재하지 않는 ouid(`000…0`)로 호출해도 HTTP 200 + 동일 응답**. 서로 다른 계정 3개의 응답 해시가 완전히 같음.
+- 대조군: `user/basic` 은 계정별로 정상적으로 다른 값 반환(T1정성민 Lv.4658 / 보엠 Lv.619).
+- 응답 헤더 `cache-control: no-store`, CloudFront `Miss` → 캐시 아티팩트 아님.
+- `docs/NEXON-API.md` 에 이미 "⚠️ 래퍼 문서상 '본인 거래 기록만 조회 가능'" 로 적혀 있었다.
+  개발 중 본인 닉네임으로만 확인하면 정상으로 보이는 구조라 지금까지 드러나지 않았다.
+- **영향**: `/market/[nickname]` 페이지·앱 이적시장 탭·💰 성향 배지·이적시장 진단 100+룰이
+  **누구를 검색하든 API 키 소유자(운영자) 본인의 거래 기록**을 보여준다. 기능 오류이자 운영자 개인 거래 내역 노출.
+
+### ③ 진단 임계값이 최상위 버킷에 고정된다 (①·② 정리 후 재보정 필요)
+- 실측 분포(보엠, 영입 100건): 중앙 94,200 / p90 3,740,000 / 최대 43,300,000 새 BP. 총영입 1억 5,616만.
+- 현재 밴드는 `천문학적 지출(≥1억)` 하나로 수렴. maxBuy·avgBuy 도 동일하게 최상위 고정.
+- 넥슨 데이터센터의 구단가치 필터 눈금(0~100억+)을 외부 앵커로 삼아 밴드를 100배 상향하는 안을 제안.
+  다만 ②로 인해 **표본을 1개 계정밖에 얻을 수 없어** 확정 보정은 보류.
+
+## 2026-09-04 — [화폐개혁 표시 수정 + 앱 설정 감사] 소액 BP "0" 표기 · 크래시 위험 · 위젯 프록시 잔존
+
+- **화폐개혁 재점검 결론**: 환산 로직·진단 임계값은 **수정 불필요**(경계 1곳·단일 상수·이중 적용 없음, 임계값도 동일 배율이라 개혁 전과 같은 실거래에 발동). 문제는 **표시**였다.
+- **소액 BP "0" 표기 수정**(DEVLOG 2026-08-16 후보로 남아 있던 LOW 항목): 새 화폐는 소수점이 일상인데 `toLocaleString()` 기본값(소수 3자리)이 극소액을 뭉갰다. `lib/format.ts` 에 `formatSmallBP` 추가 — 크기별 유효자릿수(≥1000 정수, ≥100 0자리 … <0.01 6자리, 후행 0 제거). 옛 1만 BP(새 0.0001)가 "0"→"0.0001". 기존 테스트 회귀 없음(9,999·4억 7,500만 그대로).
+- **앱 금액 포맷은 더 심각했다**: `%.0f` 라 옛 5,000만 BP(새 0.5)→"0", 옛 1.5억(새 1.5)→"2". 소수 전체 소실. `Core/UI/BPFormat.swift` 신설로 웹과 동일 규칙 적용.
+- **크래시 위험 제거**: `AppConfig.supabaseURL` 이 `URL(string: Info.plist값 as? String ?? 기본값)!` 구조라, 빈 문자열은 nil 이 아니라 `??` 를 못 타고 `URL(string:"")` = nil → 강제 언래핑 크래시. 지금은 anon 키가 먼저 비어 단락 평가로 가려져 있었을 뿐, **anon 키만 채우면 실행 즉시 크래시**. `plist()` 헬퍼(빈 문자열=미설정) + 옵셔널로 전환, 강제 언래핑 제거.
+- **릴리스 광고 안전장치**: AdMob 앱 ID/단위가 구글 테스트 값이면 릴리스에서 광고를 아예 초기화하지 않는다(`admobConfigured`). 테스트 광고 출시로 인한 정책 위반·무수익 방지.
+- **위젯 이미지 프록시 잔존 수정**: 어제 본체만 CDN 직접 로드로 바꾸고 위젯을 놓쳤다. `FCScopeWidgets` 도 `NexonCDN.playerImageURLs` 폴백 체인 사용.
+- **DEBUG 가드**: 백엔드 URL 오버라이드(UserDefaults)를 `#if DEBUG` 로 한정 — 릴리스에서는 도메인 고정.
+- **미사용 필드 연결**: 서버가 내려주던 `demoNickname` 을 앱 홈 "예시 리포트" 카드로 연결(구단주명 미설정 첫 방문자 대상).
+- **보정 도구**: `scripts/market-calibration.mjs` — 실제 구단주 거래 금액 분포(백분위)와 현재 진단 구간 분포를 출력. 임계값이 추정치라 한 구간 쏠림 여부를 실데이터로 판정.
+- 검증: `tsc` 0 · **243 PASS** · web build ✓ · iOS **Debug·Release 둘 다** build ✓ · 시뮬레이터 실행 확인.
+- 운영자 준비물 전량 정리 → `docs/SETUP-CHECKLIST.md`(제가 대신 못 하는 계정·키·결정만).
+
+## 2026-09-04 — [비용·성능 최적화] 이미지 CDN 직접 + 카드 로컬 렌더 + 선수 인덱스 내장 + 응답 SWR 캐시
+
+- 경쟁 서비스 조사(FC INFO 앱·지디큐디·FC.GG·FC랭커) + 현재 스택 비용 진단 후, **앱이 주 클라이언트가 되며 불필요해진 서버 작업**을 제거.
+- **이미지 프록시 제거(앱)**: 네이티브는 CORS 제약이 없다. 넥슨 CDN 실측(인증·핫링크 차단 없음, 액션샷 48KB) 확인 후 `PlayerImage(spid:)` 가 CDN 직접 호출 + Nuke DataCache(넥슨 CDN 은 Cache-Control 이 없어 URLCache 가 안 들음). 전적 화면 1회 0.9~1.3MB 가 Vercel 대역폭에서 사라짐. 웹은 CORS 때문에 프록시 유지.
+- **공유 카드 로컬 렌더**: 서버 `next/og`(satori+resvg, 함수 CPU 1위) → SwiftUI `ImageRenderer` 1080×1920. `lib/card/render.tsx` 레이아웃·색·폰트 크기 1:1 이식(`Core/UI/ShareCard.swift`), 스쿼드 피치 카드는 `SquadCardView`(캐시된 선수 이미지 재사용 → 넥슨 왕복 11회 제거). 7종 전부 로컬. 웹 OG 이미지는 서버 유지(크롤러 대응).
+- **선수 인덱스 앱 번들 내장**: `scripts/build-player-index.mjs` 가 spid.json(6.5MB·88k) → 50,972명 압축(1.8MB, gzip 592KB). 검색이 오프라인·즉시가 되고 서버 6.5MB 상주 메모리·필터 CPU 제거. 신규 시즌은 주 1회 `/api/v1/player-index` 로 자동 갱신(엣지 1일 캐시).
+- **응답 디스크 캐시(stale-while-revalidate)**: `ResponseCache` + `APIClient.cachedValue/getAndCache`. 재방문 시 캐시를 먼저 그리고 2분 내면 네트워크 생략 → 넥슨 36콜·match_cache 30행 쓰기(두 차례 DB 장애의 근본 원인) 반복 제거. 전적·리포트·성적표·플레이스타일·홈·픽랭킹·선수·매치에 적용(끝난 매치는 불변이라 캐시 우선).
+- **콜드 조회 2단계**: `GET /api/v1/user/:nick?stage=profile`(넥슨 2콜, 팬아웃 없음) → 앱이 히어로 먼저 렌더 + "경기 불러오는 중" 안내. 최대 60초 빈 화면 문제 해소.
+- 검증: 시뮬레이터 실측으로 **선수검색 서버 호출 0 · 이미지 프록시 호출 0** 확인(dev 로그), 전적/스쿼드 카드 로컬 생성 스크린샷 확인, 설정에 인덱스 규모·캐시 용량 표시. `tsc` 0 · 243 PASS · web build ✓ · iOS build ✓.
+- ⚠️ 남은 최적화(계정 필요): `match_cache` Postgres → Cloudflare R2(불변·PK 단건 조회라 jsonb 불필요, 전송 무료), 넥슨 프록시 → Workers(무료 10만 req/일).
+
+## 2026-09-04 — 완전 네이티브 iOS 앱(SwiftUI) + 전문가 회의 + /api/v1 + 푸시·위젯
+
+- **전문가 회의 4인**(iOS 아키텍트·게임 기획자·그로스/디자이너·유저 패널 3인) → `docs/COUNCIL-2026-09-NATIVE.md`. 합의: 전적 5탭(비로그인) → 위젯 → 푸시 2종(주간 리캡·메타 요약) → 인스타 스토리 카드 → 즐겨찾기 폼 델타. 전적 화면 배너 금지, ATT 는 첫 검색 결과 후, 첫 실행 3일 광고 0, 드래그 빌더는 2차.
+- **SwiftUI 앱(iOS 17+, XcodeGen, SPM: supabase-swift·Nuke·google-mobile-ads)** — 홈(검색·라이브 칩·급상승·즐겨찾기 델타·온보딩 3화면), 전적(히어로·매치유형·경기 기록/종합 리포트(Swift Charts)/선수 성적표(클리닉·랭커 대조·판정 도장)/플레이스타일(5축·누적 슛맵)/이적시장), 매치 리포트(Canvas 슛맵 탭 라벨·팀 스탯·평점·POTM·햅틱), 픽 랭킹·선수 도감(n 표기), 스쿼드 빌더(탭 배치·시즌 선택·포메이션 19종·프리셋·최근 선발 임포트·저장/공유/카드), 커뮤니티(목록·상세·댓글·배틀 투표·글쓰기·신고·차단), 마이페이지(Apple/Google 로그인·프로필·구단주 연동·설정·**계정 삭제**), 공유 카드(시스템 시트 + **인스타 스토리 직결**), WidgetKit 2종(내 폼 small/medium/잠금화면 · 오늘의 급상승), BGAppRefresh 폼 갱신, APNs 등록. 시뮬레이터 빌드·실행 확인(온보딩→홈→검색 오류 상태→빌더).
+- **백엔드 `/api/v1`(11 라우트)** — user(5탭)·match·meta·player·home·community(list/detail)·devices. 기존 lib 재사용, 넥슨 오류 → `code` 매핑(`lib/api/v1.ts`). `lib/supabase/server.ts` 가 **Bearer JWT** 를 받아 웹(쿠키)·앱 공존.
+- **푸시**: `lib/push/apns.ts`(HTTP/2+ES256, 의존성 0) + 크론 `push-weekly`(일 21시 KST)·`push-meta`(금 18시 KST) + `device_tokens`(0018). vercel.json 크론 추가.
+- 개발 가이드 `docs/NATIVE-APP.md`(현재는 iOS 저장소). `tsc` 0 · build ✓ · 243 PASS.
+- ⚠️ 남은 수동: Supabase URL/anon 키를 Info.plist 에, Apple Developer(App Group·Push·Sign in with Apple·Associated Domains), APNs .p8 env, AdMob 실제 ID, 0018 마이그레이션, 배포 후 실기기 검증(넥슨 키가 없는 로컬에선 전적 화면 데이터 미검증).
+
+## 2026-09-03 — iOS 앱(App Store) 준비: Capacitor 셸 + 앱 모드 최적화 + 개인정보처리방침 v2
+
+- `mobile/` Capacitor 8(SPM, CocoaPods 불필요) iOS 셸 *(2026-09-08 iOS 저장소 `legacy-capacitor/` 로 이동, 폐기)* — 원격 웹(www.fcscope.xyz) 로드, UA 토큰 `FCScopeApp/<ver>`로 웹이 앱 모드 감지. 시뮬레이터 빌드·실행 확인(`npm run build:sim`).
+- 앱 모드(웹) *(2026-09-08 전량 제거)*: `lib/client/native.ts` + `NativeBridge` — `<html data-native>`, 상태바 테마 동기화, 딥링크/OAuth 복귀, AdMob 배너(UMP→ATT→적응형 배너, 탭바·본문 인셋 자동), 푸터 숨김(약관·문의는 마이페이지 설정으로), 탭 햅틱, 카드 저장은 네이티브 공유 시트(Filesystem+Share).
+- 심사 요건: Sign in with Apple(4.8, 네이티브 시트→`signInWithIdToken`), 앱 내 계정 삭제(5.1.1(v), `/api/me/delete` + 마이페이지 설정), UGC 차단(1.2, 기기 로컬 차단 목록 + 글/댓글/목록 래퍼), ATT 문구, 세로 고정, 오프라인 화면(`www/error.html`). Google 로그인은 시스템 브라우저 시트 + `fcscope://auth/callback` 복귀(PKCE 쿠키는 웹뷰에 있어 서버 콜백 그대로 동작).
+- 유니버설 링크 `/.well-known/apple-app-site-association`(`APPLE_TEAM_ID` 설정 시), AdMob `/app-ads.txt`(`ADMOB_PUBLISHER_ID`), 미들웨어 matcher 제외.
+- 개인정보처리방침 v2(2026-09-10 시행) — 광고/IDFA/ATT, 앱 접근권한, Apple 로그인, 보유기간표, 국외이전표, 앱 내 계정 삭제, 14세 미만, 자동수집 거부, 안전성 조치. 이용약관에 광고·Apple 고지·차단/24h 검토 조항. 로그인 동의 버전 2.
+- 검증: `tsc` 0 · 243 PASS · build ✓ · 시뮬레이터(iPhone 17)에서 UMP/ATT/테스트 배너/Apple 버튼/설정 섹션 육안 확인. 수동 설정 절차·심사 노트·개인정보 라벨은 `docs/APP-STORE.md`.
+- ⚠️ 남은 수동 작업: Apple 팀 ID·App ID Capability, Supabase Redirect URL/Apple provider, AdMob 실제 ID(Info.plist·Vercel env), 개정 공지 배너 후 배포, 실기기 로그인 테스트.
+
 ## 2026-08-31 — [주간 회의] 스쿼드 빌더 딥링크 + 히어로 칩 중복 제거 + 주간 성적표 리캡
 
 - 주간 개선 회의(4렌즈). 정확성 렌즈 클린(tsc 0·243 테스트·회귀 없음, #92/#90 재감사 CLEAN).

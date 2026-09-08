@@ -9,6 +9,7 @@ import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
 import PostActions from './PostActions';
 import Comments, { type CommentView } from './Comments';
 import ReportButton from '@/app/components/ReportButton';
+import BlockedAuthor, { BlockButton } from '@/app/components/BlockedAuthor';
 import AttachedSquad from './AttachedSquad';
 import BattleVote from './BattleVote';
 
@@ -71,6 +72,7 @@ export default async function PostDetail({
     body: c.body,
     squad_id: c.squad_id,
     created_at: c.created_at,
+    authorId: c.author_id,
     authorName: profiles.get(c.author_id)?.nickname ?? '알 수 없음',
     isOwn: Boolean(userId && c.author_id === userId),
   }));
@@ -102,6 +104,7 @@ export default async function PostDetail({
         ← {cfg.label} 목록
       </Link>
 
+      <BlockedAuthor authorId={post.author_id} mode="notice">
       <article className="panel mt-3 p-6">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded bg-surface-2 px-2 py-0.5 text-[13px] font-semibold text-ink">
@@ -191,11 +194,13 @@ export default async function PostDetail({
         {isOwner ? (
           <PostActions id={post.id} status={post.status} />
         ) : (
-          <div className="mt-6 flex justify-end border-t border-line pt-4">
+          <div className="mt-6 flex items-center justify-end gap-3 border-t border-line pt-4">
             <ReportButton targetType="post" targetId={post.id} />
+            <BlockButton authorId={post.author_id} authorName={author?.nickname} />
           </div>
         )}
       </article>
+      </BlockedAuthor>
 
       {/* 댓글 — 평가/제안이 오가는 핵심 루프 */}
       <Comments
