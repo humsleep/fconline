@@ -60,10 +60,19 @@ This version has breaking changes — APIs, conventions, and file structure may 
   상한을 더 올리려면 반드시 실측부터 할 것.
 - **선수 이미지는 CORS 이슈** → 웹은 Next.js 이미지 프록시 경유.
   단 **네이티브 앱에는 CORS가 없어** 넥슨 CDN을 직접 부른다(iOS 저장소 `FCScope/Core/API/NexonCDN.swift`). 프록시 대역폭 0.
-- **iOS 앱은 별도 저장소**(SwiftUI). 이 저장소는 앱의 **백엔드**만 담당한다 — `app/api/v1/*`,
-  `lib/api/v1.ts`, `lib/push/*`(APNs), `app/api/me/delete/`, `app/.well-known/apple-app-site-association/`,
-  `app/app-ads.txt/`. `lib/supabase/server.ts` 가 쿠키(웹)와 Bearer JWT(앱)를 함께 받는다.
+- **iOS 앱은 별도 저장소**(https://github.com/humsleep/fcscope, SwiftUI). 이 저장소는 앱의 **백엔드**만
+  담당한다 — `app/api/v1/*`, `lib/api/v1.ts`, `lib/push/*`(APNs), `app/api/me/delete/`,
+  `app/.well-known/apple-app-site-association/`, `app/app-ads.txt/`.
+  `lib/supabase/server.ts` 가 쿠키(웹)와 Bearer JWT(앱)를 함께 받는다.
   **웹 코드에 앱 전용 분기를 다시 넣지 말 것** — Capacitor 웹뷰 셸 시절의 `data-native` 분기는 전부 제거했다.
+- 🔴 **`/api/v1` 은 깨뜨릴 수 없는 공개 계약이다 — 필드 추가만 허용.**
+  앱은 12개 v1 라우트를 `Models.swift`(420줄)로 그대로 디코딩하며 **버전 협상이 없다**.
+  앱스토어에 나간 구버전은 몇 달씩 살아 있고 심사 때문에 즉시 고칠 수도 없어서,
+  **필드 삭제·개명·타입 변경은 그 순간 배포된 앱을 깨뜨린다**.
+  - 없앨 필드는 지우지 말고 `null` 로 계속 내려보낸다(앱 모델이 옵셔널이면 안 깨진다).
+  - 필수(non-null)였던 필드를 nullable 로 바꾸는 것도 파괴적 변경이다.
+  - 정말 깨야 하면 `/api/v2` 를 새로 만들고 v1 은 남긴다.
+  - 리팩터링·죽은 코드 정리 중 v1 응답 형태를 건드리려 할 때 이 항목부터 확인할 것.
 - 에러 분류는 `err.name` + `err.status` + message regex (production minify 대응)
 - Supabase service role 키는 서버 전용 모듈에서만 import
 - `useSearchParams` 쓰는 페이지는 `<Suspense>` wrap 필수
