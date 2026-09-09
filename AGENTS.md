@@ -73,6 +73,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - 필수(non-null)였던 필드를 nullable 로 바꾸는 것도 파괴적 변경이다.
   - 정말 깨야 하면 `/api/v2` 를 새로 만들고 v1 은 남긴다.
   - 리팩터링·죽은 코드 정리 중 v1 응답 형태를 건드리려 할 때 이 항목부터 확인할 것.
+  - 계약은 `lib/api/contract.ts` 에 선언돼 있다. **응답 형태를 바꿨다면 배포 전에**
+    `npm run verify:api` (실제 서버 대조, 기본 프로덕션)를 돌린다. `npm test` 는 검증기만 검사한다.
+  - v1 뿐 아니라 `/api/players/search` 처럼 앱이 쓰는 구 라우트도 같은 계약 대상이다.
 - 에러 분류는 `err.name` + `err.status` + message regex (production minify 대응)
 - Supabase service role 키는 서버 전용 모듈에서만 import
 - `useSearchParams` 쓰는 페이지는 `<Suspense>` wrap 필수
