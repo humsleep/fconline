@@ -24,12 +24,14 @@ const TONE_ICON: Record<Insight["tone"], string> = {
 export default async function ReportSection({
   ouid,
   matchType,
+  cacheOnly = false,
 }: {
   ouid: string;
   matchType: number;
+  cacheOnly?: boolean;
 }) {
   // getRecentMatchDetails(React cache)로 HeroBadges·타 섹션과 요청 내 조회 공유
-  const { listOk, details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT);
+  const { listOk, details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT, cacheOnly);
   const report = aggregateReport(details, ouid);
 
   if (report.played === 0) {

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { limitNexonFanout } from "@/lib/security/rate-limit";
+import { isBot } from "@/lib/security/bot";
 import SearchForm from "@/app/components/SearchForm";
 import { DEMO_NICKNAME } from "@/lib/demo";
 import { getMaxDivisions, getOuid, getUserBasic } from "@/lib/nexon/api";
@@ -69,11 +69,11 @@ export default async function UserPage({
   } catch {
     nickname = raw;
   }
-  // 이적시장은 매치 종류와 무관 → 독립 페이지로 이동 (기존 링크 호환)
-  if (view === "market") redirect(`/market/${encodeURIComponent(nickname)}`);
-
   // 넥슨 팬아웃(매치 30건 + 배지 + 등급)을 유발하는 SSR — IP rate limit 선차단
   const hdrs = await headers();
+  // 크롤러는 캐시된 경기만 렌더한다 — 크롤 1회당 넥슨 30콜 + match_cache 쓰기를 0 으로.
+  // sitemap 에 오르는 닉네임은 search_log(사람 검색만 기록)에서 오므로 대개 캐시가 이미 있다.
+  const cacheOnly = isBot(hdrs.get("user-agent"));
   const rl = limitNexonFanout(hdrs, "user-page");
   if (!rl.ok) return <TooManyRequests nickname={nickname} />;
   const matchType =
@@ -197,7 +197,7 @@ export default async function UserPage({
           </div>
         }
       >
-        <HeroBadges ouid={ouid} nickname={basic.nickname} />
+        <HeroBadges ouid={ouid} nickname={basic.nickname} cacheOnly={cacheOnly} />
       </Suspense>
 
       {/* 매치 종류 탭 + 이적시장 진입 — 모바일에서도 한 줄 유지(넘치면 가로 스크롤) */}
@@ -217,13 +217,6 @@ export default async function UserPage({
             {t.label}
           </Link>
         ))}
-        {/* 이적시장 — ml-auto 제거: 좁은 화면에서 스크롤 컨테이너 밖으로 밀려 잘리던 문제 해소 */}
-        <Link
-          href={`/market/${encodeURIComponent(basic.nickname)}`}
-          className="scoreboard flex-none whitespace-nowrap rounded-lg bg-gold/15 px-2.5 py-1.5 text-[13px] font-bold text-gold transition-colors hover:bg-gold/25 sm:px-3.5 sm:text-sm"
-        >
-          💰 이적시장
-        </Link>
       </nav>
 
       {/* 뷰 서브탭 */}
@@ -258,19 +251,19 @@ export default async function UserPage({
 
       {activeView === "squad" ? (
         <Suspense key={`sq-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
-          <SquadSection ouid={ouid} matchType={matchType} nickname={basic.nickname} />
+          <SquadSection ouid={ouid} matchType={matchType} nickname={basic.nickname} cacheOnly={cacheOnly} />
         </Suspense>
       ) : activeView === "style" ? (
         <Suspense key={`st-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
-          <PlaystyleSection ouid={ouid} matchType={matchType} />
+          <PlaystyleSection ouid={ouid} matchType={matchType} cacheOnly={cacheOnly} />
         </Suspense>
       ) : activeView === "report" ? (
         <Suspense key={`rp-${ouid}-${matchType}`} fallback={<SquadSkeleton />}>
-          <ReportSection ouid={ouid} matchType={matchType} />
+          <ReportSection ouid={ouid} matchType={matchType} cacheOnly={cacheOnly} />
         </Suspense>
       ) : (
         <Suspense key={`${ouid}-${matchType}`} fallback={<MatchSkeleton />}>
-          <MatchSection ouid={ouid} matchType={matchType} nickname={basic.nickname} />
+          <MatchSection ouid={ouid} matchType={matchType} nickname={basic.nickname} cacheOnly={cacheOnly} />
         </Suspense>
       )}
 
@@ -300,16 +293,19 @@ async function MatchSection({
   ouid,
   matchType,
   nickname,
+  cacheOnly,
 }: {
   ouid: string;
   matchType: number;
   nickname: string;
+  cacheOnly: boolean;
 }) {
   // 히어로 배지(공식경기)와 같은 요청이면 React cache()로 넥슨 호출 공유
   const { listOk, matchIds, details } = await getRecentMatchDetails(
     ouid,
     matchType,
-    MATCH_COUNT
+    MATCH_COUNT,
+    cacheOnly
   );
   const summaries: MatchSummary[] = [];
   for (const d of details) {

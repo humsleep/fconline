@@ -9,7 +9,9 @@ import { SITE_URL } from "@/lib/site";
 import SeasonBadge from "@/app/components/SeasonBadge";
 import PlayerSearch from "@/app/meta/PlayerSearch";
 
-export const revalidate = 3600;
+// 랭커 스냅샷은 크론이 하루 1회 갱신 → 재검증 주기를 데이터 갱신 주기에 맞춘다.
+// sitemap 에 선수 페이지가 8,000개라 1시간 재검증은 크롤 시 DB 부하가 크다.
+export const revalidate = 86400;
 
 function parseSpid(raw: string): number | null {
   if (!/^\d{4,10}$/.test(raw)) return null;

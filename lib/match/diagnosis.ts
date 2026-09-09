@@ -1,5 +1,5 @@
 import type { MatchSummary } from "../nexon/summary";
-import type { RuleTone } from "../market/diagnosis";
+import type { RuleTone } from "../diagnosis/tone";
 
 /**
  * 공식경기 성향 룰베이스 진단.

@@ -1,10 +1,7 @@
 import 'server-only';
 import { getAdmin } from '@/lib/supabase/admin';
 import { guardDb } from '@/lib/supabase/circuit';
-
-/** 크롤러/미리보기 봇 User-Agent 판별(대략). 봇은 search_log 시드에서 제외. */
-const BOT_UA_RE =
-  /(bot|crawl|spider|slurp|mediapartners|facebookexternalhit|embedly|preview|headless|monitor|scanner|curl|wget|python-requests|node-fetch|axios)/i;
+import { isBot } from '@/lib/security/bot';
 
 /**
  * 검색된 구단주명을 best-effort로 기록 (sitemap 색인 시드).
@@ -14,10 +11,32 @@ const BOT_UA_RE =
  * - 봇 UA는 제외: 크롤러는 이미 sitemap에 있는 URL을 재크롤 → 재시드는 무의미한
  *   쓰기 IO일 뿐(사람이 새로 검색한 닉네임만 시드 가치). NANO Disk IO 절감.
  */
+// 인스턴스 로컬 스로틀 — 같은 닉네임을 1시간 안에 다시 기록하지 않는다.
+// sitemap 은 last_seen 순 상위 500개만 쓰므로 분 단위 정확도가 필요 없고,
+// 인기 프로필이 하루 수백 번 조회되면 그대로 수백 번의 쓰기가 되던 것을 막는다.
+const LOG_TTL_MS = 3_600_000;
+const MAX_TRACKED = 5_000;
+const recentlyLogged = new Map<string, number>();
+
 export function logNicknameSearch(nickname: string, userAgent?: string | null): void {
   const name = nickname.trim();
   if (!name) return;
-  if (userAgent && BOT_UA_RE.test(userAgent)) return;
+  if (isBot(userAgent)) return;
+
+  const key = name.toLowerCase();
+  const now = Date.now();
+  const last = recentlyLogged.get(key);
+  if (last !== undefined && now - last < LOG_TTL_MS) return;
+  if (recentlyLogged.size > MAX_TRACKED) {
+    for (const [k, t] of recentlyLogged) if (now - t > LOG_TTL_MS) recentlyLogged.delete(k);
+    // 정리 후에도 넘치면 가장 오래된 것부터 축출(Map 은 삽입 순서 보존)
+    while (recentlyLogged.size > MAX_TRACKED) {
+      const oldest = recentlyLogged.keys().next().value;
+      if (oldest === undefined) break;
+      recentlyLogged.delete(oldest);
+    }
+  }
+  recentlyLogged.set(key, now);
   const db = getAdmin();
   if (!db) return;
   // 서킷 브레이커 경유 — DB 불통 시 즉시 skip(재연결 폭풍 방지). 실패는 조용히 무시.

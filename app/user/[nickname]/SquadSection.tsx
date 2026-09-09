@@ -20,14 +20,16 @@ export default async function SquadSection({
   ouid,
   matchType,
   nickname,
+  cacheOnly = false,
 }: {
   ouid: string;
   matchType: number;
   nickname: string;
+  cacheOnly?: boolean;
 }) {
   // HeroBadges와 동일 요청 내에서 getRecentMatchDetails(React cache)로 공유 →
   // 기본 탭(type=50) 뷰에서 매치 목록·상세 배치 조회 중복(넥슨+Supabase)을 0으로.
-  const { details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT);
+  const { details } = await getRecentMatchDetails(ouid, matchType, MATCH_COUNT, cacheOnly);
   const all = aggregatePlayers(details, ouid);
   const players = all.filter((p) => p.games >= MIN_GAMES).slice(0, MAX_CARDS);
 

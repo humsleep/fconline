@@ -7,6 +7,10 @@ import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { safeNextPath } from '@/lib/security/safe-redirect';
 import { isInAppBrowser, inAppBrowserName } from '@/lib/client/in-app-browser';
 
+/** 약관·개인정보처리방침 버전 — 문서 개정 시 올린다(동의 증적). */
+const TERMS_VERSION = 2;
+const PRIVACY_VERSION = 2;
+
 function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -38,22 +42,26 @@ function LoginContent() {
     });
   }, [configured, next, router]);
 
-  const signInWithGoogle = async () => {
-    if (!configured) return;
+  /** 동의 확인 + 동의 시점 로컬 증적. 미동의면 false. */
+  const ensureAgreed = (): boolean => {
     if (!agreed) {
       setError('이용약관과 개인정보처리방침에 동의해 주세요.');
-      return;
+      return false;
     }
+    try {
+      localStorage.setItem(
+        'fcscope-consent',
+        JSON.stringify({ termsV: TERMS_VERSION, privacyV: PRIVACY_VERSION, at: new Date().toISOString() })
+      );
+    } catch {}
+    return true;
+  };
+
+  const signInWithGoogle = async () => {
+    if (!configured || !ensureAgreed()) return;
     setLoading(true);
     setError(null);
     try {
-      // 동의 시점 기록 (분쟁 대비 로컬 증적)
-      try {
-        localStorage.setItem(
-          'fcscope-consent',
-          JSON.stringify({ termsV: 1, privacyV: 1, at: new Date().toISOString() })
-        );
-      } catch {}
       const supabase = createClient();
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
       const { error } = await supabase.auth.signInWithOAuth({

@@ -31,10 +31,8 @@ export async function POST(
     });
   }
 
-  // 브라우저가 요청한 경로와 동일한 인코딩으로 무효화 (전적·이적시장 둘 다)
-  const enc = encodeURIComponent(decoded);
-  revalidatePath(`/user/${enc}`);
-  revalidatePath(`/market/${enc}`);
+  // 브라우저가 요청한 경로와 동일한 인코딩으로 무효화
+  revalidatePath(`/user/${encodeURIComponent(decoded)}`);
 
   return Response.json({ ok: true });
 }

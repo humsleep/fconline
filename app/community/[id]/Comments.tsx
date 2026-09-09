@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation';
 import { formatRelativeKr } from '@/lib/format';
 import MySquadPicker from '@/app/components/MySquadPicker';
 import ReportButton from '@/app/components/ReportButton';
+import BlockedAuthor, { BlockButton } from '@/app/components/BlockedAuthor';
 
 export interface CommentView {
   id: string;
   body: string;
   squad_id: string | null;
   created_at: string;
+  authorId: string;
   authorName: string;
   isOwn: boolean;
 }
@@ -110,7 +112,8 @@ export default function Comments({
       ) : (
         <ul className="mt-4 space-y-4">
           {comments.map((c) => (
-            <li key={c.id} className="flex gap-2.5">
+            <BlockedAuthor key={c.id} authorId={c.authorId}>
+            <li className="flex gap-2.5">
               <Avatar name={c.authorName} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-[13px]">
@@ -124,11 +127,10 @@ export default function Comments({
                       삭제
                     </button>
                   ) : (
-                    <ReportButton
-                      targetType="comment"
-                      targetId={c.id}
-                      className="ml-auto"
-                    />
+                    <span className="ml-auto flex items-center gap-2">
+                      <ReportButton targetType="comment" targetId={c.id} />
+                      <BlockButton authorId={c.authorId} authorName={c.authorName} />
+                    </span>
                   )}
                 </div>
                 <div className="mt-1 rounded-xl rounded-tl-sm bg-surface-2 px-3 py-2">
@@ -146,6 +148,7 @@ export default function Comments({
                 </div>
               </div>
             </li>
+            </BlockedAuthor>
           ))}
         </ul>
       )}

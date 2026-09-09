@@ -60,7 +60,12 @@ GET /fconline/v1/user/trade?ouid=&tradetype=&offset=&limit=
 → [{ tradeDate, saleSn, spid, grade, value }]
 ```
 - `tradetype`: `buy` | `sell`
-- ⚠️ 래퍼 문서상 "본인 거래 기록만 조회 가능"
+- 🔴 **라이브 실측(2026-09-04) 확정: `ouid` 파라미터가 무시된다.**
+  존재하지 않는 ouid 로 호출해도 200 + 동일 응답이 오고, 서로 다른 계정의 응답이 완전히 같다.
+  실제로는 **API 키 소유자 본인의 거래 기록만** 반환한다(래퍼 문서 설명과 일치).
+  → 타인 닉네임으로 이적시장을 보여주는 기능은 성립하지 않는다.
+- ⚠️ `value` 는 **거래 시점 화폐 단위**로 저장된다. 화폐개혁(2026-08-20) 전 기록만 `/1e8` 환산해야 한다
+  (`lib/nexon/bp.ts` `toNewBp(value, tradeDate)`).
 
 ## 3. 매치 상세
 

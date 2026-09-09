@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { useUser } from "@/lib/supabase/useUser";
+import { useUser, signOut } from "@/lib/supabase/useUser";
+import { BLOCKLIST_EVENT, clearBlocked, getBlocked } from "@/lib/client/blocklist";
 import { forgetMySquad, loadMySquads, MAX_MY_SQUADS, type MySquad } from "@/app/components/MySquadPicker";
 import { POST_TYPES } from "@/lib/community/post-types";
 import { getFavorites, toggleFavorite, getStreak, type Streak } from "@/lib/client/local-prefs";
@@ -11,6 +12,10 @@ import type { FormPoint } from "@/lib/form-trend";
 
 const RECENT_KEY = "fcscope-recent-searches";
 
+function subscribeBlocklist(cb: () => void) {
+  window.addEventListener(BLOCKLIST_EVENT, cb);
+  return () => window.removeEventListener(BLOCKLIST_EVENT, cb);
+}
 interface Profile {
   nickname: string | null;
   verified_nickname: string | null;
@@ -47,6 +52,31 @@ export default function MyPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [streak, setStreak] = useState<Streak | null>(null);
   const [fetched, setFetched] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  // 기기 로컬 값들 — SSR 에선 기본값, 하이드레이션 후 실제 값
+  const blockedCount = useSyncExternalStore(subscribeBlocklist, () => getBlocked().length, () => 0);
+
+  /** 계정 삭제 — 2단계 확인 후 즉시 처리(App Store 5.1.1(v)). */
+  async function deleteAccount() {
+    if (
+      !window.confirm(
+        "계정을 삭제할까요?\n닉네임·구단주 연동·내가 쓴 글과 댓글·전적 스냅샷이 모두 삭제되며 되돌릴 수 없어요."
+      )
+    )
+      return;
+    if (!window.confirm("정말 삭제할까요? 이 작업은 취소할 수 없습니다.")) return;
+    setDeletingAccount(true);
+    try {
+      const res = await fetch("/api/me/delete", { method: "DELETE" });
+      const d = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(d?.error ?? "삭제하지 못했어요.");
+      window.alert("계정이 삭제됐어요. 그동안 이용해 주셔서 감사합니다.");
+      await signOut();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "삭제하지 못했어요.");
+      setDeletingAccount(false);
+    }
+  }
 
   useEffect(() => {
     setSquads(loadMySquads());
@@ -378,6 +408,50 @@ export default function MyPage() {
           )}
         </section>
       )}
+
+      {/* 설정 — 차단 목록·약관·문의·계정 관리 */}
+      <section className="panel mt-3 p-4 sm:p-5">
+        <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">설정</p>
+        <ul className="mt-2 divide-y divide-line/60 text-sm">
+          <li className="flex min-h-11 items-center justify-between gap-3 py-1.5">
+            <span className="text-muted">차단한 사용자</span>
+            {blockedCount > 0 ? (
+              <button
+                onClick={() => {
+                  if (window.confirm(`차단한 사용자 ${blockedCount}명을 모두 해제할까요?`)) clearBlocked();
+                }}
+                className="scoreboard rounded px-2 py-1 text-[13px] font-semibold text-accent hover:bg-line"
+              >
+                {blockedCount}명 · 전체 해제
+              </button>
+            ) : (
+              <span className="scoreboard text-[13px] text-muted">없음</span>
+            )}
+          </li>
+          <li className="flex min-h-11 flex-wrap items-center gap-x-4 py-1.5">
+            <Link href="/terms" className="py-2 text-ink underline underline-offset-2">이용약관</Link>
+            <Link href="/privacy" className="py-2 text-ink underline underline-offset-2">개인정보처리방침</Link>
+            <a href="mailto:boheme88@naver.com" className="py-2 text-ink underline underline-offset-2">문의</a>
+          </li>
+          {user && (
+            <li className="flex min-h-11 flex-wrap items-center justify-between gap-3 py-1.5">
+              <button onClick={() => signOut()} className="py-2 text-muted hover:text-ink">
+                로그아웃
+              </button>
+              <button
+                onClick={deleteAccount}
+                disabled={deletingAccount}
+                className="py-2 text-lose disabled:opacity-50"
+              >
+                {deletingAccount ? "삭제 중…" : "계정 삭제"}
+              </button>
+            </li>
+          )}
+        </ul>
+        <p className="mt-2 text-[12px] leading-relaxed text-muted">
+          FC Scope은 비공식 팬 서비스입니다. Data based on NEXON Open API. 게임 데이터의 저작권은 NEXON·EA에 있습니다.
+        </p>
+      </section>
     </div>
   );
 }
