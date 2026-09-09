@@ -9,7 +9,7 @@
  *
  * 위반이 하나라도 있으면 exit 1. 배포 전(특히 v1 라우트를 건드린 PR)에 돌린다.
  */
-import { checkRoute, ROUTES, type Violation } from '../lib/api/contract';
+import { checkRoute, ROUTES, AUTH_ONLY, WRITE_ONLY, type Violation } from '../lib/api/contract';
 
 const BASE = (process.argv[2] || 'https://www.fcscope.xyz').replace(/\/$/, '');
 const NICK = process.argv[3] || '보엠';
@@ -78,6 +78,10 @@ async function main() {
     { key: 'GET /api/v1/user/:nickname/report', url: `${BASE}/api/v1/user/${n}/report` },
     { key: 'GET /api/v1/user/:nickname/players', url: `${BASE}/api/v1/user/${n}/players` },
     { key: 'GET /api/v1/user/:nickname/playstyle', url: `${BASE}/api/v1/user/${n}/playstyle` },
+    // 구 라우트 — 앱이 v1 과 똑같이 의존한다.
+    { key: 'GET /api/me/notifications', url: `${BASE}/api/me/notifications` },
+    { key: 'GET /api/squad/preset', url: `${BASE}/api/squad/preset?id=mancity` },
+    { key: 'GET /api/squad/from-user', url: `${BASE}/api/squad/from-user?nickname=${n}` },
   ] satisfies Case[]) {
     await run(c);
   }
@@ -103,8 +107,22 @@ async function main() {
   if (postId) await run({ key: 'GET /api/v1/community/posts/:id', url: `${BASE}/api/v1/community/posts/${postId}` });
   else skipped.push('GET /api/v1/community/posts/:id — 게시글이 없어 id 를 못 구함');
 
+  // battle 투표 · 스쿼드 상세 — 커뮤니티 글에서 실제 id 를 뽑아 쓴다.
+  if (postId) await run({ key: 'GET /api/community/battle', url: `${BASE}/api/community/battle?postId=${postId}` });
+  else skipped.push('GET /api/community/battle — postId 를 못 구함');
+
+  const squadId = pick<string>(list.body, ['posts', '0', 'squad_id'])
+    ?? pick<string>(await getJson(`${BASE}/api/v1/community/posts`).then((r) => r), ['body', 'posts', '1', 'squad_id']);
+  if (squadId) await run({ key: 'GET /api/squad/:id', url: `${BASE}/api/squad/${squadId}` });
+  else skipped.push('GET /api/squad/:id — 스쿼드가 붙은 글이 없어 id 를 못 구함');
+
+  // 익명으로는 확인할 수 없는 라우트를 명시적으로 남긴다(조용히 빠지지 않도록).
+  for (const k of AUTH_ONLY) skipped.push(`${k} — 로그인 필요(익명 검증 불가)`);
+  for (const k of WRITE_ONLY) skipped.push(`${k} — 쓰기 라우트(자동 호출 안 함)`);
+
   const defined = Object.keys(ROUTES).length;
-  console.log(`\n검증 ${checked}/${defined} 라우트 · 위반 ${failures}건`);
+  const auto = defined - AUTH_ONLY.size - WRITE_ONLY.size;
+  console.log(`\n검증 ${checked}/${auto} 라우트(자동 검증 대상) · 계약 정의 ${defined}개 · 위반 ${failures}건`);
   if (skipped.length) {
     console.log('\n건너뜀:');
     for (const s of skipped) console.log(`  – ${s}`);

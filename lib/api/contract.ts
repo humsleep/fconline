@@ -173,6 +173,18 @@ export const SHAPES: Record<string, Shape> = {
 
   SquadSlot: { slotId: 'string', spid: 'int', name: 'string', 'season?': 'string', 'x?': 'number', 'y?': 'number' },
   PlayerHit: { spid: 'int', pid: 'int', name: 'string', season: 'string', seasons: 'SeasonVariant[]' },
+
+  // ── 구 라우트(/api/*) — 앱이 v1 과 똑같이 의존한다. 웹도 함께 쓰므로 오히려 리팩터링에 휩쓸리기 쉽다.
+  MyProfile: { 'id?': 'string', 'nickname?': 'string', 'verified_nickname?': 'string', 'verified_ouid?': 'string' },
+  MyPost: { id: 'string', type: 'string', title: 'string', created_at: 'string' },
+  MySquad: { id: 'string', name: 'string', formation: 'string' },
+  Snapshot: {
+    winRate: 'int', avgRating: 'number', played: 'int',
+    'deltaWinRate?': 'int', 'deltaRating?': 'number', 'prevDate?': 'string',
+  },
+  FormPoint: { date: 'string', winRate: 'int', avgRating: 'number' },
+  NotifItem: { postId: 'string', title: 'string', count: 'int' },
+  ImportedPlayer: { spid: 'int', name: 'string', pos: 'string', season: 'string' },
 };
 
 /** 라우트별 최상위 응답 형태. 키는 `METHOD 경로`(경로 파라미터는 `:name`). */
@@ -217,7 +229,40 @@ export const ROUTES: Record<string, Shape> = {
     post: 'Post', comments: 'Comment[]', viewer: 'Viewer',
   },
   'GET /api/players/search': { players: 'PlayerHit[]' },
+
+  // ── 구 라우트 ────────────────────────────────────────────────
+  // 로그인 상태에서의 형태. 비로그인이면 서버가 `{ profile: null }` 만 돌려주고
+  // 앱은 로그인 상태에서만 호출한다(토큰 만료 시엔 디코딩 실패 → 비로그인 화면으로 안전하게 강등).
+  'GET /api/profile': {
+    'profile?': 'MyProfile', posts: 'MyPost[]', squads: 'MySquad[]',
+    'snapshot?': 'Snapshot', snapshots: 'FormPoint[]',
+  },
+  'GET /api/me/notifications': { total: 'int', items: 'NotifItem[]' },
+  'GET /api/squad/preset': { formation: 'string', name: 'string', teamTag: 'string', slots: 'SquadSlot[]' },
+  'GET /api/squad/from-user': {
+    nickname: 'string', formation: 'string', 'matchDate?': 'string', players: 'ImportedPlayer[]',
+  },
+  'GET /api/squad/:id': {
+    id: 'string', name: 'string', formation: 'string', slots: 'SquadSlot[]',
+    'teamTag?': 'string', 'createdAt?': 'string',
+  },
+  // 서버는 소문자 a/b 로 내려준다(웹 BattleVote 도 소문자를 읽는다). mine 은 서버가 주지 않는다.
+  'GET /api/community/battle': { a: 'int', b: 'int' },
+
+  // ── 쓰기 라우트 — 검증기가 자동 호출하지 않는다(상태를 바꾸므로). 형태만 고정해 둔다.
+  'POST /api/community/battle': { a: 'int', b: 'int' },
+  'POST /api/squad': { id: 'string' },
+  'POST /api/profile': { ok: 'bool', nickname: 'string' },
+  'POST /api/profile/verify': { ok: 'bool' },
 };
+
+/** 로그인이 필요해 익명 검증기가 실제 형태를 확인할 수 없는 라우트. */
+export const AUTH_ONLY = new Set(['GET /api/profile']);
+
+/** 상태를 바꾸므로 검증기가 호출하면 안 되는 라우트. */
+export const WRITE_ONLY = new Set(
+  Object.keys(ROUTES).filter((k) => !k.startsWith('GET '))
+);
 
 /** 검증 결과 한 건. */
 export interface Violation {
