@@ -166,13 +166,34 @@ export async function GET(req: Request) {
   }
 
   // app_events — 앱 익명 사용 기록. 재방문·공유 통계는 최근 30일 위주로 본다.
+  // match_cache 와 같은 이유로 한 번에 지우지 않는다(WAL 폭증). id(identity) 구간으로 잘라
+  // 한 문장이 최대 BATCH 행만 건드리게 하고, 실행당 반복 상한을 둬 며칠에 걸쳐 수렴시킨다.
+  // (in(id 목록) 대신 구간을 쓰는 건 5,000개 id 가 URL 에 실리지 않게 하기 위해서다.)
   try {
     const cutoff = new Date(Date.now() - 180 * day).toISOString();
-    const { count } = await db
-      .from('app_events')
-      .delete({ count: 'estimated' })
-      .lt('created_at', cutoff);
-    retention.app_events_deleted = count ?? 0;
+    const BATCH = 5_000;
+    const MAX_ITER = 20;
+    let deleted = 0;
+    for (let i = 0; i < MAX_ITER; i++) {
+      const { data: edge, error: edgeErr } = await db
+        .from('app_events')
+        .select('id')
+        .lt('created_at', cutoff)
+        .order('id', { ascending: true })
+        .limit(1);
+      if (edgeErr || !edge?.length) break;
+      const lo = Number(edge[0].id);
+      const { count, error } = await db
+        .from('app_events')
+        .delete({ count: 'exact' })
+        .gte('id', lo)
+        .lt('id', lo + BATCH)
+        .lt('created_at', cutoff);
+      if (error) break;
+      deleted += count ?? 0;
+      await new Promise((r) => setTimeout(r, 200)); // 체크포인트 숨돌리기
+    }
+    retention.app_events_deleted = deleted;
   } catch {
     retention.app_events_deleted = -1;
   }
