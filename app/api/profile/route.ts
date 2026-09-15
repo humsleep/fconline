@@ -33,9 +33,12 @@ export async function GET() {
   }
 
   // 계정에 귀속된 내 스쿼드(크로스기기)
+  // squads 는 공개 SELECT 정책이 없다(0022 — ip_hash·user_id 노출 방지) → 본인 user_id 로 걸러 service_role 로 읽는다.
   let squads: { id: string; name: string; formation: string }[] = [];
   try {
-    const { data: sq } = await supabase
+    const admin = getAdmin();
+    if (!admin) throw new Error('no admin');
+    const { data: sq } = await admin
       .from('squads')
       .select('id, name, formation, created_at')
       .eq('user_id', user.id)
