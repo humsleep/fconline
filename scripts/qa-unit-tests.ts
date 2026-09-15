@@ -40,6 +40,7 @@ import { POST_TYPES, isPostType } from '../lib/community/post-types';
 import type { Squad } from '../lib/squad/store';
 import { isOuidLookupNotFound, MATCH_ID_RE } from '../lib/nexon/errors';
 import { containsBannedWords, findBannedTerm } from '../lib/community/moderation';
+import { APNS_PRODUCTION, APNS_SANDBOX, apnsHost, deadTokenDecision, isDeadToken } from '../lib/push/policy';
 
 let pass = 0;
 const fails: string[] = [];
@@ -863,6 +864,33 @@ section('moderation');
 
   ok(containsBannedWords(null, '', '좋은 글', '씨발'), 'moderation: 여러 필드 중 하나라도 걸리면 true');
   ok(!containsBannedWords(null, undefined, '', '좋은 글'), 'moderation: 빈/정상 필드만이면 false');
+}
+
+// ── 푸시 정책 (APNS_SANDBOX 해석·무효 토큰·삭제 브레이커) ─────
+section('push-policy');
+{
+  eq(apnsHost(undefined), APNS_PRODUCTION, 'apns: 미설정 = 운영');
+  eq(apnsHost(''), APNS_PRODUCTION, 'apns: 빈 값 = 운영');
+  eq(apnsHost('0'), APNS_PRODUCTION, 'apns: "0" = 운영 (truthy 버그 회귀)');
+  eq(apnsHost('false'), APNS_PRODUCTION, 'apns: "false" = 운영 (truthy 버그 회귀)');
+  eq(apnsHost('yes'), APNS_PRODUCTION, 'apns: 모르는 값 = 운영');
+  eq(apnsHost('1'), APNS_SANDBOX, 'apns: "1" = 샌드박스');
+  eq(apnsHost('true'), APNS_SANDBOX, 'apns: "true" = 샌드박스');
+  eq(apnsHost(' TRUE '), APNS_SANDBOX, 'apns: 대소문자·공백 허용');
+
+  ok(isDeadToken({ token: 't', status: 410 }), 'push: 410 Unregistered = 무효');
+  ok(isDeadToken({ token: 't', status: 400, reason: 'BadDeviceToken' }), 'push: BadDeviceToken = 무효');
+  ok(isDeadToken({ token: 't', status: 400, reason: 'DeviceTokenNotForTopic' }), 'push: DeviceTokenNotForTopic = 무효');
+  ok(!isDeadToken({ token: 't', status: 400, reason: 'BadTopic' }), 'push: 다른 400 사유는 무효 아님');
+  ok(!isDeadToken({ token: 't', status: 403, reason: 'InvalidProviderToken' }), 'push: 키 오류(403)는 무효 아님');
+  ok(!isDeadToken({ token: 't', status: 0, reason: 'session_error' }), 'push: 세션 오류(status 0)는 무효 아님');
+
+  eq(deadTokenDecision(10, 0), { delete: false, tripped: false }, 'breaker: 무효 0 → 할 일 없음');
+  eq(deadTokenDecision(10, 5), { delete: true, tripped: false }, 'breaker: 정확히 50% 는 삭제');
+  eq(deadTokenDecision(10, 6), { delete: false, tripped: true }, 'breaker: 50% 초과는 삭제 건너뜀');
+  eq(deadTokenDecision(5, 5), { delete: false, tripped: true }, 'breaker: 5개 중 5개 무효 → 건너뜀');
+  eq(deadTokenDecision(4, 4), { delete: true, tripped: false }, 'breaker: 5개 미만 배치는 삭제 허용');
+  eq(deadTokenDecision(1000, 1000), { delete: false, tripped: true }, 'breaker: 전량 무효(환경 오류) → 건너뜀');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
