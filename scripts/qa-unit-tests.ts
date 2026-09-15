@@ -31,6 +31,8 @@ import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { slimMatchDetail } from '../lib/nexon/slim';
 import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
 import { Semaphore } from '../lib/nexon/semaphore';
+import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
+import { sanitizeEvents, MAX_EVENTS } from '../lib/analytics/events';
 import { readFileSync } from 'node:fs';
 import { aggregatePlayers } from '../lib/nexon/player-stats';
 import { squadCardTree } from '../lib/card/squad-card';
@@ -699,6 +701,116 @@ asyncTests.push({
   const ff = weeklyRecap([wm(1, '승', 9, 0, true), wm(2, '승', 2, 1, false)], NOW);
   eq(ff.games, 2, 'weekly: 몰수도 경기수 포함');
   ok(ff.best !== null && ff.best.matchId === '2-승-2', 'weekly: 최고 경기는 몰수 제외');
+}
+
+
+// ── 앱 응답 계약 (checkShape / ROUTES) ────────────────────────
+// 앱은 응답을 Swift Decodable 로 디코딩한다 — 필수 필드가 하나만 없어도 응답 전체가 실패한다.
+// 여기서 검증기 자체를 테스트하고, 계약 정의가 스스로 모순되지 않는지 확인한다.
+// 실제 응답 대조는 `npm run verify:api -- <baseUrl>` 가 담당한다.
+{
+  section('api-contract');
+
+  const shape = { a: 'string', b: 'int', 'c?': 'string', rows: 'int[]' };
+
+  eq(checkShape(shape, { a: 'x', b: 1, c: null, rows: [1, 2] }), [], 'contract: 정상 응답은 위반 0');
+  eq(checkShape(shape, { a: 'x', b: 1, rows: [] }), [], 'contract: 옵셔널 필드는 없어도 통과');
+
+  // 필드 삭제 — 가장 흔한 파괴적 변경
+  const missing = checkShape(shape, { b: 1, rows: [] });
+  eq(missing.length, 1, 'contract: 필수 필드 누락 1건');
+  eq(missing[0].kind, 'missing', 'contract: 누락은 missing 으로 분류');
+  eq(missing[0].path, 'a', 'contract: 누락 경로 보고');
+
+  // 필수 필드가 null 이 되는 것도 파괴적 변경
+  const nulled = checkShape(shape, { a: null, b: 1, rows: [] });
+  eq(nulled.length, 1, 'contract: 필수 필드 null 1건');
+  eq(nulled[0].kind, 'null', 'contract: null 은 null 로 분류');
+
+  // 타입 변경
+  eq(checkShape(shape, { a: 1, b: 1, rows: [] })[0].kind, 'type', 'contract: 타입 불일치 감지');
+  // Swift Int 는 소수를 못 받는다
+  eq(checkShape(shape, { a: 'x', b: 1.5, rows: [] })[0].kind, 'type', 'contract: int 자리에 소수는 위반');
+  eq(checkShape({ b: 'number' }, { b: 1.5 }), [], 'contract: number 자리의 소수는 정상');
+
+  // 배열이 객체로 바뀌는 경우
+  eq(checkShape(shape, { a: 'x', b: 1, rows: {} })[0].kind, 'not-array', 'contract: 배열 아님 감지');
+  eq(checkShape(shape, { a: 'x', b: 1, rows: ['x'] })[0].kind, 'type', 'contract: 배열 원소 타입 검사');
+
+  // 필드 추가는 위반이 아니다 — 앱은 모르는 키를 무시한다
+  eq(checkShape(shape, { a: 'x', b: 1, rows: [], brandNew: 123 }), [], 'contract: 필드 추가는 허용');
+
+  // 중첩 구조 경로 보고
+  const nestedShape = { me: 'SummaryMe' };
+  const nested = checkShape(nestedShape, { me: { nickname: 'n', goals: 1, possession: 50 } });
+  eq(nested.length, 1, 'contract: 중첩 누락 1건');
+  eq(nested[0].path, 'me.rating', 'contract: 중첩 경로를 점으로 이어 보고');
+
+  // 최상위가 객체가 아닌 경우(오류 응답이 그대로 온 경우 등)
+  eq(checkShape(shape, null)[0].kind, 'not-object', 'contract: null 응답 감지');
+  eq(checkShape(shape, [])[0].kind, 'not-object', 'contract: 배열 응답 감지');
+
+  // 정의되지 않은 라우트는 검사 대상이 아니다
+  eq(checkRoute('GET /api/v1/does-not-exist', { anything: 1 }), [], 'contract: 미정의 라우트는 통과');
+
+  // ── 계약 정의 자체의 무결성 ──
+  // 참조하는 SHAPES 이름이 전부 존재해야 한다. 오타 하나로 검증이 조용히 무력화되는 걸 막는다.
+  const known = new Set(['string', 'int', 'number', 'bool', 'any']);
+  const unresolved: string[] = [];
+  const visit = (where: string, sh: Record<string, string>) => {
+    for (const [k, spec] of Object.entries(sh)) {
+      const base = spec.endsWith('[]') ? spec.slice(0, -2) : spec;
+      if (!known.has(base) && !SHAPES[base]) unresolved.push(`${where}.${k} → '${base}'`);
+    }
+  };
+  for (const [name, sh] of Object.entries(SHAPES)) visit(`SHAPES.${name}`, sh);
+  for (const [name, sh] of Object.entries(ROUTES)) visit(`ROUTES['${name}']`, sh);
+  eq(unresolved, [], 'contract: 정의되지 않은 스펙 참조 없음');
+
+  // 라우트가 실수로 비지 않았는지 (빈 계약은 모든 응답을 통과시킨다)
+  const emptyRoutes = Object.entries(ROUTES).filter(([, sh]) => Object.keys(sh).length === 0).map(([k]) => k);
+  eq(emptyRoutes, [], 'contract: 빈 라우트 계약 없음');
+  ok(Object.keys(ROUTES).length >= 11, `contract: 라우트 계약 11개 이상 (현재 ${Object.keys(ROUTES).length})`);
+}
+
+
+// ── 앱 사용 기록 검증 (sanitizeEvents) ────────────────────────
+// 공개 엔드포인트라 받은 값을 그대로 저장하면 안 된다. 거부보다 정리 — 구버전 앱의 모르는 필드는 버리고 나머지는 살린다.
+{
+  section('analytics');
+  const NOW = Date.parse('2026-09-15T12:00:00Z');
+  const ID = '0f8fad5b-d9cb-469f-a165-70867728950e';
+
+  eq(sanitizeEvents(null, NOW), null, 'events: null 입력 거부');
+  eq(sanitizeEvents({ installId: 'not-a-uuid', events: [] }, NOW), null, 'events: 설치 ID 형식 오류 거부');
+
+  const ok1 = sanitizeEvents({ installId: ID.toUpperCase(), appVersion: '1.0.0', env: 'appstore',
+    events: [{ name: 'card_share', props: { type: 'match', channel: 'instagram' }, at: '2026-09-15T11:59:00Z' }] }, NOW);
+  eq(ok1?.installId, ID, 'events: 설치 ID 소문자 정규화');
+  eq(ok1?.events.length, 1, 'events: 정상 이벤트 1건');
+  eq(ok1?.events[0].props, { type: 'match', channel: 'instagram' }, 'events: props 보존');
+  eq(ok1?.env, 'appstore', 'events: env 보존');
+
+  const mixed = sanitizeEvents({ installId: ID, events: [{ name: 'drop_table' }, { name: 'search' }, 'junk'] }, NOW);
+  eq(mixed?.events.map((e) => e.name), ['search'], 'events: 허용 목록 밖 이름·잘못된 항목 제거');
+
+  const props = sanitizeEvents({ installId: ID, events: [{ name: 'search', props: {
+    ok: true, n: 3, bad_obj: { a: 1 }, 'Bad-Key': 'x', long: 'x'.repeat(200), inf: Infinity,
+  } }] }, NOW);
+  eq(props?.events[0].props.bad_obj, undefined, 'events: 중첩 객체 제거');
+  eq(props?.events[0].props['Bad-Key'], undefined, 'events: 키 형식 위반 제거');
+  eq((props?.events[0].props.long as string).length, 60, 'events: 문자열 60자 제한');
+  eq(props?.events[0].props.inf, undefined, 'events: 무한대 숫자 제거');
+  eq(props?.events[0].props.ok, true, 'events: 불리언 보존');
+
+  const future = sanitizeEvents({ installId: ID, events: [{ name: 'search', at: '2030-01-01T00:00:00Z' }] }, NOW);
+  eq(future?.events[0].at, new Date(NOW).toISOString(), 'events: 미래 시각은 수신 시각으로');
+  const old = sanitizeEvents({ installId: ID, events: [{ name: 'search', at: '2026-01-01T00:00:00Z' }] }, NOW);
+  eq(old?.events[0].at, new Date(NOW).toISOString(), 'events: 7일 넘은 시각은 수신 시각으로');
+
+  const many = sanitizeEvents({ installId: ID, events: Array.from({ length: 80 }, () => ({ name: 'search' })) }, NOW);
+  eq(many?.events.length, MAX_EVENTS, 'events: 배치 50개 상한');
+  eq(sanitizeEvents({ installId: ID, env: 'prod', events: [] }, NOW)?.env, 'unknown', 'events: 모르는 env 는 unknown');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

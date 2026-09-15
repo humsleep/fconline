@@ -165,5 +165,17 @@ export async function GET(req: Request) {
     retention.user_snapshots_deleted = -1;
   }
 
+  // app_events — 앱 익명 사용 기록. 재방문·공유 통계는 최근 30일 위주로 본다.
+  try {
+    const cutoff = new Date(Date.now() - 180 * day).toISOString();
+    const { count } = await db
+      .from('app_events')
+      .delete({ count: 'estimated' })
+      .lt('created_at', cutoff);
+    retention.app_events_deleted = count ?? 0;
+  } catch {
+    retention.app_events_deleted = -1;
+  }
+
   return Response.json({ ok: true, warmed: summary, retention });
 }

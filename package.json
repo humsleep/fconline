@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --require ./scripts/qa-shim.cjs --import tsx scripts/qa-unit-tests.ts",
-    "test:smoke": "bash scripts/qa-smoke.sh"
+    "test:smoke": "bash scripts/qa-smoke.sh",
+    "verify:api": "node --require ./scripts/qa-shim.cjs --import tsx scripts/verify-api-contract.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
