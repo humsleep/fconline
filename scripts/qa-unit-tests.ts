@@ -33,6 +33,8 @@ import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
 import { Semaphore } from '../lib/nexon/semaphore';
 import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
 import { sanitizeEvents, MAX_EVENTS } from '../lib/analytics/events';
+import { appleSiwaConfig, buildAppleClientSecret } from '../lib/auth/apple-revoke';
+import { createVerify, generateKeyPairSync } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { aggregatePlayers } from '../lib/nexon/player-stats';
 import { squadCardTree } from '../lib/card/squad-card';
@@ -813,8 +815,28 @@ asyncTests.push({
   eq(old?.events[0].at, new Date(NOW).toISOString(), 'events: 7일 넘은 시각은 수신 시각으로');
 
   const many = sanitizeEvents({ installId: ID, events: Array.from({ length: 80 }, () => ({ name: 'search' })) }, NOW);
-  eq(many?.events.length, MAX_EVENTS, 'events: 배치 50개 상한');
+  eq(many?.events.length, MAX_EVENTS, 'events: 배치 20개 상한');
   eq(sanitizeEvents({ installId: ID, env: 'prod', events: [] }, NOW)?.env, 'unknown', 'events: 모르는 env 는 unknown');
+}
+
+// ── Sign in with Apple 토큰 폐기: client_secret ─────────
+section('apple-revoke');
+{
+  eq(appleSiwaConfig({ APPLE_TEAM_ID: 'T' }), null, 'apple: 키 없으면 미설정(null) — 삭제는 폐기 없이 진행');
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  const pem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+  const cfg = appleSiwaConfig({ APPLE_TEAM_ID: '68BP5NY48R', APPLE_SIWA_KEY_ID: 'KEY123', APPLE_SIWA_PRIVATE_KEY: pem.replace(/\n/g, '\\n') });
+  ok(cfg !== null && cfg.clientId === 'xyz.fcscope.app', 'apple: 이스케이프된 개행 키 해석 + 기본 client_id');
+  const jwt = buildAppleClientSecret(cfg!, Date.UTC(2026, 8, 15));
+  const [h, p, sig] = jwt.split('.');
+  const header = JSON.parse(Buffer.from(h, 'base64url').toString());
+  const payload = JSON.parse(Buffer.from(p, 'base64url').toString());
+  eq(header.alg + header.kid, 'ES256KEY123', 'apple: 헤더 alg·kid');
+  eq([payload.iss, payload.sub, payload.aud, payload.exp - payload.iat].join('|'), '68BP5NY48R|xyz.fcscope.app|https://appleid.apple.com|300', 'apple: iss·sub·aud·5분 만료');
+  eq(Buffer.from(sig, 'base64url').length, 64, 'apple: JOSE 서명 64바이트');
+  const v = createVerify('SHA256');
+  v.update(`${h}.${p}`);
+  ok(v.verify({ key: publicKey, dsaEncoding: 'ieee-p1363' }, Buffer.from(sig, 'base64url')), 'apple: 서명 검증');
 }
 
 // ── 넥슨 오류 분류 (없는 닉네임 → 404, 매치 ID 형식) ─────────
