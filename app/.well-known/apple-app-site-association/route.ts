@@ -24,6 +24,9 @@ export function GET() {
             { '/': '/admin*', exclude: true },
             { '/': '/qr*', exclude: true },
             { '/': '/login*', exclude: true },
+            // 앱 설정의 약관·방침 링크가 앱 자신으로 되돌아오면 방침을 볼 수 없다(App Store 5.1.1(i)).
+            { '/': '/terms*', exclude: true },
+            { '/': '/privacy*', exclude: true },
             { '/': '*' },
           ],
         },

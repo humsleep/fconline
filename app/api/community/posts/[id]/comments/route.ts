@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { shortId } from '@/lib/community/posts';
+import { MODERATION_MESSAGE, containsBannedWords } from '@/lib/community/moderation';
 
 const BODY_MAX = 1000;
 
@@ -53,6 +54,8 @@ export async function POST(
     return NextResponse.json({ error: '내용을 입력하세요.' }, { status: 400 });
   if (body.length > BODY_MAX)
     return NextResponse.json({ error: '댓글이 너무 깁니다.' }, { status: 400 });
+  if (containsBannedWords(body))
+    return NextResponse.json({ error: MODERATION_MESSAGE }, { status: 400 });
 
   const rawSquad = payload.squad_id ? String(payload.squad_id).trim() : '';
   const squad_id = /^[a-zA-Z0-9]{1,32}$/.test(rawSquad) ? rawSquad : null;

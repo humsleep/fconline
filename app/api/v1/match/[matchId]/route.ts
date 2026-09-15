@@ -1,5 +1,6 @@
 import { getMatchDetailCached } from '@/lib/nexon/cached';
 import { NexonApiError } from '@/lib/nexon/client';
+import { MATCH_ID_RE } from '@/lib/nexon/errors';
 import { getMatchTypeName, getPositionLabel } from '@/lib/nexon/meta';
 import { getPlayerNames } from '@/lib/nexon/players';
 import { detectGoalCode } from '@/app/components/ShotMap';
@@ -69,6 +70,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ matchId:
   const guard = fanoutGuard(req, 'v1-match');
   if (guard) return guard;
   const { matchId } = await params;
+  // 형식이 틀린 ID 는 넥슨을 부르지 않는다(넥슨은 400 "파라미터 오류"를 줘 502 로 떨어졌다).
+  if (!MATCH_ID_RE.test(matchId)) return apiError('bad_request', '잘못된 매치 ID예요.', 400);
   const me = new URL(req.url).searchParams.get('me');
   let detail;
   try {

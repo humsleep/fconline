@@ -38,6 +38,10 @@ import { aggregatePlayers } from '../lib/nexon/player-stats';
 import { squadCardTree } from '../lib/card/squad-card';
 import { POST_TYPES, isPostType } from '../lib/community/post-types';
 import type { Squad } from '../lib/squad/store';
+import { isOuidLookupNotFound, MATCH_ID_RE } from '../lib/nexon/errors';
+import { containsBannedWords, findBannedTerm } from '../lib/community/moderation';
+import { APNS_PRODUCTION, APNS_SANDBOX, apnsHost, deadTokenDecision, isDeadToken } from '../lib/push/policy';
+import { cleanDeviceText, sanitizeFavorites } from '../lib/push/device-input';
 
 let pass = 0;
 const fails: string[] = [];
@@ -811,6 +815,102 @@ asyncTests.push({
   const many = sanitizeEvents({ installId: ID, events: Array.from({ length: 80 }, () => ({ name: 'search' })) }, NOW);
   eq(many?.events.length, MAX_EVENTS, 'events: 배치 50개 상한');
   eq(sanitizeEvents({ installId: ID, env: 'prod', events: [] }, NOW)?.env, 'unknown', 'events: 모르는 env 는 unknown');
+}
+
+// ── 넥슨 오류 분류 (없는 닉네임 → 404, 매치 ID 형식) ─────────
+section('nexon-errors');
+{
+  const nx = (status: number, code: string, message = '') => ({ name: 'NexonApiError', status, code, message });
+  ok(isOuidLookupNotFound(nx(400, 'OPENAPI00004', 'Please input valid parameter')), 'ouid: 00004 파라미터 오류 = 없는 닉네임');
+  ok(isOuidLookupNotFound(nx(400, 'OPENAPI00003', 'Please input valid identifier')), 'ouid: 00003 = 없는 닉네임');
+  ok(isOuidLookupNotFound(nx(400, 'HTTP400', 'Please input valid parameter')), 'ouid: 코드 없으면 메시지로 판별');
+  ok(!isOuidLookupNotFound(nx(400, 'HTTP400', '넥슨 API 오류 (HTTP 400)')), 'ouid: 본문 없는 400 은 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(400, 'OPENAPI00005', 'Please input valid API key')), 'ouid: API 키 오류는 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(400, 'OPENAPI00009', 'Please input valid parameter')), 'ouid: 데이터 준비 중(00009)은 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(400, 'OPENAPI00010')), 'ouid: 점검(00010)은 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(500, 'OPENAPI00004', 'Please input valid parameter')), 'ouid: 5xx 는 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(429, 'OPENAPI00007')), 'ouid: 429 는 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(504, 'TIMEOUT')), 'ouid: 타임아웃은 not-found 아님');
+  ok(!isOuidLookupNotFound({ name: 'Error', status: 400, code: 'OPENAPI00004' }), 'ouid: NexonApiError 가 아니면 false');
+  ok(!isOuidLookupNotFound(null), 'ouid: null');
+
+  ok(MATCH_ID_RE.test('6aa554a2e0ba2d88c7d0c505'), 'matchId: 실측 형식 통과');
+  ok(!MATCH_ID_RE.test('zzzz'), 'matchId: zzzz 거부');
+  ok(!MATCH_ID_RE.test('6AA554A2E0BA2D88C7D0C505'), 'matchId: 대문자 거부');
+  ok(!MATCH_ID_RE.test('6aa554a2e0ba2d88c7d0c50'), 'matchId: 23자 거부');
+  ok(!MATCH_ID_RE.test('6aa554a2e0ba2d88c7d0c505/x'), 'matchId: 경로 문자 거부');
+}
+
+// ── UGC 금칙어 필터 (App Store 1.2) ──────────────────────────
+section('moderation');
+{
+  const banned = [
+    '씨발', '시발 뭐냐', 'ㅅㅂ', '병신같네', 'ㅂㅅ', '좆같다', '개새끼', '니애미', '느금마', '존나 못하네', '지랄하네',
+    // 우회 변형: 숫자·기호·라틴·이모지 삽입, 한 글자씩 띄어쓰기, 전각, 영타
+    '씨1발', '시.발', '씨 발', '병 신', 'ㅅ ㅂ', '개 새끼', '씨a발', '시🤬발', 'ｓｈｉｔ', 'tlqkf',
+    'fuck you', 'F.U.C.K', 'sh1t', 'cunt',
+    // 스팸
+    '바카라 사이트 홍보', '카지노 첫 입금', 'totocasino.com 가입', 'bet365.com', '조건만남',
+  ];
+  for (const t of banned) ok(findBannedTerm(t) !== null, `moderation: 차단돼야 함 — ${t}`);
+
+  const clean = [
+    '시발점', '시발역에서 출발', '다시 발로 찼다', '날씨 벌써 추워요', '슈바인슈타이거 카드 좋네요', '곱씹어 보면 명경기',
+    'hamstring niggle', 'Scunthorpe United', 'goals hit the post', '3개년 계획', '오피셜 떴다', '보지 마세요',
+    '자지 말고 랭겜', '토토 스킬라치 아이콘', '졸라 아이콘 카드', '니 미드필더 좋네', '4-2-3-1 포메이션 추천',
+    '후쿠다 fukuda', '오픈채팅 https://open.kakao.com/o/abc123', '새끼손가락 부상', '미친 중거리슛',
+    '첫 충전 이벤트', '발롱도르 메시', 'alphabet.com', '병장 신병 둘다 환영', '손흥민팬',
+  ];
+  for (const t of clean) eq(findBannedTerm(t), null, `moderation: 통과해야 함 — ${t}`);
+
+  ok(containsBannedWords(null, '', '좋은 글', '씨발'), 'moderation: 여러 필드 중 하나라도 걸리면 true');
+  ok(!containsBannedWords(null, undefined, '', '좋은 글'), 'moderation: 빈/정상 필드만이면 false');
+}
+
+// ── 푸시 정책 (APNS_SANDBOX 해석·무효 토큰·삭제 브레이커) ─────
+section('push-policy');
+{
+  eq(apnsHost(undefined), APNS_PRODUCTION, 'apns: 미설정 = 운영');
+  eq(apnsHost(''), APNS_PRODUCTION, 'apns: 빈 값 = 운영');
+  eq(apnsHost('0'), APNS_PRODUCTION, 'apns: "0" = 운영 (truthy 버그 회귀)');
+  eq(apnsHost('false'), APNS_PRODUCTION, 'apns: "false" = 운영 (truthy 버그 회귀)');
+  eq(apnsHost('yes'), APNS_PRODUCTION, 'apns: 모르는 값 = 운영');
+  eq(apnsHost('1'), APNS_SANDBOX, 'apns: "1" = 샌드박스');
+  eq(apnsHost('true'), APNS_SANDBOX, 'apns: "true" = 샌드박스');
+  eq(apnsHost(' TRUE '), APNS_SANDBOX, 'apns: 대소문자·공백 허용');
+
+  ok(isDeadToken({ token: 't', status: 410 }), 'push: 410 Unregistered = 무효');
+  ok(isDeadToken({ token: 't', status: 400, reason: 'BadDeviceToken' }), 'push: BadDeviceToken = 무효');
+  ok(isDeadToken({ token: 't', status: 400, reason: 'DeviceTokenNotForTopic' }), 'push: DeviceTokenNotForTopic = 무효');
+  ok(!isDeadToken({ token: 't', status: 400, reason: 'BadTopic' }), 'push: 다른 400 사유는 무효 아님');
+  ok(!isDeadToken({ token: 't', status: 403, reason: 'InvalidProviderToken' }), 'push: 키 오류(403)는 무효 아님');
+  ok(!isDeadToken({ token: 't', status: 0, reason: 'session_error' }), 'push: 세션 오류(status 0)는 무효 아님');
+
+  eq(deadTokenDecision(10, 0), { delete: false, tripped: false }, 'breaker: 무효 0 → 할 일 없음');
+  eq(deadTokenDecision(10, 5), { delete: true, tripped: false }, 'breaker: 정확히 50% 는 삭제');
+  eq(deadTokenDecision(10, 6), { delete: false, tripped: true }, 'breaker: 50% 초과는 삭제 건너뜀');
+  eq(deadTokenDecision(5, 5), { delete: false, tripped: true }, 'breaker: 5개 중 5개 무효 → 건너뜀');
+  eq(deadTokenDecision(4, 4), { delete: true, tripped: false }, 'breaker: 5개 미만 배치는 삭제 허용');
+  eq(deadTokenDecision(1000, 1000), { delete: false, tripped: true }, 'breaker: 전량 무효(환경 오류) → 건너뜀');
+}
+
+// ── 디바이스 등록 입력 정리 (/api/v1/devices) ────────────────
+section('device-input');
+{
+  const ch = (cp: number) => String.fromCharCode(cp);
+  eq(cleanDeviceText('  손흥민 '), '손흥민', 'devices: trim');
+  eq(cleanDeviceText(`a${ch(0)}b${ch(0x202e)}c${ch(0x200b)}d${ch(10)}`), 'abcd', 'devices: 제어·bidi·zero-width 제거');
+  eq(cleanDeviceText(''), null, 'devices: 빈 문자열은 null');
+  eq(cleanDeviceText(`  ${ch(0x200b)} `), null, 'devices: 보이지 않는 문자만이면 null');
+  eq(cleanDeviceText(123), null, 'devices: 문자열 아니면 null');
+  eq(cleanDeviceText('가'.repeat(50))?.length, 40, 'devices: 40자 상한');
+  eq(Array.from(cleanDeviceText('😀'.repeat(50)) ?? '').length, 40, 'devices: 코드포인트 기준 자르기(서로게이트 안 깨짐)');
+  eq(cleanDeviceText('1.2.3-build-long-version', 20), '1.2.3-build-long-ver', 'devices: appVersion 20자');
+
+  eq(sanitizeFavorites(['a', ' a ', '', '   ', 'b', 5, null, 'x'.repeat(60)]), ['a', 'b', 'x'.repeat(40)], 'favorites: 정리·빈값 제거·중복 제거·40자');
+  eq(sanitizeFavorites(Array.from({ length: 30 }, (_, i) => `n${i}`)).length, 12, 'favorites: 최대 12개');
+  eq(sanitizeFavorites([...Array.from({ length: 20 }, () => ''), 'late']), ['late'], 'favorites: 빈 값은 12개 상한에 안 셈');
+  eq(sanitizeFavorites('abc'), [], 'favorites: 배열 아니면 빈 배열');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

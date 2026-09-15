@@ -19,6 +19,11 @@ export const EVENT_NAMES = new Set([
   'account_delete',
 ]);
 
+/**
+ * 요청당 이벤트 상한. ⚠️ 50 아래로 내리지 말 것(앱 먼저 바꾸기 전엔):
+ * 앱(fcscope-ios Analytics.swift)은 20개마다 flush 하지만 오프라인·flush 중에 쌓인 큐(최대 200)를
+ * `queue.prefix(50)` 로 보내고, 200 을 받으면 그 50개를 큐에서 지운다 — 서버가 20개만 받으면 30개가 조용히 사라진다.
+ */
 export const MAX_EVENTS = 50;
 const MAX_PROPS = 8;
 const MAX_STR = 60;

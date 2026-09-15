@@ -30,3 +30,27 @@ join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relkind = 'r'
 order by pg_total_relation_size(c.oid) desc
 limit 15;
+
+-- ③ 컬럼 단위 쓰기 권한 (0021) — 전부 ✅ 여야 함
+--    RLS 는 행만 막는다. 작성자가 created_at(간격 제한 우회)·verified_*(연동 사칭)를 못 쓰는지 확인.
+with checks(object, ok) as (values
+  ('posts.created_at UPDATE 불가',         not has_column_privilege('authenticated', 'public.community_posts', 'created_at', 'UPDATE')),
+  ('posts.created_at INSERT 불가',         not has_column_privilege('authenticated', 'public.community_posts', 'created_at', 'INSERT')),
+  ('posts.comment_count UPDATE 불가',      not has_column_privilege('authenticated', 'public.community_posts', 'comment_count', 'UPDATE')),
+  ('posts.type UPDATE 불가',               not has_column_privilege('authenticated', 'public.community_posts', 'type', 'UPDATE')),
+  ('posts.title UPDATE 가능(수정 기능)',    has_column_privilege('authenticated', 'public.community_posts', 'title', 'UPDATE')),
+  ('posts.status UPDATE 가능(마감 토글)',   has_column_privilege('authenticated', 'public.community_posts', 'status', 'UPDATE')),
+  ('posts.body INSERT 가능(글쓰기)',        has_column_privilege('authenticated', 'public.community_posts', 'body', 'INSERT')),
+  ('comments.created_at INSERT 불가',      not has_column_privilege('authenticated', 'public.community_comments', 'created_at', 'INSERT')),
+  ('comments.body INSERT 가능(댓글)',       has_column_privilege('authenticated', 'public.community_comments', 'body', 'INSERT')),
+  ('profiles.verified_ouid UPDATE 불가',   not has_column_privilege('authenticated', 'public.profiles', 'verified_ouid', 'UPDATE')),
+  ('profiles.verified_ouid INSERT 불가',   not has_column_privilege('authenticated', 'public.profiles', 'verified_ouid', 'INSERT')),
+  ('profiles.consented_at UPDATE 불가',    not has_column_privilege('authenticated', 'public.profiles', 'consented_at', 'UPDATE')),
+  ('profiles.nickname UPDATE 가능(닉네임)', has_column_privilege('authenticated', 'public.profiles', 'nickname', 'UPDATE')),
+  ('profiles.nickname INSERT 가능(등록)',   has_column_privilege('authenticated', 'public.profiles', 'nickname', 'INSERT')),
+  ('anon 은 profiles 쓰기 불가',            not has_table_privilege('anon', 'public.profiles', 'UPDATE')),
+  ('profiles_nickname_len 제약 존재',       exists(select 1 from pg_constraint where conname = 'profiles_nickname_len'))
+)
+select case when ok then '✅' else '🔴' end as status, object as "컬럼 권한 (0021)"
+from checks
+order by ok, object;
