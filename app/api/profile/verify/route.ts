@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getAdmin } from '@/lib/supabase/admin';
 import { getOuid } from '@/lib/nexon/api';
 import {
   isUserNotFound,
@@ -91,7 +92,11 @@ export async function POST(request: Request) {
       { status: 409 }
     );
 
-  const { error } = await supabase
+  // verified_* 는 유저 세션에 UPDATE 권한이 없다(0021) — 넥슨 조회로 검증한 뒤 서버(service_role)만 쓴다.
+  const admin = getAdmin();
+  if (!admin)
+    return NextResponse.json({ error: '지금은 연동할 수 없어요. 잠시 후 다시 시도하세요.' }, { status: 503 });
+  const { error } = await admin
     .from('profiles')
     .update({
       verified_nickname: nickname,

@@ -94,7 +94,15 @@ with checks(migration, object, ok) as (values
     not exists(select 1 from information_schema.columns
                where table_schema='public' and table_name='match_cache' and column_name='ouids')),
   ('0019 drop_dead_schema', 'ouid_cache 테이블 제거됨',  to_regclass('public.ouid_cache') is null),
-  ('0019 drop_dead_schema', 'club_posts 테이블 제거됨',  to_regclass('public.club_posts') is null)
+  ('0019 drop_dead_schema', 'club_posts 테이블 제거됨',  to_regclass('public.club_posts') is null),
+
+  -- 0021 컬럼 단위 쓰기 권한 (상세는 verify-rls.sql ③)
+  ('0021 column_grants',   'posts.created_at UPDATE 회수됨',
+    not has_column_privilege('authenticated', 'public.community_posts', 'created_at', 'UPDATE')),
+  ('0021 column_grants',   'profiles.verified_ouid UPDATE 회수됨',
+    not has_column_privilege('authenticated', 'public.profiles', 'verified_ouid', 'UPDATE')),
+  ('0021 column_grants',   'constraint profiles_nickname_len',
+    exists(select 1 from pg_constraint where conname = 'profiles_nickname_len'))
 )
 select
   case when ok then '✅ OK' else '❌ 미실행' end as status,

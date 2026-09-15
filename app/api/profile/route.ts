@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getAdmin } from '@/lib/supabase/admin';
 import { validateNickname } from '@/lib/community/constants';
 import { MODERATION_MESSAGE, containsBannedWords } from '@/lib/community/moderation';
 
@@ -117,8 +118,10 @@ export async function POST(request: Request) {
     .upsert({ id: user.id, nickname }, { onConflict: 'id' });
 
   // 약관 동의 시각 서버 기록 (최초 1회만 — 이미 있으면 유지)
-  if (!error) {
-    await supabase
+  // consented_at 은 유저 세션에 UPDATE 권한이 없다(0021) — 서버 시각을 service_role 로만 쓴다.
+  const admin = getAdmin();
+  if (!error && admin) {
+    await admin
       .from('profiles')
       .update({ consented_at: new Date().toISOString() })
       .eq('id', user.id)
