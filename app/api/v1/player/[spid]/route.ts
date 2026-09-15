@@ -26,7 +26,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ spid: s
     {
       spid,
       name: player?.name ?? `선수 ${spid}`,
-      season: player?.season ?? '',
+      // 같은 실선수의 대표 카드 시즌이 아니라 **요청한 spid 카드**의 시즌(예: PTG 카드인데 "26 TOTS"로 내려가던 문제).
+      season: player?.seasons.find((s) => s.spid === spid)?.season ?? player?.season ?? '',
       pid: player?.pid ?? null,
       seasons: player?.seasons ?? [],
       imageUrl: `/api/player-image/${spid}`,
