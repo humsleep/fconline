@@ -47,7 +47,8 @@ const GAMBLING_URL = /(^|[^a-z])(casino|baccarat|toto|slot|bet)[a-z0-9-]*\.(com|
 
 const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', $: 's', '!': 'i' };
 
-const INVISIBLE = /[​-‏⁠﻿­]/g;
+// zero-width(U+200B~200F)·word joiner(U+2060)·BOM(U+FEFF)·soft hyphen(U+00AD) — 소스에 원문자를 두지 않으려 코드포인트로 만든다.
+const INVISIBLE = new RegExp(`[${String.fromCharCode(0x200b)}-${String.fromCharCode(0x200f)}${String.fromCharCode(0x2060, 0xfeff, 0xad)}]`, 'g');
 
 /** 영어·URL 판정용 — NFKC 로 전각 문자(ｓｈｉｔ)를 반각으로. */
 function base(text: string): string {
