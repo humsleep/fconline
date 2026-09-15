@@ -16,7 +16,14 @@ interface DeviceRow { token: string; nickname: string | null; user_id: string | 
 export async function loadDevices(filter: 'weekly' | 'meta'): Promise<DeviceRow[]> {
   const db = getAdmin();
   if (!db) return [];
-  let q = db.from('device_tokens').select('token, nickname, user_id, favorites, weekly_opt, meta_opt').eq('platform', 'ios').limit(5000);
+  // 상한(5000)을 넘으면 최근에 앱을 연 기기부터 — 순서 없이 자르면 활성 사용자가 빠질 수 있다.
+  // last_seen 은 /api/v1/devices upsert 가 매번 갱신한다.
+  let q = db
+    .from('device_tokens')
+    .select('token, nickname, user_id, favorites, weekly_opt, meta_opt')
+    .eq('platform', 'ios')
+    .order('last_seen', { ascending: false })
+    .limit(5000);
   q = filter === 'weekly' ? q.eq('weekly_opt', true).not('nickname', 'is', null) : q.eq('meta_opt', true);
   const { data } = await q;
   return (data as DeviceRow[]) ?? [];

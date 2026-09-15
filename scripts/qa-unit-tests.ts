@@ -41,6 +41,7 @@ import type { Squad } from '../lib/squad/store';
 import { isOuidLookupNotFound, MATCH_ID_RE } from '../lib/nexon/errors';
 import { containsBannedWords, findBannedTerm } from '../lib/community/moderation';
 import { APNS_PRODUCTION, APNS_SANDBOX, apnsHost, deadTokenDecision, isDeadToken } from '../lib/push/policy';
+import { cleanDeviceText, sanitizeFavorites } from '../lib/push/device-input';
 
 let pass = 0;
 const fails: string[] = [];
@@ -891,6 +892,25 @@ section('push-policy');
   eq(deadTokenDecision(5, 5), { delete: false, tripped: true }, 'breaker: 5개 중 5개 무효 → 건너뜀');
   eq(deadTokenDecision(4, 4), { delete: true, tripped: false }, 'breaker: 5개 미만 배치는 삭제 허용');
   eq(deadTokenDecision(1000, 1000), { delete: false, tripped: true }, 'breaker: 전량 무효(환경 오류) → 건너뜀');
+}
+
+// ── 디바이스 등록 입력 정리 (/api/v1/devices) ────────────────
+section('device-input');
+{
+  const ch = (cp: number) => String.fromCharCode(cp);
+  eq(cleanDeviceText('  손흥민 '), '손흥민', 'devices: trim');
+  eq(cleanDeviceText(`a${ch(0)}b${ch(0x202e)}c${ch(0x200b)}d${ch(10)}`), 'abcd', 'devices: 제어·bidi·zero-width 제거');
+  eq(cleanDeviceText(''), null, 'devices: 빈 문자열은 null');
+  eq(cleanDeviceText(`  ${ch(0x200b)} `), null, 'devices: 보이지 않는 문자만이면 null');
+  eq(cleanDeviceText(123), null, 'devices: 문자열 아니면 null');
+  eq(cleanDeviceText('가'.repeat(50))?.length, 40, 'devices: 40자 상한');
+  eq(Array.from(cleanDeviceText('😀'.repeat(50)) ?? '').length, 40, 'devices: 코드포인트 기준 자르기(서로게이트 안 깨짐)');
+  eq(cleanDeviceText('1.2.3-build-long-version', 20), '1.2.3-build-long-ver', 'devices: appVersion 20자');
+
+  eq(sanitizeFavorites(['a', ' a ', '', '   ', 'b', 5, null, 'x'.repeat(60)]), ['a', 'b', 'x'.repeat(40)], 'favorites: 정리·빈값 제거·중복 제거·40자');
+  eq(sanitizeFavorites(Array.from({ length: 30 }, (_, i) => `n${i}`)).length, 12, 'favorites: 최대 12개');
+  eq(sanitizeFavorites([...Array.from({ length: 20 }, () => ''), 'late']), ['late'], 'favorites: 빈 값은 12개 상한에 안 셈');
+  eq(sanitizeFavorites('abc'), [], 'favorites: 배열 아니면 빈 배열');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────
