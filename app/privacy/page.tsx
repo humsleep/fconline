@@ -49,14 +49,14 @@ function Table({
 
 /**
  * 개인정보처리방침 v2 (2026-09-10 시행) — iOS 앱(광고·Apple 로그인·앱 접근권한·계정 삭제) 반영.
- * v3 (2026-09-22 시행) — 앱 이용 기록(익명 통계), 푸시 알림 토큰·알림용 구단주명, 투표 중복 방지값, 알림·사진 추가 권한 고지.
+ * v3 (2026-09-23 시행) — 앱 이용 기록(익명 통계), 푸시 알림 토큰·알림용 구단주명, 투표 중복 방지값, 알림·사진 추가 권한 고지.
  * 개정 시 app/login/page.tsx 의 PRIVACY_VERSION 도 함께 올릴 것.
  */
 export default function PrivacyPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-8 md:pb-16">
       <h1 className="text-2xl font-bold">개인정보처리방침</h1>
-      <p className="mt-1 text-sm text-muted">시행일: 2026년 9월 22일 (이전 버전: 2026년 9월 10일)</p>
+      <p className="mt-1 text-sm text-muted">시행일: 2026년 9월 23일 (이전 버전: 2026년 9월 10일)</p>
       <p className="mt-3 text-sm leading-relaxed text-muted">
         FC Scope(이하 &quot;서비스&quot;)의 운영자는 「개인정보 보호법」 등 관계 법령을 준수하며, 웹사이트(fcscope.xyz)와
         iOS 앱(FC Scope)에서 이용자의 개인정보를 어떻게 처리하는지 아래와 같이 알려드립니다.
