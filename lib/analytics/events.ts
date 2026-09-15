@@ -20,11 +20,11 @@ export const EVENT_NAMES = new Set([
 ]);
 
 /**
- * 요청당 이벤트 상한. ⚠️ 50 아래로 내리지 말 것(앱 먼저 바꾸기 전엔):
- * 앱(fcscope-ios Analytics.swift)은 20개마다 flush 하지만 오프라인·flush 중에 쌓인 큐(최대 200)를
- * `queue.prefix(50)` 로 보내고, 200 을 받으면 그 50개를 큐에서 지운다 — 서버가 20개만 받으면 30개가 조용히 사라진다.
+ * 요청당 이벤트 상한. 앱(fcscope-ios Analytics.swift)은 요청당 최대 20개를 보낸다(2026-09 출시 전 변경).
+ * ⚠️ 앱보다 작게 내리지 말 것 — 앱은 200 을 받으면 보낸 만큼 큐에서 지우므로, 서버가 덜 받으면 나머지가 조용히 사라진다.
+ * (출시 전이라 50개씩 보내던 구버전 앱은 배포된 적 없다.)
  */
-export const MAX_EVENTS = 50;
+export const MAX_EVENTS = 20;
 const MAX_PROPS = 8;
 const MAX_STR = 60;
 const ENVS = new Set(['debug', 'testflight', 'appstore']);

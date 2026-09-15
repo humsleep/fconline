@@ -9,7 +9,7 @@ import { isInAppBrowser, inAppBrowserName } from '@/lib/client/in-app-browser';
 
 /** 약관·개인정보처리방침 버전 — 문서 개정 시 올린다(동의 증적). */
 const TERMS_VERSION = 2;
-const PRIVACY_VERSION = 2;
+const PRIVACY_VERSION = 3;
 
 function LoginContent() {
   const searchParams = useSearchParams();
