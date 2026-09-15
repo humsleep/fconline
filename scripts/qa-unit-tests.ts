@@ -38,6 +38,7 @@ import { aggregatePlayers } from '../lib/nexon/player-stats';
 import { squadCardTree } from '../lib/card/squad-card';
 import { POST_TYPES, isPostType } from '../lib/community/post-types';
 import type { Squad } from '../lib/squad/store';
+import { isOuidLookupNotFound, MATCH_ID_RE } from '../lib/nexon/errors';
 
 let pass = 0;
 const fails: string[] = [];
@@ -811,6 +812,30 @@ asyncTests.push({
   const many = sanitizeEvents({ installId: ID, events: Array.from({ length: 80 }, () => ({ name: 'search' })) }, NOW);
   eq(many?.events.length, MAX_EVENTS, 'events: 배치 50개 상한');
   eq(sanitizeEvents({ installId: ID, env: 'prod', events: [] }, NOW)?.env, 'unknown', 'events: 모르는 env 는 unknown');
+}
+
+// ── 넥슨 오류 분류 (없는 닉네임 → 404, 매치 ID 형식) ─────────
+section('nexon-errors');
+{
+  const nx = (status: number, code: string, message = '') => ({ name: 'NexonApiError', status, code, message });
+  ok(isOuidLookupNotFound(nx(400, 'OPENAPI00004', 'Please input valid parameter')), 'ouid: 00004 파라미터 오류 = 없는 닉네임');
+  ok(isOuidLookupNotFound(nx(400, 'OPENAPI00003', 'Please input valid identifier')), 'ouid: 00003 = 없는 닉네임');
+  ok(isOuidLookupNotFound(nx(400, 'HTTP400', 'Please input valid parameter')), 'ouid: 코드 없으면 메시지로 판별');
+  ok(!isOuidLookupNotFound(nx(400, 'HTTP400', '넥슨 API 오류 (HTTP 400)')), 'ouid: 본문 없는 400 은 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(400, 'OPENAPI00005', 'Please input valid API key')), 'ouid: API 키 오류는 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(400, 'OPENAPI00009', 'Please input valid parameter')), 'ouid: 데이터 준비 중(00009)은 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(400, 'OPENAPI00010')), 'ouid: 점검(00010)은 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(500, 'OPENAPI00004', 'Please input valid parameter')), 'ouid: 5xx 는 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(429, 'OPENAPI00007')), 'ouid: 429 는 not-found 아님');
+  ok(!isOuidLookupNotFound(nx(504, 'TIMEOUT')), 'ouid: 타임아웃은 not-found 아님');
+  ok(!isOuidLookupNotFound({ name: 'Error', status: 400, code: 'OPENAPI00004' }), 'ouid: NexonApiError 가 아니면 false');
+  ok(!isOuidLookupNotFound(null), 'ouid: null');
+
+  ok(MATCH_ID_RE.test('6aa554a2e0ba2d88c7d0c505'), 'matchId: 실측 형식 통과');
+  ok(!MATCH_ID_RE.test('zzzz'), 'matchId: zzzz 거부');
+  ok(!MATCH_ID_RE.test('6AA554A2E0BA2D88C7D0C505'), 'matchId: 대문자 거부');
+  ok(!MATCH_ID_RE.test('6aa554a2e0ba2d88c7d0c50'), 'matchId: 23자 거부');
+  ok(!MATCH_ID_RE.test('6aa554a2e0ba2d88c7d0c505/x'), 'matchId: 경로 문자 거부');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

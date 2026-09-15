@@ -1,10 +1,21 @@
-import { nexonFetch } from './client';
+import { NexonApiError, nexonFetch } from './client';
+import { isOuidLookupNotFound } from './errors';
 import type { MatchDetail, MaxDivision, RankerStat, UserBasic } from './types';
 
-/** 닉네임 → 계정 식별자. 닉네임 변경 직후에는 조회 실패 가능. */
+/**
+ * 닉네임 → 계정 식별자. 닉네임 변경 직후에는 조회 실패 가능.
+ * 없는 닉네임에 넥슨이 주는 400(OPENAPI00003/00004)은 이 단계에서만 USER_NOT_FOUND 로 번역한다.
+ */
 export async function getOuid(nickname: string): Promise<string> {
-  const res = await nexonFetch<{ ouid: string }>('id', { nickname }, 3600);
-  return res.ouid;
+  try {
+    const res = await nexonFetch<{ ouid: string }>('id', { nickname }, 3600);
+    return res.ouid;
+  } catch (err) {
+    if (isOuidLookupNotFound(err)) {
+      throw new NexonApiError((err as Error).message, 404, 'USER_NOT_FOUND');
+    }
+    throw err;
+  }
 }
 
 export function getUserBasic(ouid: string): Promise<UserBasic> {

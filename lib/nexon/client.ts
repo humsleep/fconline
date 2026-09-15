@@ -18,8 +18,12 @@ export class NexonApiError extends Error {
   }
 }
 
+/**
+ * 구단주 없음. OPENAPI00003(유효하지 않은 식별자) 또는 getOuid 가 닉네임 조회 단계에서
+ * 넥슨의 "파라미터 오류"를 번역한 USER_NOT_FOUND (lib/nexon/errors.ts isOuidLookupNotFound).
+ */
 export function isUserNotFound(err: unknown): boolean {
-  return err instanceof NexonApiError && err.code === 'OPENAPI00003';
+  return err instanceof NexonApiError && (err.code === 'OPENAPI00003' || err.code === 'USER_NOT_FOUND');
 }
 
 export function isNotConfigured(err: unknown): boolean {
