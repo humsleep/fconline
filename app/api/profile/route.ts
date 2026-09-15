@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateNickname } from '@/lib/community/constants';
+import { MODERATION_MESSAGE, containsBannedWords } from '@/lib/community/moderation';
 
 export async function GET() {
   const supabase = await createClient();
@@ -108,6 +109,8 @@ export async function POST(request: Request) {
 
   const invalid = validateNickname(nickname);
   if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
+  if (containsBannedWords(nickname))
+    return NextResponse.json({ error: MODERATION_MESSAGE }, { status: 400 });
 
   const { error } = await supabase
     .from('profiles')

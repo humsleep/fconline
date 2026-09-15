@@ -39,6 +39,7 @@ import { squadCardTree } from '../lib/card/squad-card';
 import { POST_TYPES, isPostType } from '../lib/community/post-types';
 import type { Squad } from '../lib/squad/store';
 import { isOuidLookupNotFound, MATCH_ID_RE } from '../lib/nexon/errors';
+import { containsBannedWords, findBannedTerm } from '../lib/community/moderation';
 
 let pass = 0;
 const fails: string[] = [];
@@ -836,6 +837,32 @@ section('nexon-errors');
   ok(!MATCH_ID_RE.test('6AA554A2E0BA2D88C7D0C505'), 'matchId: 대문자 거부');
   ok(!MATCH_ID_RE.test('6aa554a2e0ba2d88c7d0c50'), 'matchId: 23자 거부');
   ok(!MATCH_ID_RE.test('6aa554a2e0ba2d88c7d0c505/x'), 'matchId: 경로 문자 거부');
+}
+
+// ── UGC 금칙어 필터 (App Store 1.2) ──────────────────────────
+section('moderation');
+{
+  const banned = [
+    '씨발', '시발 뭐냐', 'ㅅㅂ', '병신같네', 'ㅂㅅ', '좆같다', '개새끼', '니애미', '느금마', '존나 못하네', '지랄하네',
+    // 우회 변형: 숫자·기호·라틴·이모지 삽입, 한 글자씩 띄어쓰기, 전각, 영타
+    '씨1발', '시.발', '씨 발', '병 신', 'ㅅ ㅂ', '개 새끼', '씨a발', '시🤬발', 'ｓｈｉｔ', 'tlqkf',
+    'fuck you', 'F.U.C.K', 'sh1t', 'cunt',
+    // 스팸
+    '바카라 사이트 홍보', '카지노 첫 입금', 'totocasino.com 가입', 'bet365.com', '조건만남',
+  ];
+  for (const t of banned) ok(findBannedTerm(t) !== null, `moderation: 차단돼야 함 — ${t}`);
+
+  const clean = [
+    '시발점', '시발역에서 출발', '다시 발로 찼다', '날씨 벌써 추워요', '슈바인슈타이거 카드 좋네요', '곱씹어 보면 명경기',
+    'hamstring niggle', 'Scunthorpe United', 'goals hit the post', '3개년 계획', '오피셜 떴다', '보지 마세요',
+    '자지 말고 랭겜', '토토 스킬라치 아이콘', '졸라 아이콘 카드', '니 미드필더 좋네', '4-2-3-1 포메이션 추천',
+    '후쿠다 fukuda', '오픈채팅 https://open.kakao.com/o/abc123', '새끼손가락 부상', '미친 중거리슛',
+    '첫 충전 이벤트', '발롱도르 메시', 'alphabet.com', '병장 신병 둘다 환영', '손흥민팬',
+  ];
+  for (const t of clean) eq(findBannedTerm(t), null, `moderation: 통과해야 함 — ${t}`);
+
+  ok(containsBannedWords(null, '', '좋은 글', '씨발'), 'moderation: 여러 필드 중 하나라도 걸리면 true');
+  ok(!containsBannedWords(null, undefined, '', '좋은 글'), 'moderation: 빈/정상 필드만이면 false');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

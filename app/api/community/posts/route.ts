@@ -10,6 +10,7 @@ import {
   type PostField,
 } from '@/lib/community/post-types';
 import { REGIONS, POSITION_OPTIONS } from '@/lib/community/constants';
+import { MODERATION_MESSAGE, containsBannedWords } from '@/lib/community/moderation';
 
 const REGION_SET = new Set<string>(REGIONS);
 const POSITION_SET = new Set<string>(POSITION_OPTIONS);
@@ -100,6 +101,10 @@ export async function POST(request: Request) {
       if (v) meta[k] = v;
     }
   }
+
+  // UGC 금칙어(App Store 1.2) — 사용자가 쓴 모든 자유 텍스트
+  if (containsBannedWords(title, body, contact, ...Object.values(meta)))
+    return NextResponse.json({ error: MODERATION_MESSAGE }, { status: 400 });
 
   // 스쿼드 배틀 B팀 — meta.squad_b(공유코드 형식만)
   if (allowed.has('squad_b') && payload.squad_b) {
