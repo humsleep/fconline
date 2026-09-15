@@ -32,6 +32,7 @@ import { slimMatchDetail } from '../lib/nexon/slim';
 import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
 import { Semaphore } from '../lib/nexon/semaphore';
 import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
+import { sanitizeEvents, MAX_EVENTS } from '../lib/analytics/events';
 import { readFileSync } from 'node:fs';
 import { aggregatePlayers } from '../lib/nexon/player-stats';
 import { squadCardTree } from '../lib/card/squad-card';
@@ -770,6 +771,46 @@ asyncTests.push({
   const emptyRoutes = Object.entries(ROUTES).filter(([, sh]) => Object.keys(sh).length === 0).map(([k]) => k);
   eq(emptyRoutes, [], 'contract: 빈 라우트 계약 없음');
   ok(Object.keys(ROUTES).length >= 11, `contract: 라우트 계약 11개 이상 (현재 ${Object.keys(ROUTES).length})`);
+}
+
+
+// ── 앱 사용 기록 검증 (sanitizeEvents) ────────────────────────
+// 공개 엔드포인트라 받은 값을 그대로 저장하면 안 된다. 거부보다 정리 — 구버전 앱의 모르는 필드는 버리고 나머지는 살린다.
+{
+  section('analytics');
+  const NOW = Date.parse('2026-09-15T12:00:00Z');
+  const ID = '0f8fad5b-d9cb-469f-a165-70867728950e';
+
+  eq(sanitizeEvents(null, NOW), null, 'events: null 입력 거부');
+  eq(sanitizeEvents({ installId: 'not-a-uuid', events: [] }, NOW), null, 'events: 설치 ID 형식 오류 거부');
+
+  const ok1 = sanitizeEvents({ installId: ID.toUpperCase(), appVersion: '1.0.0', env: 'appstore',
+    events: [{ name: 'card_share', props: { type: 'match', channel: 'instagram' }, at: '2026-09-15T11:59:00Z' }] }, NOW);
+  eq(ok1?.installId, ID, 'events: 설치 ID 소문자 정규화');
+  eq(ok1?.events.length, 1, 'events: 정상 이벤트 1건');
+  eq(ok1?.events[0].props, { type: 'match', channel: 'instagram' }, 'events: props 보존');
+  eq(ok1?.env, 'appstore', 'events: env 보존');
+
+  const mixed = sanitizeEvents({ installId: ID, events: [{ name: 'drop_table' }, { name: 'search' }, 'junk'] }, NOW);
+  eq(mixed?.events.map((e) => e.name), ['search'], 'events: 허용 목록 밖 이름·잘못된 항목 제거');
+
+  const props = sanitizeEvents({ installId: ID, events: [{ name: 'search', props: {
+    ok: true, n: 3, bad_obj: { a: 1 }, 'Bad-Key': 'x', long: 'x'.repeat(200), inf: Infinity,
+  } }] }, NOW);
+  eq(props?.events[0].props.bad_obj, undefined, 'events: 중첩 객체 제거');
+  eq(props?.events[0].props['Bad-Key'], undefined, 'events: 키 형식 위반 제거');
+  eq((props?.events[0].props.long as string).length, 60, 'events: 문자열 60자 제한');
+  eq(props?.events[0].props.inf, undefined, 'events: 무한대 숫자 제거');
+  eq(props?.events[0].props.ok, true, 'events: 불리언 보존');
+
+  const future = sanitizeEvents({ installId: ID, events: [{ name: 'search', at: '2030-01-01T00:00:00Z' }] }, NOW);
+  eq(future?.events[0].at, new Date(NOW).toISOString(), 'events: 미래 시각은 수신 시각으로');
+  const old = sanitizeEvents({ installId: ID, events: [{ name: 'search', at: '2026-01-01T00:00:00Z' }] }, NOW);
+  eq(old?.events[0].at, new Date(NOW).toISOString(), 'events: 7일 넘은 시각은 수신 시각으로');
+
+  const many = sanitizeEvents({ installId: ID, events: Array.from({ length: 80 }, () => ({ name: 'search' })) }, NOW);
+  eq(many?.events.length, MAX_EVENTS, 'events: 배치 50개 상한');
+  eq(sanitizeEvents({ installId: ID, env: 'prod', events: [] }, NOW)?.env, 'unknown', 'events: 모르는 env 는 unknown');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

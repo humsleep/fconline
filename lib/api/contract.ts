@@ -254,6 +254,8 @@ export const ROUTES: Record<string, Shape> = {
   'POST /api/squad': { id: 'string' },
   'POST /api/profile': { ok: 'bool', nickname: 'string' },
   'POST /api/profile/verify': { ok: 'bool' },
+  // 앱 익명 사용 기록(배치). 측정 실패도 200 이므로 accepted 로 실제 저장 수를 확인한다.
+  'POST /api/v1/events': { ok: 'bool', accepted: 'int' },
 };
 
 /** 로그인이 필요해 익명 검증기가 실제 형태를 확인할 수 없는 라우트. */
