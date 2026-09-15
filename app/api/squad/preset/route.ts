@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("id") ?? "";
   if (!/^[a-z0-9]{1,20}$/.test(id)) {
-    return Response.json({ error: "invalid id" }, { status: 400 });
+    return Response.json({ error: "잘못된 프리셋이에요." }, { status: 400 });
   }
   const resolved = await resolvePreset(id);
-  if (!resolved) return Response.json({ error: "not found" }, { status: 404 });
+  if (!resolved) return Response.json({ error: "지금은 제공하지 않는 팀 프리셋이에요." }, { status: 404 });
   return Response.json(resolved);
 }
