@@ -147,6 +147,7 @@ export default async function AdminPage() {
   const siwaKey = process.env.APPLE_SIWA_PRIVATE_KEY ?? '';
   const pem = (v: string) => v.replace(/\\n/g, '\n').includes('-----BEGIN PRIVATE KEY-----');
   const envChecks: { name: string; ok: boolean; warn?: boolean; hint: string }[] = [
+    { name: 'ADMIN_EMAILS', ok: has(process.env.ADMIN_EMAILS), hint: '이 화면에 들어올 수 있는 이메일(쉼표 구분). 없으면 아무도 관리자가 아닙니다' },
     { name: 'SUPABASE_SERVICE_ROLE_KEY', ok: has(process.env.SUPABASE_SERVICE_ROLE_KEY), hint: '없으면 이 화면도 안 열립니다' },
     { name: 'NEXON_API_KEY', ok: has(process.env.NEXON_API_KEY), hint: '전적 조회' },
     { name: 'CRON_SECRET', ok: has(process.env.CRON_SECRET), hint: '크론 인증' },
