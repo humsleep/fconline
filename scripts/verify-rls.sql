@@ -54,3 +54,17 @@ with checks(object, ok) as (values
 select case when ok then '✅' else '🔴' end as status, object as "컬럼 권한 (0021)"
 from checks
 order by ok, object;
+
+-- ④ 0022 + 운영 상태 (출시 전 최종 확인)
+with checks(object, ok) as (values
+  ('0022 squads 공개 읽기 정책 제거', not exists(
+      select 1 from pg_policy p join pg_class c on c.oid = p.polrelid
+      where c.relname = 'squads' and p.polname = 'squads_read')),
+  ('0021 닉네임 길이 제약 검증 완료(validate)', exists(
+      select 1 from pg_constraint where conname = 'profiles_nickname_len' and convalidated)),
+  ('0020 app_events 테이블 존재', to_regclass('public.app_events') is not null),
+  ('개정 공지 게시됨(active)', exists(select 1 from public.notices where active))
+)
+select case when ok then '✅' else '🔴' end as status, object as "출시 전 확인"
+from checks
+order by ok, object;
