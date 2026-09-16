@@ -141,6 +141,27 @@ export default async function AdminPage() {
     // 테이블 미생성 등 — 빈 화면으로
   }
 
+  // 서버 환경변수 점검 (관리자 전용 · 존재 여부만). 앱 출시 준비에서 "넣었는지" 확인이 가장 자주 막힌다.
+  const has = (v?: string) => Boolean(v && v.trim());
+  const apnsKey = process.env.APNS_PRIVATE_KEY ?? '';
+  const siwaKey = process.env.APPLE_SIWA_PRIVATE_KEY ?? '';
+  const pem = (v: string) => v.replace(/\\n/g, '\n').includes('-----BEGIN PRIVATE KEY-----');
+  const envChecks: { name: string; ok: boolean; warn?: boolean; hint: string }[] = [
+    { name: 'SUPABASE_SERVICE_ROLE_KEY', ok: has(process.env.SUPABASE_SERVICE_ROLE_KEY), hint: '없으면 이 화면도 안 열립니다' },
+    { name: 'NEXON_API_KEY', ok: has(process.env.NEXON_API_KEY), hint: '전적 조회' },
+    { name: 'CRON_SECRET', ok: has(process.env.CRON_SECRET), hint: '크론 인증' },
+    { name: 'APPLE_TEAM_ID', ok: has(process.env.APPLE_TEAM_ID), hint: '유니버설 링크(AASA)' },
+    { name: 'APNS_KEY_ID', ok: has(process.env.APNS_KEY_ID), hint: '푸시 — 10자리 키 ID' },
+    { name: 'APNS_TEAM_ID', ok: has(process.env.APNS_TEAM_ID), hint: '푸시 — 팀 ID' },
+    { name: 'APNS_BUNDLE_ID', ok: has(process.env.APNS_BUNDLE_ID), hint: '푸시 — 기본 xyz.fcscope.app' },
+    { name: 'APNS_PRIVATE_KEY', ok: has(apnsKey) && pem(apnsKey), warn: has(apnsKey) && !pem(apnsKey), hint: has(apnsKey) && !pem(apnsKey) ? '값은 있는데 .p8 형식이 아닙니다(BEGIN PRIVATE KEY 줄 포함 전체를 넣으세요)' : '푸시 — .p8 파일 내용 전체' },
+    { name: 'APNS_SANDBOX', ok: !has(process.env.APNS_SANDBOX), warn: has(process.env.APNS_SANDBOX), hint: has(process.env.APNS_SANDBOX) ? '운영에서는 비워 두세요 — 값이 있으면 테스트 서버로 발송돼 기기 토큰이 삭제될 수 있습니다' : '비어 있음(정상)' },
+    { name: 'APPLE_SIWA_KEY_ID', ok: has(process.env.APPLE_SIWA_KEY_ID), hint: '계정 삭제 시 Apple 토큰 폐기 — 10자리 키 ID' },
+    { name: 'APPLE_SIWA_PRIVATE_KEY', ok: has(siwaKey) && pem(siwaKey), warn: has(siwaKey) && !pem(siwaKey), hint: has(siwaKey) && !pem(siwaKey) ? '값은 있는데 .p8 형식이 아닙니다' : 'Sign in with Apple 키(.p8) 내용 전체' },
+    { name: 'ADMOB_PUBLISHER_ID', ok: has(process.env.ADMOB_PUBLISHER_ID), hint: '/app-ads.txt' },
+    { name: 'NEXT_PUBLIC_DEMO_NICKNAME', ok: has(process.env.NEXT_PUBLIC_DEMO_NICKNAME), hint: '앱 홈 예시 리포트' },
+  ];
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-8 md:pb-16">
       <h1 className="text-2xl font-bold">운영 콘솔</h1>
@@ -154,6 +175,27 @@ export default async function AdminPage() {
         <div className="mt-3">
           <PauseToggle paused={nexonPaused} />
         </div>
+      </section>
+
+      {/* 서버 설정 점검 — 값은 절대 표시하지 않고 "채워졌는지"만 본다 */}
+      <section className="panel mt-4 p-5">
+        <h2 className="scoreboard text-sm font-bold tracking-[0.2em] text-muted">
+          서버 설정 점검
+        </h2>
+        <ul className="mt-3 space-y-1.5 text-sm">
+          {envChecks.map((c) => (
+            <li key={c.name} className="flex items-start gap-2">
+              <span aria-hidden>{c.ok ? '✅' : c.warn ? '⚠️' : '⬜'}</span>
+              <span>
+                <b className="text-ink">{c.name}</b>
+                <span className="text-muted"> — {c.hint}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-xs text-muted">
+          값 자체는 표시하지 않습니다. 바꾼 뒤에는 Vercel 재배포를 해야 반영됩니다.
+        </p>
       </section>
 
       {/* 공지 관리 */}
