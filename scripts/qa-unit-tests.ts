@@ -31,6 +31,7 @@ import type { MatchSummary } from '../lib/nexon/summary';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { slimMatchDetail } from '../lib/nexon/slim';
+import { popularCombos } from '../lib/nexon/popular-combos';
 import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
 import { Semaphore } from '../lib/nexon/semaphore';
 import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
@@ -464,6 +465,18 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   eq(scoreTier(r35).label, '분발 필요', `recentScore: 승률 35% + 득실 열세는 분발 필요 (got ${r35})`);
   ok(recentScore(Array.from({ length: 30 }, () => sum('승', 9, 0, 10, 100))) <= 10, 'recentScore: 상한 10');
   ok(recentScore(Array.from({ length: 30 }, () => sum('패', 0, 9, 1, 0))) >= 0, 'recentScore: 하한 0');
+}
+
+// ── 랭커 예열 조합: 크론은 패킹된 match_cache payload 를 읽는다 ──
+{
+  const fx = JSON.parse(readFileSync(new URL('./fixtures/match-detail.json', import.meta.url), 'utf8')) as MatchDetail;
+  const packed = packMatchDetail(slimMatchDetail(fx));
+  ok(Array.isArray(packed) && (packed as unknown as MatchDetail).matchInfo === undefined, '패킹 payload 에는 matchInfo 키가 없다(예전 크론이 0조합이던 원인)');
+  const combos = popularCombos([unpackMatchDetail(packed)], 60);
+  eq(combos.length, 22, 'popularCombos: 언패킹 후 선발 출전 선수×포지션 22조합(양팀 11+11, 교체 투입 28 제외)');
+  ok(combos.every((c) => c.po !== 28), 'popularCombos: 교체 대기(28) 제외');
+  eq(popularCombos([fx, fx], 3).length, 3, 'popularCombos: limit 컷');
+  eq(popularCombos([null, undefined], 10), [], 'popularCombos: 빈 입력 방어');
 }
 
 // ── 몰수 경기는 스코어 기반 진단에서 제외 ──
