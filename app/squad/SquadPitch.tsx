@@ -9,6 +9,7 @@ export interface FilledSlot {
   name: string;
   season?: string; // 시즌(클래스) 이름
   imageSpid?: number; // 표시 사진(같은 선수의 다른 시즌 카드). 없으면 spid
+  pos?: string; // 선수별 포지션(앱에서 끌어 옮긴 경우). 없으면 슬롯 기본 라벨
 }
 
 export interface Coord {

@@ -15,6 +15,8 @@ export interface SquadSlot {
   x?: number; // 커스텀 포메이션 좌표(0~100). 없으면 포메이션 기본 좌표 사용
   /** 표시용 사진 — 같은 선수(pid)의 다른 시즌 카드 spid 또는 pid(기본 사진). 없으면 spid 사진. */
   imageSpid?: number;
+  /** 선수별 포지션 라벨(FC온라인 커스텀 포지션). 없으면 포메이션 기본 라벨. */
+  pos?: string;
   y?: number;
 }
 

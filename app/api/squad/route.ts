@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 // 스쿼드 저장 → 공유 id 반환
+const POSITION_LABELS = new Set([
+  "GK", "SW", "LWB", "RWB", "LB", "RB", "CB", "LCB", "RCB", "CDM", "LDM", "RDM", "CM", "LCM", "RCM",
+  "LM", "RM", "CAM", "LAM", "RAM", "LW", "RW", "CF", "LF", "RF", "ST", "LS", "RS",
+]);
+
 export async function POST(req: Request) {
   let body: {
     name?: unknown;
@@ -54,6 +59,8 @@ export async function POST(req: Request) {
       seenPid.add(pid);
       const slot: SquadSlot = { slotId, spid, name: nm.slice(0, 40) };
       // 표시 사진(선택) — 반드시 같은 선수(pid)의 사진만. 다른 선수 사진으로 바꿔 끼우는 것을 막는다.
+      // 선수별 포지션(선택) — FC온라인 포지션 라벨만 받는다. 앱에서 자리를 끌어 옮기면 그 선수만 라벨이 바뀐다.
+      if (typeof s.pos === "string" && POSITION_LABELS.has(s.pos)) slot.pos = s.pos;
       const img = s.imageSpid;
       if (typeof img === "number" && Number.isInteger(img) && img > 0 && img !== spid && img % 1_000_000 === pid) {
         slot.imageSpid = img;
