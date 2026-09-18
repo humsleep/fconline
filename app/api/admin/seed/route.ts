@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/admin-auth';
 import { getOuid, getUserMatches } from '@/lib/nexon/api';
 import { getMatchDetailsBatch } from '@/lib/nexon/cached';
-import { getRankerStatsCached, rankerKey } from '@/lib/nexon/ranker';
+import { getRankerStatsCached } from '@/lib/nexon/ranker';
+import { popularCombos } from '@/lib/nexon/popular-combos';
 import { isUserNotFound } from '@/lib/nexon/client';
 import type { MatchDetail } from '@/lib/nexon/types';
 
@@ -63,22 +64,7 @@ export async function POST(request: Request) {
   }
 
   // 방금 수집한 경기에서 선수×포지션 사용 빈도 → 상위 조합 랭커 워밍 (크론과 동일 로직)
-  const freq = new Map<string, { id: number; po: number; n: number }>();
-  for (const d of allDetails) {
-    for (const e of d.matchInfo ?? []) {
-      for (const p of e.player ?? []) {
-        if ((p.status?.spRating ?? 0) <= 0 || p.spPosition === 28) continue;
-        const key = rankerKey(p.spId, p.spPosition);
-        const cur = freq.get(key);
-        if (cur) cur.n += 1;
-        else freq.set(key, { id: p.spId, po: p.spPosition, n: 1 });
-      }
-    }
-  }
-  const top = [...freq.values()]
-    .sort((a, b) => b.n - a.n)
-    .slice(0, TOP_COMBOS)
-    .map((p) => ({ id: p.id, po: p.po }));
+  const top = popularCombos(allDetails, TOP_COMBOS);
 
   let warmed = 0;
   if (top.length > 0) {

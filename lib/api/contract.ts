@@ -41,6 +41,8 @@ export const SHAPES: Record<string, Shape> = {
     played: 'int', winRate: 'int', currentStreak: 'int', bestWinStreak: 'int', momentum: 'int',
     avgRating: 'number', cleanSheets: 'int', scoreless: 'int', bigWins: 'int', bigLosses: 'int',
     counterWins: 'int', dominantLosses: 'int',
+    // 2026-09-18 추가(옵셔널): 몰수 경기 수 · 몰수 제외 정상 종료 경기 수(스코어 기반 지표의 분모)
+    'forfeits?': 'int', 'normalPlayed?': 'int',
   },
   Rule: { id: 'string', kind: 'string', tone: 'string', title: 'string', desc: 'string' },
   Diagnosis: { 'type?': 'Rule', notes: 'Rule[]' },
@@ -63,7 +65,7 @@ export const SHAPES: Record<string, Shape> = {
 
   TimeBand: { label: 'string', forGoals: 'int', againstGoals: 'int' },
   ShotTypeStat: { key: 'string', label: 'string', tries: 'int', goals: 'int' },
-  FormGame: { diff: 'int', result: 'string', label: 'string' },
+  FormGame: { diff: 'int', result: 'string', label: 'string', 'forfeit?': 'bool' },
   WeeklyForm: {
     recentGames: 'int', recentWin: 'int', recentWinRate: 'int', prevGames: 'int',
     'prevWinRate?': 'int', 'deltaWinRate?': 'int',

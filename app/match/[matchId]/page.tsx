@@ -5,6 +5,8 @@ import ShotMap, { detectGoalCode, type ShotMapShot } from "@/app/components/Shot
 import VerdictStamp from "@/app/components/VerdictStamp";
 import ShareCardButton from "@/app/components/ShareCardButton";
 import { verdictFromMatch } from "@/lib/verdict";
+import { teamRating } from "@/lib/nexon/rating";
+import { goalMinute } from "@/lib/nexon/goal-time";
 import { formatMatchDate } from "@/lib/format";
 import { NexonApiError, isNotConfigured } from "@/lib/nexon/client";
 import { getMatchDetailCached } from "@/lib/nexon/cached";
@@ -84,7 +86,7 @@ export default async function MatchPage({
       y: s.y,
       isGoal: goalCode !== null && s.result === goalCode,
       hitPost: s.hitPost,
-      label: `${Math.round(s.goalTime / 60) || "?"}' ${names.get(s.spId) ?? s.spId} — ${
+      label: `${goalMinute(s.goalTime)}' ${names.get(s.spId) ?? s.spId} — ${
         goalCode !== null && s.result === goalCode
           ? "골"
           : s.hitPost
@@ -109,7 +111,7 @@ export default async function MatchPage({
 
   const matchVerdict = verdictFromMatch({
     result: mine.matchDetail?.matchResult ?? "?",
-    myRating: mine.matchDetail?.averageRating ?? 0,
+    myRating: teamRating(mine),
     seed: detail.matchId,
   });
 

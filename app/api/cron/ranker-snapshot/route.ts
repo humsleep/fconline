@@ -1,6 +1,7 @@
 import { getAdmin } from '@/lib/supabase/admin';
 import { getRankerStatsCached, rankerKey } from '@/lib/nexon/ranker';
-import type { MatchDetail } from '@/lib/nexon/types';
+import { unpackMatchDetail } from '@/lib/nexon/pack';
+import { popularCombos } from '@/lib/nexon/popular-combos';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
   const summary: Record<string, number> = {};
 
   for (const matchtype of MATCH_TYPES) {
-    let rows: { payload: MatchDetail }[] = [];
+    let rows: { payload: unknown }[] = [];
     try {
       const { data } = await db
         .from('match_cache')
@@ -39,30 +40,15 @@ export async function GET(req: Request) {
         .eq('match_type', matchtype)
         .order('match_date', { ascending: false })
         .limit(RECENT_MATCHES);
-      rows = (data as { payload: MatchDetail }[]) ?? [];
+      rows = (data as { payload: unknown }[]) ?? [];
     } catch {
       summary[`type_${matchtype}`] = -1;
       continue;
     }
 
-    // 선수×포지션 사용 빈도 집계
-    const freq = new Map<string, { id: number; po: number; n: number }>();
-    for (const row of rows) {
-      for (const e of row.payload?.matchInfo ?? []) {
-        for (const p of e.player ?? []) {
-          if ((p.status?.spRating ?? 0) <= 0 || p.spPosition === 28) continue;
-          const key = rankerKey(p.spId, p.spPosition);
-          const cur = freq.get(key);
-          if (cur) cur.n += 1;
-          else freq.set(key, { id: p.spId, po: p.spPosition, n: 1 });
-        }
-      }
-    }
-
-    let top = [...freq.values()]
-      .sort((a, b) => b.n - a.n)
-      .slice(0, TOP_PLAYERS)
-      .map((p) => ({ id: p.id, po: p.po }));
+    // payload 는 배열 패킹 저장이다(lib/nexon/pack.ts, 2026-09-08~). 예전엔 row.payload.matchInfo 를
+    // 바로 읽어 패킹 행에서 항상 undefined → 조합 0개 → 랭커 예열이 직전 스냅샷 폴백에만 의존했다.
+    let top = popularCombos(rows.map((r) => unpackMatchDetail(r.payload)), TOP_PLAYERS);
 
     // 폴백: match_cache가 비면(콜드스타트) 직전 스냅샷의 조합을 재예열
     // → 한 번 시딩되면 검색이 없어도 랭킹이 매일 갱신·유지된다.
@@ -92,6 +78,9 @@ export async function GET(req: Request) {
 
     const warmed = await getRankerStatsCached(matchtype, top);
     summary[`type_${matchtype}`] = warmed.size;
+    // 진단용: 조합 수(0 이면 match_cache/폴백 문제) vs 실데이터 수(0 이면 넥슨 ranker-stats 응답 문제)
+    summary[`combos_${matchtype}`] = top.length;
+    summary[`cache_rows_${matchtype}`] = rows.length;
   }
 
   // 보관기간 정리 — 캐시 테이블 무한 증가 방지(Disk + 무료 500MB 한도 + IO).

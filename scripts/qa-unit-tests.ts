@@ -8,7 +8,9 @@ process.env.IP_HASH_SALT = process.env.IP_HASH_SALT ?? 'qa-salt-1234567890abcdef
 import type { MatchDetail } from '../lib/nexon/types';
 import { pickKeyPlayers, topSeason } from '../lib/squad/card-badges';
 import { getFormation, formationsByLine } from '../lib/squad/formations';
-import { aggregateReport, reportInsights, computeWeekly } from '../lib/nexon/report';
+import { aggregateReport, reportInsights, computeWeekly, bandIndex } from '../lib/nexon/report';
+import { goalMinute, goalMinuteExact, splitGoalTime } from '../lib/nexon/goal-time';
+import { teamRating, legacyToTeamRating, normalizeSnapshotRating } from '../lib/nexon/rating';
 import { summarizeMatch, aggregate, topRivals, pickNemesis } from '../lib/nexon/summary';
 import type { Rival } from '../lib/nexon/summary';
 import { verdictFromRating, verdictFromMatch } from '../lib/verdict';
@@ -29,6 +31,7 @@ import type { MatchSummary } from '../lib/nexon/summary';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { slimMatchDetail } from '../lib/nexon/slim';
+import { popularCombos } from '../lib/nexon/popular-combos';
 import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
 import { Semaphore } from '../lib/nexon/semaphore';
 import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
@@ -144,10 +147,12 @@ ok(formationsByLine().length >= 2, '라인별 포메이션 그룹 존재');
 
 // ── report ───────────────────────────────────────────────────
 section('report');
+// goalTime 은 하프 비트가 실린 값: 전반 = 초, 후반 = 2^24 + 후반 경과 초 (lib/nexon/goal-time.ts)
+const H2 = 2 ** 24;
 const rptDetails = [
-  mkMatch('1', 1, 3, { myTimes: [300], oppTimes: [600, 4800, 5000] }),
-  mkMatch('2', 0, 2, { oppTimes: [4700, 5100] }),
-  mkMatch('3', 2, 4, { myTimes: [1000, 2000], oppTimes: [4600, 4900, 5200, 300] }),
+  mkMatch('1', 1, 3, { myTimes: [300], oppTimes: [600, H2 + 2100, H2 + 2300] }),
+  mkMatch('2', 0, 2, { oppTimes: [H2 + 2000, H2 + 2400] }),
+  mkMatch('3', 2, 4, { myTimes: [1000, 2000], oppTimes: [H2 + 1900, H2 + 2200, H2 + 2500, 300] }),
 ];
 const rpt = aggregateReport(rptDetails, 'ME');
 eq(rpt.played, 3, 'report played=3');
@@ -389,6 +394,120 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   eq(scoreTier(7).tone, 'win', 'scoreTier: 6.5↑ win');
   eq(scoreTier(5.5).tone, 'muted', 'scoreTier: 5↑ muted');
   eq(scoreTier(4).tone, 'lose', 'scoreTier: 5미만 lose');
+}
+
+// ── goalTime 디코딩 (하프 비트 2^24) ──
+{
+  const H2 = 2 ** 24, ET1 = 2 ** 25, ET2 = 2 ** 25 + 2 ** 24;
+  eq(splitGoalTime(H2 + 1430), { half: 1, seconds: 1430 }, 'splitGoalTime: 후반 분리');
+  eq(goalMinute(0), 1, 'goalMinute: 킥오프 직후 1분');
+  eq(goalMinute(919), 16, 'goalMinute: 전반 15:19 → 16분');
+  eq(goalMinute(2857), 48, 'goalMinute: 전반 추가시간 47:37 → 48분');
+  eq(goalMinuteExact(H2), 45, 'goalMinuteExact: 후반 시작 = 45');
+  eq(goalMinute(H2 + 1430), 69, 'goalMinute: 후반 23:50 → 69분');
+  // 라이브 회귀: /api/v1/match/6aa8f0303652ec4e175624c3 가 minute 279664 를 내려보냈다
+  eq(goalMinute(16779840), 89, 'goalMinute: 라이브 후반 값(16779840) → 89분 (279664 아님)');
+  eq(goalMinute(ET1 + 208), 94, 'goalMinute: 연장 전반 3:28 → 94분');
+  eq(goalMinute(ET2 + 1212), 126, 'goalMinute: 연장 후반 20:12 → 126분');
+  eq(goalMinute(2 ** 26 + 5), 120, 'goalMinute: 승부차기 → 120');
+  eq(goalMinute(-1), 1, 'goalMinute: 비정상 값 방어');
+  // 시간대 밴드
+  eq(bandIndex(899), 0, 'bandIndex: 14:59 → 0-15');
+  eq(bandIndex(900), 1, 'bandIndex: 15:00 → 16-30');
+  eq(bandIndex(2857), 2, 'bandIndex: 전반 추가시간은 31-45 에 남는다');
+  eq(bandIndex(H2 + 100), 3, 'bandIndex: 후반 초반 → 46-60 (예전엔 76-90+)');
+  eq(bandIndex(H2 + 1000), 4, 'bandIndex: 후반 61-75');
+  eq(bandIndex(H2 + 2984), 5, 'bandIndex: 후반 추가시간 → 76-90+');
+  eq(bandIndex(ET1 + 10), 5, 'bandIndex: 연장 → 76-90+ 흡수');
+  // 후반 골이 여러 밴드로 퍼져야 한다(예전엔 전부 76-90+)
+  const spread = aggregateReport([mkMatch('gt', 3, 0, { myTimes: [H2 + 60, H2 + 1200, H2 + 2500] })], 'ME');
+  eq(spread.timeBands.map((b) => b.forGoals), [0, 0, 0, 1, 1, 1], '후반 골이 46-60/61-75/76-90+ 로 분산');
+}
+
+// ── 경기 평점 척도 (averageRating = Σ spRating / 18) ──
+{
+  const fx = JSON.parse(readFileSync(new URL('./fixtures/match-detail.json', import.meta.url), 'utf8')) as MatchDetail;
+  const [a, b] = fx.matchInfo;
+  // 실데이터: 출전 11명 Σ=70.0, averageRating 3.88889 = 70/18
+  eq(teamRating(a), 6.36, 'teamRating: 출전 선수(spRating>0) 평균 — 벤치 0점 제외');
+  eq(teamRating(b), 7.16, 'teamRating: 교체 투입 선수 포함 13명 평균');
+  ok(Math.abs(a.matchDetail.averageRating * 18 - 70.0) < 0.01, 'averageRating 은 18명 분모(실데이터 고정)');
+  eq(summarizeMatch(fx, 'ouid1')!.me.rating, 7.16, 'summarizeMatch.me.rating = teamRating');
+  eq(teamRating({ player: [], matchDetail: { averageRating: 4.4 } as never }), 7.2, 'teamRating: player[] 없으면 ×18/11 근사');
+  eq(teamRating(null), 0, 'teamRating: null 방어');
+  eq(legacyToTeamRating(0), 0, 'legacyToTeamRating: 0 유지');
+  eq(normalizeSnapshotRating(4.42), 7.23, '스냅샷: 구 척도(<5.5) 환산');
+  eq(normalizeSnapshotRating(6.9), 6.9, '스냅샷: 새 척도는 그대로');
+}
+
+// ── 스코어·판정 재보정 (라이브 분포: 경기 평점 중앙값 6.71, IQR 6.44~7.07) ──
+{
+  // 라이브 회귀: 보엠 2:0 승(평점 averageRating 4.36 → 출전 평균 7.14)이 LIABILITY '고전한 경기'로 나왔다
+  const w20 = sum('승', 2, 0, 7.14, 45);
+  ok(matchScore(w20) >= 6.5, `matchScore: 2:0 승은 6.5↑ (got ${matchScore(w20)})`);
+  const v20 = verdictFromMatch({ result: '승', myRating: 7.14 });
+  ok(v20.tier !== 'LIABILITY' && v20.oneLiner !== '고전한 경기', `verdictFromMatch: 2:0 승 평점 7.14 는 고전 아님 (got ${v20.tier})`);
+  const vLegacy = verdictFromMatch({ result: '승', myRating: legacyToTeamRating(4.8) });
+  ok(vLegacy.tier !== 'LIABILITY' && vLegacy.oneLiner !== '고전한 경기', '구 척도 4.8 도 환산하면 고전 아님');
+  // 중앙값 경기(6.7)는 평점 가감 0
+  eq(matchScore(sum('무', 1, 1, 6.7)), 5, 'matchScore: 중앙값 평점 무승부 = 5.0');
+  const rec = (spec: [('승' | '무' | '패'), number, number, number, number][]) =>
+    recentScore(spec.flatMap(([r, gf, ga, rt, n]) => Array.from({ length: n }, () => sum(r, gf, ga, rt))));
+  const r50 = rec([['승', 2, 1, 6.9, 15], ['무', 1, 1, 6.7, 5], ['패', 1, 2, 6.5, 10]]);
+  eq(scoreTier(r50).label, '평범', `recentScore: 승률 50% 는 평범 (got ${r50})`);
+  const r60 = rec([['승', 2, 0, 7.0, 18], ['무', 1, 1, 6.7, 4], ['패', 0, 1, 6.5, 8]]);
+  eq(scoreTier(r60).label, '수준급', `recentScore: 승률 60% + 득실 우위는 수준급 (got ${r60})`);
+  const r80 = rec([['승', 2, 0, 7.0, 24], ['패', 0, 1, 6.5, 6]]);
+  eq(scoreTier(r80).label, '수준급', `recentScore: 승률 80% 도 대승 위주가 아니면 수준급 (got ${r80})`);
+  const r90 = rec([['승', 3, 0, 7.3, 27], ['패', 0, 1, 6.5, 3]]);
+  eq(scoreTier(r90).label, '월드클래스', `recentScore: 승률 90% 대승 위주는 월드클래스 (got ${r90})`);
+  const r35 = rec([['승', 1, 0, 6.7, 10], ['무', 1, 1, 6.7, 3], ['패', 0, 2, 6.5, 17]]);
+  eq(scoreTier(r35).label, '분발 필요', `recentScore: 승률 35% + 득실 열세는 분발 필요 (got ${r35})`);
+  ok(recentScore(Array.from({ length: 30 }, () => sum('승', 9, 0, 10, 100))) <= 10, 'recentScore: 상한 10');
+  ok(recentScore(Array.from({ length: 30 }, () => sum('패', 0, 9, 1, 0))) >= 0, 'recentScore: 하한 0');
+}
+
+// ── 랭커 예열 조합: 크론은 패킹된 match_cache payload 를 읽는다 ──
+{
+  const fx = JSON.parse(readFileSync(new URL('./fixtures/match-detail.json', import.meta.url), 'utf8')) as MatchDetail;
+  const packed = packMatchDetail(slimMatchDetail(fx));
+  ok(Array.isArray(packed) && (packed as unknown as MatchDetail).matchInfo === undefined, '패킹 payload 에는 matchInfo 키가 없다(예전 크론이 0조합이던 원인)');
+  const combos = popularCombos([unpackMatchDetail(packed)], 60);
+  eq(combos.length, 22, 'popularCombos: 언패킹 후 선발 출전 선수×포지션 22조합(양팀 11+11, 교체 투입 28 제외)');
+  ok(combos.every((c) => c.po !== 28), 'popularCombos: 교체 대기(28) 제외');
+  eq(popularCombos([fx, fx], 3).length, 3, 'popularCombos: limit 컷');
+  eq(popularCombos([null, undefined], 10), [], 'popularCombos: 빈 입력 방어');
+}
+
+// ── 몰수 경기는 스코어 기반 진단에서 제외 ──
+{
+  const ff = (r: '승' | '패') => ({ ...sum(r, r === '승' ? 3 : 0, r === '승' ? 0 : 3, 5), forfeit: true });
+  const st = computeMatchPerfStats([
+    ...Array.from({ length: 4 }, () => ff('승')),
+    ...Array.from({ length: 4 }, () => ff('패')),
+    ...Array.from({ length: 6 }, () => sum('승', 2, 1)),
+    ...Array.from({ length: 6 }, () => sum('패', 1, 2)),
+  ]);
+  eq([st.played, st.win, st.lose, st.winRate], [20, 10, 10, 50], '몰수: 승패·승률에는 포함');
+  eq(st.forfeits, 8, '몰수 경기 수');
+  eq(st.normalPlayed, 12, '정상 종료 경기 수');
+  eq([st.bigWins, st.bigLosses, st.cleanSheets, st.scoreless], [0, 0, 0, 0], '몰수 3:0/0:3 은 대승·대패·클린시트·무득점 아님');
+  eq([st.goalsFor, st.goalsAgainst], [18, 18], '몰수 스코어는 득실에서 제외');
+  eq(st.avgFor, 1.5, 'avgFor 분모 = 정상 경기 수');
+  eq(st.avgRating, 7, '몰수 경기 평점은 평균에서 제외');
+  ok(diagnoseMatchPerf(st).type?.id !== 't-rollercoaster', '몰수만으로 롤러코스터가 되지 않음');
+  // 리포트: 몰수 경기는 시간대 밴드·대패 인사이트에서 제외, 폼에는 표시
+  const H2 = 2 ** 24;
+  const rf = aggregateReport([
+    mkMatch('f1', 0, 3, { endType: 2, oppTimes: [H2 + 2400] }),
+    mkMatch('f2', 0, 3, { endType: 2 }),
+    mkMatch('n1', 1, 2, { myTimes: [300], oppTimes: [H2 + 100, H2 + 2500] }),
+  ], 'ME');
+  eq(rf.played, 3, '리포트: 몰수 포함 3경기');
+  eq(rf.timeBands.reduce((a, b) => a + b.againstGoals, 0), 2, '리포트: 몰수 경기 골은 시간대에서 제외');
+  eq(rf.form.filter((g) => g.forfeit).length, 2, '리포트: 폼에 몰수 표시');
+  ok(rf.form[0].label.includes('몰수'), '리포트: 몰수 라벨');
+  ok(!reportInsights(rf).some((i) => i.text.includes('대패')), '리포트: 몰수 0:3 두 경기는 대패 인사이트 아님');
 }
 
 // ── 유튜브 RSS 파서 ──

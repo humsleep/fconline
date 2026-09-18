@@ -1,4 +1,5 @@
 import type { MatchDetail, MatchInfoEntry } from './types';
+import { teamRating } from './rating';
 
 export interface MatchSummary {
   matchId: string;
@@ -6,6 +7,7 @@ export interface MatchSummary {
   matchType: number;
   result: '승' | '무' | '패' | '?';
   forfeit: boolean; // 몰수 경기 여부
+  /** rating = 출전 선수 평균 평점(teamRating, 5~10 척도). averageRating(18명 분모) 아님. */
   me: { nickname: string; goals: number; possession: number; rating: number };
   opponent: { nickname: string; goals: number } | null;
 }
@@ -35,7 +37,7 @@ export function summarizeMatch(
       nickname: mine.nickname,
       goals: goalsOf(mine),
       possession: mine.matchDetail?.possession ?? 0,
-      rating: mine.matchDetail?.averageRating ?? 0,
+      rating: teamRating(mine),
     },
     opponent: other ? { nickname: other.nickname, goals: goalsOf(other) } : null,
   };
