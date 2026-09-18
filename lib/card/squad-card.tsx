@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import { loadKoreanFont } from "./font";
 import { getFormation } from "@/lib/squad/formations";
+import { squadFormationTitle } from "@/lib/squad/title";
 import type { Squad } from "@/lib/squad/store";
 import { topSeason } from "@/lib/squad/card-badges";
 
@@ -274,7 +275,7 @@ export function squadCardTree(
   fontLoaded: boolean
 ): { element: ReactElement; fontText: string } {
   return buildSquadCardElement({
-    formationName: getFormation(squad.formation).name,
+    formationName: squadFormationTitle(squad),
     squadName: squad.name,
     nodes: baseNodes(squad),
     top: topSeason(squad, _seasonNames),
@@ -312,7 +313,7 @@ export async function renderSquadCard(
 
   const top = topSeason(squad, seasonNames);
   const built = buildSquadCardElement({
-    formationName: getFormation(squad.formation).name,
+    formationName: squadFormationTitle(squad),
     squadName: squad.name,
     nodes,
     top,
@@ -321,7 +322,7 @@ export async function renderSquadCard(
   });
   const font = await loadKoreanFont(built.fontText);
   const { element } = buildSquadCardElement({
-    formationName: getFormation(squad.formation).name,
+    formationName: squadFormationTitle(squad),
     squadName: squad.name,
     nodes,
     top,

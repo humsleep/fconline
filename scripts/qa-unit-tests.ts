@@ -36,6 +36,7 @@ import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
 import { Semaphore } from '../lib/nexon/semaphore';
 import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
 import { sanitizeEvents, MAX_EVENTS } from '../lib/analytics/events';
+import { squadFormationTitle } from '../lib/squad/title';
 import { appleSiwaConfig, buildAppleClientSecret } from '../lib/auth/apple-revoke';
 import { createVerify, generateKeyPairSync } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -936,6 +937,15 @@ asyncTests.push({
   const many = sanitizeEvents({ installId: ID, events: Array.from({ length: 80 }, () => ({ name: 'search' })) }, NOW);
   eq(many?.events.length, MAX_EVENTS, 'events: 배치 20개 상한');
   eq(sanitizeEvents({ installId: ID, env: 'prod', events: [] }, NOW)?.env, 'unknown', 'events: 모르는 env 는 unknown');
+}
+
+// ── 스쿼드 포메이션 제목(선수별 포지션) ─────────
+section('squad-title');
+{
+  eq(squadFormationTitle({ formation: '433', slots: [] }), '4-3-3', 'title: 옮긴 자리 없으면 저장 포메이션');
+  // 4-3-3 → LW·RW 를 LM·RM, 가운데 CM 하나를 ST 로 → 정확히 4-4-2
+  eq(squadFormationTitle({ formation: '433', slots: [{ slotId: 'lw1', pos: 'LM' }, { slotId: 'rw1', pos: 'RM' }, { slotId: 'cm2', pos: 'ST' }] }), '4-4-2', 'title: 정확히 일치하면 그 포메이션');
+  ok(squadFormationTitle({ formation: '433', slots: [{ slotId: 'lw1', pos: 'LM' }] }).startsWith('커스텀 (≈'), 'title: 일치 없으면 커스텀(≈가까운 포메이션)');
 }
 
 // ── Sign in with Apple 토큰 폐기: client_secret ─────────

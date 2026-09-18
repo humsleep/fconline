@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { squadFormationTitle } from "@/lib/squad/title";
 import Link from "next/link";
 import ShareCardButton from "@/app/components/ShareCardButton";
 import { getFormation } from "@/lib/squad/formations";
@@ -21,7 +22,7 @@ export async function generateMetadata({
   if (!squad) return { title: "스쿼드", description: "스쿼드 공유" };
 
   const title = squad.name;
-  const description = `${squad.name} — ${getFormation(squad.formation).name} 스쿼드`;
+  const description = `${squad.name} — ${squadFormationTitle(squad)} 스쿼드`;
   // 카톡·디시·에펨 링크 붙여넣기 시 카드 썸네일이 뜨도록 절대 URL OG 이미지 연결
   const image = `${SITE_URL}/api/card/squad/${id}`;
   return {
@@ -80,7 +81,7 @@ export default async function SquadViewPage({
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-8 md:pb-16">
       <p className="scoreboard text-sm font-semibold tracking-[0.2em] text-muted">
-        {getFormation(squad.formation).name} · {squad.slots.length}명
+        {squadFormationTitle(squad)} · {squad.slots.length}명
       </p>
       <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{squad.name}</h1>
 
