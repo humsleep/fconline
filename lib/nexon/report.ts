@@ -26,6 +26,8 @@ export interface FormGame {
   diff: number; // 내 골 - 상대 골
   result: '승' | '무' | '패' | '?';
   label: string; // 툴팁
+  /** 몰수 경기(matchEndType 1/2)일 때만 true. 기록상 3:0/0:3 이라 대승·대패 판정에서 뺀다. */
+  forfeit?: true;
 }
 
 export interface WeeklyForm {
@@ -39,10 +41,10 @@ export interface WeeklyForm {
 
 export interface MatchReport {
   played: number;
-  goalsFor: number;
+  goalsFor: number; // 몰수 3:0 포함(기록 그대로 — 전적 요약과 같은 의미)
   goalsAgainst: number;
-  avgRating: number; // 출전 선수 평균(teamRating) — averageRating(18명 분모) 아님
-  timeBands: TimeBand[];
+  avgRating: number; // 몰수 제외 · 출전 선수 평균(teamRating)
+  timeBands: TimeBand[]; // 몰수 제외(실제 슛 이벤트만)
   shotTypes: ShotTypeStat[]; // 내 결정력
   form: FormGame[]; // 최신 → 과거
   weekly: WeeklyForm | null; // 최근 7일 vs 직전 7일
@@ -111,7 +113,9 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
     const oppGoals = opp ? goalsOf(opp) : 0;
     goalsFor += myGoals;
     goalsAgainst += oppGoals;
-    const rating = teamRating(mine);
+    // 몰수는 정상 종료가 아니라(3:0 기록·경기 중단) 평점·시간대 득실에서 뺀다. 전적·폼에는 남긴다.
+    const forfeit = (mine.matchDetail?.matchEndType ?? 0) !== 0;
+    const rating = forfeit ? 0 : teamRating(mine);
     if (rating > 0) {
       ratingSum += rating;
       ratingN += 1;
@@ -125,7 +129,8 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
         result: summary.result,
         label: `${myGoals}:${oppGoals} ${summary.result === '?' ? '' : summary.result}${
           summary.opponent ? ` vs ${summary.opponent.nickname}` : ''
-        }`.trim(),
+        }${forfeit ? ' (몰수)' : ''}`.trim(),
+        ...(forfeit ? { forfeit: true as const } : {}),
       });
       const t = Date.parse(d.matchDate.endsWith('Z') || d.matchDate.includes('+') ? d.matchDate : `${d.matchDate}Z`);
       if (!Number.isNaN(t)) dated.push({ time: t, result: summary.result });
@@ -136,7 +141,7 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
       { shots: mine.shootDetail ?? [], goals: myGoals },
       ...(opp ? [{ shots: opp.shootDetail ?? [], goals: oppGoals }] : []),
     ]);
-    if (goalCode !== null) {
+    if (goalCode !== null && !forfeit) {
       for (const s of mine.shootDetail ?? [])
         if (s.result === goalCode) bands[bandIndex(s.goalTime)].forGoals += 1;
       if (opp)
@@ -213,8 +218,9 @@ export interface Insight {
 /** 숫자를 처방형 문장으로 — 트리거 임계 미달이면 문장을 만들지 않는다(빈 조언 금지). */
 export function reportInsights(r: MatchReport): Insight[] {
   const out: Insight[] = [];
-  const gf = r.goalsFor;
-  const ga = r.goalsAgainst;
+  // 비율의 분모는 시간대 밴드 합계(= 몰수 제외 실제 골). goalsFor 는 몰수 3:0 을 포함해 분모로 쓰면 희석된다.
+  const gf = r.timeBands.reduce((a, b) => a + b.forGoals, 0);
+  const ga = r.timeBands.reduce((a, b) => a + b.againstGoals, 0);
 
   const lateConceded = r.timeBands[5].againstGoals; // 76-90+
   const earlyConceded = r.timeBands[0].againstGoals; // 0-15
@@ -294,7 +300,7 @@ export function reportInsights(r: MatchReport): Insight[] {
       });
   }
 
-  const blowouts = r.form.filter((g) => g.diff <= -3).length;
+  const blowouts = r.form.filter((g) => g.diff <= -3 && !g.forfeit).length;
   if (blowouts >= 2)
     out.push({
       tone: 'info',

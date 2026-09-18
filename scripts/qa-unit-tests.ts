@@ -466,6 +466,37 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   ok(recentScore(Array.from({ length: 30 }, () => sum('패', 0, 9, 1, 0))) >= 0, 'recentScore: 하한 0');
 }
 
+// ── 몰수 경기는 스코어 기반 진단에서 제외 ──
+{
+  const ff = (r: '승' | '패') => ({ ...sum(r, r === '승' ? 3 : 0, r === '승' ? 0 : 3, 5), forfeit: true });
+  const st = computeMatchPerfStats([
+    ...Array.from({ length: 4 }, () => ff('승')),
+    ...Array.from({ length: 4 }, () => ff('패')),
+    ...Array.from({ length: 6 }, () => sum('승', 2, 1)),
+    ...Array.from({ length: 6 }, () => sum('패', 1, 2)),
+  ]);
+  eq([st.played, st.win, st.lose, st.winRate], [20, 10, 10, 50], '몰수: 승패·승률에는 포함');
+  eq(st.forfeits, 8, '몰수 경기 수');
+  eq(st.normalPlayed, 12, '정상 종료 경기 수');
+  eq([st.bigWins, st.bigLosses, st.cleanSheets, st.scoreless], [0, 0, 0, 0], '몰수 3:0/0:3 은 대승·대패·클린시트·무득점 아님');
+  eq([st.goalsFor, st.goalsAgainst], [18, 18], '몰수 스코어는 득실에서 제외');
+  eq(st.avgFor, 1.5, 'avgFor 분모 = 정상 경기 수');
+  eq(st.avgRating, 7, '몰수 경기 평점은 평균에서 제외');
+  ok(diagnoseMatchPerf(st).type?.id !== 't-rollercoaster', '몰수만으로 롤러코스터가 되지 않음');
+  // 리포트: 몰수 경기는 시간대 밴드·대패 인사이트에서 제외, 폼에는 표시
+  const H2 = 2 ** 24;
+  const rf = aggregateReport([
+    mkMatch('f1', 0, 3, { endType: 2, oppTimes: [H2 + 2400] }),
+    mkMatch('f2', 0, 3, { endType: 2 }),
+    mkMatch('n1', 1, 2, { myTimes: [300], oppTimes: [H2 + 100, H2 + 2500] }),
+  ], 'ME');
+  eq(rf.played, 3, '리포트: 몰수 포함 3경기');
+  eq(rf.timeBands.reduce((a, b) => a + b.againstGoals, 0), 2, '리포트: 몰수 경기 골은 시간대에서 제외');
+  eq(rf.form.filter((g) => g.forfeit).length, 2, '리포트: 폼에 몰수 표시');
+  ok(rf.form[0].label.includes('몰수'), '리포트: 몰수 라벨');
+  ok(!reportInsights(rf).some((i) => i.text.includes('대패')), '리포트: 몰수 0:3 두 경기는 대패 인사이트 아님');
+}
+
 // ── 유튜브 RSS 파서 ──
 {
   const xml = `<?xml version="1.0"?><feed>
