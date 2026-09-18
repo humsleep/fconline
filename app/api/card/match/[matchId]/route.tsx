@@ -1,6 +1,7 @@
 import { getMatchDetailCached } from "@/lib/nexon/cached";
 import { getMatchTypeName } from "@/lib/nexon/meta";
 import { verdictFromMatch } from "@/lib/verdict";
+import { teamRating } from "@/lib/nexon/rating";
 import { renderCard } from "@/lib/card/render";
 import { limitNexonFanout } from "@/lib/security/rate-limit";
 
@@ -33,9 +34,10 @@ export async function GET(
       ? opp.shoot?.goalTotalDisplay ?? opp.shoot?.goalTotal ?? 0
       : 0;
 
+    const myRating = teamRating(mine);
     const v = verdictFromMatch({
       result: mine.matchDetail?.matchResult ?? "?",
-      myRating: mine.matchDetail?.averageRating ?? 0,
+      myRating,
       seed: detail.matchId,
     });
     const typeName = await getMatchTypeName(detail.matchType);
@@ -50,7 +52,7 @@ export async function GET(
         { label: "유효슛", value: `${mine.shoot?.effectiveShootTotal ?? 0}` },
         {
           label: "평점",
-          value: (mine.matchDetail?.averageRating ?? 0).toFixed(1),
+          value: myRating.toFixed(1),
           color: v.color,
         },
       ],

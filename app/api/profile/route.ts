@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getAdmin } from '@/lib/supabase/admin';
 import { validateNickname } from '@/lib/community/constants';
 import { MODERATION_MESSAGE, containsBannedWords } from '@/lib/community/moderation';
+import { normalizeSnapshotRating } from '@/lib/nexon/rating';
 
 export async function GET() {
   const supabase = await createClient();
@@ -50,6 +51,7 @@ export async function GET() {
   }
 
   // 지난 방문 대비 delta + 폼 추세 — 최근 14개 스냅샷(RLS로 본인 것만)
+  // avg_rating 은 2026-09-18 전후로 척도가 다르다(averageRating 18명 분모 → 출전 선수 평균). 읽을 때 새 척도로 환산.
   let snapshot: {
     winRate: number;
     avgRating: number;
@@ -72,10 +74,10 @@ export async function GET() {
       const prev = snaps[1] ?? null;
       snapshot = {
         winRate: cur.win_rate,
-        avgRating: Number(cur.avg_rating),
+        avgRating: normalizeSnapshotRating(Number(cur.avg_rating)),
         played: cur.played,
         deltaWinRate: prev ? cur.win_rate - prev.win_rate : null,
-        deltaRating: prev ? Math.round((Number(cur.avg_rating) - Number(prev.avg_rating)) * 100) / 100 : null,
+        deltaRating: prev ? Math.round((normalizeSnapshotRating(Number(cur.avg_rating)) - normalizeSnapshotRating(Number(prev.avg_rating))) * 100) / 100 : null,
         prevDate: prev ? (prev.snapshot_date as string) : null,
       };
       // 응답은 오래된→최신으로 뒤집어 그래프가 좌→우 시간축이 되게
@@ -84,7 +86,7 @@ export async function GET() {
         .map((s) => ({
           date: s.snapshot_date as string,
           winRate: s.win_rate,
-          avgRating: Number(s.avg_rating),
+          avgRating: normalizeSnapshotRating(Number(s.avg_rating)),
         }));
     }
   } catch {

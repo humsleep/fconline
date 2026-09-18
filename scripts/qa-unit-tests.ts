@@ -10,6 +10,7 @@ import { pickKeyPlayers, topSeason } from '../lib/squad/card-badges';
 import { getFormation, formationsByLine } from '../lib/squad/formations';
 import { aggregateReport, reportInsights, computeWeekly, bandIndex } from '../lib/nexon/report';
 import { goalMinute, goalMinuteExact, splitGoalTime } from '../lib/nexon/goal-time';
+import { teamRating, legacyToTeamRating, normalizeSnapshotRating } from '../lib/nexon/rating';
 import { summarizeMatch, aggregate, topRivals, pickNemesis } from '../lib/nexon/summary';
 import type { Rival } from '../lib/nexon/summary';
 import { verdictFromRating, verdictFromMatch } from '../lib/verdict';
@@ -420,6 +421,49 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   // 후반 골이 여러 밴드로 퍼져야 한다(예전엔 전부 76-90+)
   const spread = aggregateReport([mkMatch('gt', 3, 0, { myTimes: [H2 + 60, H2 + 1200, H2 + 2500] })], 'ME');
   eq(spread.timeBands.map((b) => b.forGoals), [0, 0, 0, 1, 1, 1], '후반 골이 46-60/61-75/76-90+ 로 분산');
+}
+
+// ── 경기 평점 척도 (averageRating = Σ spRating / 18) ──
+{
+  const fx = JSON.parse(readFileSync(new URL('./fixtures/match-detail.json', import.meta.url), 'utf8')) as MatchDetail;
+  const [a, b] = fx.matchInfo;
+  // 실데이터: 출전 11명 Σ=70.0, averageRating 3.88889 = 70/18
+  eq(teamRating(a), 6.36, 'teamRating: 출전 선수(spRating>0) 평균 — 벤치 0점 제외');
+  eq(teamRating(b), 7.16, 'teamRating: 교체 투입 선수 포함 13명 평균');
+  ok(Math.abs(a.matchDetail.averageRating * 18 - 70.0) < 0.01, 'averageRating 은 18명 분모(실데이터 고정)');
+  eq(summarizeMatch(fx, 'ouid1')!.me.rating, 7.16, 'summarizeMatch.me.rating = teamRating');
+  eq(teamRating({ player: [], matchDetail: { averageRating: 4.4 } as never }), 7.2, 'teamRating: player[] 없으면 ×18/11 근사');
+  eq(teamRating(null), 0, 'teamRating: null 방어');
+  eq(legacyToTeamRating(0), 0, 'legacyToTeamRating: 0 유지');
+  eq(normalizeSnapshotRating(4.42), 7.23, '스냅샷: 구 척도(<5.5) 환산');
+  eq(normalizeSnapshotRating(6.9), 6.9, '스냅샷: 새 척도는 그대로');
+}
+
+// ── 스코어·판정 재보정 (라이브 분포: 경기 평점 중앙값 6.71, IQR 6.44~7.07) ──
+{
+  // 라이브 회귀: 보엠 2:0 승(평점 averageRating 4.36 → 출전 평균 7.14)이 LIABILITY '고전한 경기'로 나왔다
+  const w20 = sum('승', 2, 0, 7.14, 45);
+  ok(matchScore(w20) >= 6.5, `matchScore: 2:0 승은 6.5↑ (got ${matchScore(w20)})`);
+  const v20 = verdictFromMatch({ result: '승', myRating: 7.14 });
+  ok(v20.tier !== 'LIABILITY' && v20.oneLiner !== '고전한 경기', `verdictFromMatch: 2:0 승 평점 7.14 는 고전 아님 (got ${v20.tier})`);
+  const vLegacy = verdictFromMatch({ result: '승', myRating: legacyToTeamRating(4.8) });
+  ok(vLegacy.tier !== 'LIABILITY' && vLegacy.oneLiner !== '고전한 경기', '구 척도 4.8 도 환산하면 고전 아님');
+  // 중앙값 경기(6.7)는 평점 가감 0
+  eq(matchScore(sum('무', 1, 1, 6.7)), 5, 'matchScore: 중앙값 평점 무승부 = 5.0');
+  const rec = (spec: [('승' | '무' | '패'), number, number, number, number][]) =>
+    recentScore(spec.flatMap(([r, gf, ga, rt, n]) => Array.from({ length: n }, () => sum(r, gf, ga, rt))));
+  const r50 = rec([['승', 2, 1, 6.9, 15], ['무', 1, 1, 6.7, 5], ['패', 1, 2, 6.5, 10]]);
+  eq(scoreTier(r50).label, '평범', `recentScore: 승률 50% 는 평범 (got ${r50})`);
+  const r60 = rec([['승', 2, 0, 7.0, 18], ['무', 1, 1, 6.7, 4], ['패', 0, 1, 6.5, 8]]);
+  eq(scoreTier(r60).label, '수준급', `recentScore: 승률 60% + 득실 우위는 수준급 (got ${r60})`);
+  const r80 = rec([['승', 2, 0, 7.0, 24], ['패', 0, 1, 6.5, 6]]);
+  eq(scoreTier(r80).label, '수준급', `recentScore: 승률 80% 도 대승 위주가 아니면 수준급 (got ${r80})`);
+  const r90 = rec([['승', 3, 0, 7.3, 27], ['패', 0, 1, 6.5, 3]]);
+  eq(scoreTier(r90).label, '월드클래스', `recentScore: 승률 90% 대승 위주는 월드클래스 (got ${r90})`);
+  const r35 = rec([['승', 1, 0, 6.7, 10], ['무', 1, 1, 6.7, 3], ['패', 0, 2, 6.5, 17]]);
+  eq(scoreTier(r35).label, '분발 필요', `recentScore: 승률 35% + 득실 열세는 분발 필요 (got ${r35})`);
+  ok(recentScore(Array.from({ length: 30 }, () => sum('승', 9, 0, 10, 100))) <= 10, 'recentScore: 상한 10');
+  ok(recentScore(Array.from({ length: 30 }, () => sum('패', 0, 9, 1, 0))) >= 0, 'recentScore: 하한 0');
 }
 
 // ── 유튜브 RSS 파서 ──

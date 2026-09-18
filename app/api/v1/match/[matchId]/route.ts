@@ -5,6 +5,7 @@ import { getMatchTypeName, getPositionLabel } from '@/lib/nexon/meta';
 import { getPlayerNames } from '@/lib/nexon/players';
 import { detectGoalCode } from '@/app/components/ShotMap';
 import { verdictFromMatch } from '@/lib/verdict';
+import { teamRating } from '@/lib/nexon/rating';
 import { goalMinute } from '@/lib/nexon/goal-time';
 import { formatMatchDate } from '@/lib/format';
 import type { MatchInfoEntry } from '@/lib/nexon/types';
@@ -22,7 +23,8 @@ function side(e: MatchInfoEntry, goalCode: number | null, names: Map<number, str
     forfeit: (e.matchDetail?.matchEndType ?? 0) !== 0,
     goals: e.shoot?.goalTotalDisplay ?? e.shoot?.goalTotal ?? 0,
     possession: e.matchDetail?.possession ?? 50,
-    rating: e.matchDetail?.averageRating ?? 0,
+    // 출전 선수 평균(5~10 척도). averageRating 은 벤치 포함 18명 분모라 3~5 로 눌려 있다(lib/nexon/rating.ts).
+    rating: teamRating(e),
     controller: e.matchDetail?.controller ?? '',
     stats: {
       shots: e.shoot?.shootTotal ?? 0,
@@ -124,7 +126,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ matchId:
       matchTypeName,
       me: side(mine, goalCode, names),
       opponent: opp ? side(opp, goalCode, names) : null,
-      verdict: verdictFromMatch({ result: mine.matchDetail?.matchResult ?? '?', myRating: mine.matchDetail?.averageRating ?? 0, seed: detail.matchId }),
+      verdict: verdictFromMatch({ result: mine.matchDetail?.matchResult ?? '?', myRating: teamRating(mine), seed: detail.matchId }),
       potm,
       cardUrl: `/api/card/match/${encodeURIComponent(matchId)}?me=${encodeURIComponent(mine.ouid)}`,
     },

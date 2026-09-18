@@ -34,7 +34,7 @@ export interface MatchPerfStats {
   bestWinStreak: number;
   worstLoseStreak: number;
   avgRating: number;
-  /** 평점 8.0 이상 / 6.0 미만(0 제외) 경기 수 */
+  /** 경기 평점 HIGH_RATING(7.8) 이상 / LOW_RATING(6.0) 미만(0 제외) 경기 수 — 평점은 출전 선수 평균(teamRating) */
   highRatings: number;
   lowRatings: number;
   avgPossession: number;
@@ -50,6 +50,14 @@ export interface MatchPerfStats {
   /** 최근 10경기 승률 − 전체 승률 (%p, 표본 15경기 이상일 때만 의미) */
   momentum: number;
 }
+
+/**
+ * 경기 평점(출전 선수 평균) 임계값 — 2026-09-18 라이브 159개 팀-경기 실측:
+ * p10 6.17 · 중앙값 6.71 · p90 7.51 · max 8.02. 8.0 은 사실상 도달 불가라 상위 ~5%(7.8)로,
+ * 하위는 6.0(하위 ~5%) 유지.
+ */
+export const HIGH_RATING = 7.8;
+export const LOW_RATING = 6.0;
 
 export function computeMatchPerfStats(summaries: MatchSummary[]): MatchPerfStats {
   // 결과를 알 수 없는 경기는 제외 (최신순 유지)
@@ -81,8 +89,8 @@ export function computeMatchPerfStats(summaries: MatchSummary[]): MatchPerfStats
     if (m.me.rating > 0) {
       ratingSum += m.me.rating;
       ratingN++;
-      if (m.me.rating >= 8) highRatings++;
-      if (m.me.rating < 6) lowRatings++;
+      if (m.me.rating >= HIGH_RATING) highRatings++;
+      if (m.me.rating < LOW_RATING) lowRatings++;
     }
     if (m.me.possession > 0) {
       possSum += m.me.possession;
@@ -220,7 +228,7 @@ export const MATCH_RULES: MatchRule[] = [
   R("n-rating-good", "note", "win", "평균 평점 7점대", "준수한 경기력 — 에이스 의존도만 줄이면 완벽.", (s) => s.avgRating >= 7 && s.avgRating < 7.5),
   R("n-rating-mid", "note", "info", "평균 평점 6점대", "평점이 평범합니다 — 몇몇 포지션 업그레이드 여지가 있어요.", (s) => s.avgRating >= 6 && s.avgRating < 7),
   R("n-rating-low", "note", "lose", "평균 평점 6 미만", "경기 내용이 결과보다 아쉽습니다 — 스쿼드 진단을 받아보세요.", (s) => s.avgRating > 0 && s.avgRating < 6),
-  R("n-rating-peak", "note", "win", "8점대 경기 다수", "평점 8.0 이상 경기가 여러 번 — 터지는 날은 확실히 터집니다.", (s) => s.highRatings >= 3),
+  R("n-rating-peak", "note", "win", "고평점 경기 다수", "평점 7.8 이상 경기가 여러 번 — 터지는 날은 확실히 터집니다.", (s) => s.highRatings >= 3),
   R("n-rating-floor", "note", "lose", "6점 미만 경기 다수", "낮은 평점 경기가 잦습니다 — 안 풀리는 날의 플랜 B가 필요해요.", (s) => s.lowRatings >= 3),
 
   // ═══════════ 점유율 스타일 (note) ═══════════

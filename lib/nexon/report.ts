@@ -1,5 +1,6 @@
 import type { MatchDetail, MatchInfoEntry, ShootDetail } from './types';
 import { summarizeMatch } from './summary';
+import { teamRating } from './rating';
 import { splitGoalTime } from './goal-time';
 
 /**
@@ -40,7 +41,7 @@ export interface MatchReport {
   played: number;
   goalsFor: number;
   goalsAgainst: number;
-  avgRating: number;
+  avgRating: number; // 출전 선수 평균(teamRating) — averageRating(18명 분모) 아님
   timeBands: TimeBand[];
   shotTypes: ShotTypeStat[]; // 내 결정력
   form: FormGame[]; // 최신 → 과거
@@ -96,6 +97,7 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
   let goalsFor = 0;
   let goalsAgainst = 0;
   let ratingSum = 0;
+  let ratingN = 0;
   let played = 0;
 
   for (const d of details) {
@@ -109,7 +111,11 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
     const oppGoals = opp ? goalsOf(opp) : 0;
     goalsFor += myGoals;
     goalsAgainst += oppGoals;
-    ratingSum += mine.matchDetail?.averageRating ?? 0;
+    const rating = teamRating(mine);
+    if (rating > 0) {
+      ratingSum += rating;
+      ratingN += 1;
+    }
 
     // 폼 타임라인
     const summary = summarizeMatch(d, ouid);
@@ -163,7 +169,7 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
     played,
     goalsFor,
     goalsAgainst,
-    avgRating: played ? ratingSum / played : 0,
+    avgRating: ratingN ? ratingSum / ratingN : 0,
     timeBands: bands,
     shotTypes,
     form,
