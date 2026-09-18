@@ -1,5 +1,6 @@
 import type { MatchDetail, MatchInfoEntry, ShootDetail } from './types';
 import { summarizeMatch } from './summary';
+import { splitGoalTime } from './goal-time';
 
 /**
  * 30경기 통합 분석 리포트 집계 — 이미 가져온 match-detail 배열만으로 계산(넥슨 추가 호출 0).
@@ -66,15 +67,15 @@ function detectGoalCode(sides: { shots: ShootDetail[]; goals: number }[]): numbe
 
 const BAND_LABELS = ['0-15', '16-30', '31-45', '46-60', '61-75', '76-90+'];
 
-// goalTime(초) → 6개 밴드 인덱스. 전/후반 추가시간·연장은 인접 밴드로 흡수(모바일 6밴드로 단순화).
-function bandIndex(goalTimeSec: number): number {
-  const min = goalTimeSec / 60;
-  if (min < 15) return 0;
-  if (min < 30) return 1;
-  if (min < 45) return 2;
-  if (min < 60) return 3;
-  if (min < 75) return 4;
-  return 5;
+// goalTime → 6개 밴드 인덱스(모바일 6밴드로 단순화).
+// goalTime 은 하프 비트가 실린 값이라(goal-time.ts) 먼저 하프를 나눈다 — 예전엔 /60 을 그대로 써서
+// 후반·연장 골이 전부 76-90+ 로 몰렸다. 전반 추가시간은 31-45, 후반 추가시간·연장은 76-90+ 에 흡수.
+export function bandIndex(goalTime: number): number {
+  const { half, seconds } = splitGoalTime(goalTime);
+  if (half >= 2) return 5;
+  const inHalf = seconds / 60;
+  if (half === 0) return inHalf < 15 ? 0 : inHalf < 30 ? 1 : 2;
+  return inHalf < 15 ? 3 : inHalf < 30 ? 4 : 5; // 후반: 46-60 / 61-75 / 76-90+
 }
 
 const SHOT_TYPES: { key: string; label: string; try: keyof NonNullable<MatchInfoEntry['shoot']>; goal: keyof NonNullable<MatchInfoEntry['shoot']> }[] = [

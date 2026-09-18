@@ -8,7 +8,8 @@ process.env.IP_HASH_SALT = process.env.IP_HASH_SALT ?? 'qa-salt-1234567890abcdef
 import type { MatchDetail } from '../lib/nexon/types';
 import { pickKeyPlayers, topSeason } from '../lib/squad/card-badges';
 import { getFormation, formationsByLine } from '../lib/squad/formations';
-import { aggregateReport, reportInsights, computeWeekly } from '../lib/nexon/report';
+import { aggregateReport, reportInsights, computeWeekly, bandIndex } from '../lib/nexon/report';
+import { goalMinute, goalMinuteExact, splitGoalTime } from '../lib/nexon/goal-time';
 import { summarizeMatch, aggregate, topRivals, pickNemesis } from '../lib/nexon/summary';
 import type { Rival } from '../lib/nexon/summary';
 import { verdictFromRating, verdictFromMatch } from '../lib/verdict';
@@ -144,10 +145,12 @@ ok(formationsByLine().length >= 2, '라인별 포메이션 그룹 존재');
 
 // ── report ───────────────────────────────────────────────────
 section('report');
+// goalTime 은 하프 비트가 실린 값: 전반 = 초, 후반 = 2^24 + 후반 경과 초 (lib/nexon/goal-time.ts)
+const H2 = 2 ** 24;
 const rptDetails = [
-  mkMatch('1', 1, 3, { myTimes: [300], oppTimes: [600, 4800, 5000] }),
-  mkMatch('2', 0, 2, { oppTimes: [4700, 5100] }),
-  mkMatch('3', 2, 4, { myTimes: [1000, 2000], oppTimes: [4600, 4900, 5200, 300] }),
+  mkMatch('1', 1, 3, { myTimes: [300], oppTimes: [600, H2 + 2100, H2 + 2300] }),
+  mkMatch('2', 0, 2, { oppTimes: [H2 + 2000, H2 + 2400] }),
+  mkMatch('3', 2, 4, { myTimes: [1000, 2000], oppTimes: [H2 + 1900, H2 + 2200, H2 + 2500, 300] }),
 ];
 const rpt = aggregateReport(rptDetails, 'ME');
 eq(rpt.played, 3, 'report played=3');
@@ -389,6 +392,34 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   eq(scoreTier(7).tone, 'win', 'scoreTier: 6.5↑ win');
   eq(scoreTier(5.5).tone, 'muted', 'scoreTier: 5↑ muted');
   eq(scoreTier(4).tone, 'lose', 'scoreTier: 5미만 lose');
+}
+
+// ── goalTime 디코딩 (하프 비트 2^24) ──
+{
+  const H2 = 2 ** 24, ET1 = 2 ** 25, ET2 = 2 ** 25 + 2 ** 24;
+  eq(splitGoalTime(H2 + 1430), { half: 1, seconds: 1430 }, 'splitGoalTime: 후반 분리');
+  eq(goalMinute(0), 1, 'goalMinute: 킥오프 직후 1분');
+  eq(goalMinute(919), 16, 'goalMinute: 전반 15:19 → 16분');
+  eq(goalMinute(2857), 48, 'goalMinute: 전반 추가시간 47:37 → 48분');
+  eq(goalMinuteExact(H2), 45, 'goalMinuteExact: 후반 시작 = 45');
+  eq(goalMinute(H2 + 1430), 69, 'goalMinute: 후반 23:50 → 69분');
+  // 라이브 회귀: /api/v1/match/6aa8f0303652ec4e175624c3 가 minute 279664 를 내려보냈다
+  eq(goalMinute(16779840), 89, 'goalMinute: 라이브 후반 값(16779840) → 89분 (279664 아님)');
+  eq(goalMinute(ET1 + 208), 94, 'goalMinute: 연장 전반 3:28 → 94분');
+  eq(goalMinute(ET2 + 1212), 126, 'goalMinute: 연장 후반 20:12 → 126분');
+  eq(goalMinute(2 ** 26 + 5), 120, 'goalMinute: 승부차기 → 120');
+  eq(goalMinute(-1), 1, 'goalMinute: 비정상 값 방어');
+  // 시간대 밴드
+  eq(bandIndex(899), 0, 'bandIndex: 14:59 → 0-15');
+  eq(bandIndex(900), 1, 'bandIndex: 15:00 → 16-30');
+  eq(bandIndex(2857), 2, 'bandIndex: 전반 추가시간은 31-45 에 남는다');
+  eq(bandIndex(H2 + 100), 3, 'bandIndex: 후반 초반 → 46-60 (예전엔 76-90+)');
+  eq(bandIndex(H2 + 1000), 4, 'bandIndex: 후반 61-75');
+  eq(bandIndex(H2 + 2984), 5, 'bandIndex: 후반 추가시간 → 76-90+');
+  eq(bandIndex(ET1 + 10), 5, 'bandIndex: 연장 → 76-90+ 흡수');
+  // 후반 골이 여러 밴드로 퍼져야 한다(예전엔 전부 76-90+)
+  const spread = aggregateReport([mkMatch('gt', 3, 0, { myTimes: [H2 + 60, H2 + 1200, H2 + 2500] })], 'ME');
+  eq(spread.timeBands.map((b) => b.forGoals), [0, 0, 0, 1, 1, 1], '후반 골이 46-60/61-75/76-90+ 로 분산');
 }
 
 // ── 유튜브 RSS 파서 ──

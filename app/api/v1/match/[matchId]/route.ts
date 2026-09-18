@@ -5,6 +5,7 @@ import { getMatchTypeName, getPositionLabel } from '@/lib/nexon/meta';
 import { getPlayerNames } from '@/lib/nexon/players';
 import { detectGoalCode } from '@/app/components/ShotMap';
 import { verdictFromMatch } from '@/lib/verdict';
+import { goalMinute } from '@/lib/nexon/goal-time';
 import { formatMatchDate } from '@/lib/format';
 import type { MatchInfoEntry } from '@/lib/nexon/types';
 import { apiError, fanoutGuard, nexonErrorResponse, ok } from '@/lib/api/v1';
@@ -41,7 +42,8 @@ function side(e: MatchInfoEntry, goalCode: number | null, names: Map<number, str
     shots: (e.shootDetail ?? []).map((s) => ({
       x: s.x,
       y: s.y,
-      minute: Math.round(s.goalTime / 60) || 0,
+      // goalTime 은 하프 비트(2^24)가 실린 값 — /60 을 그대로 쓰면 후반 슛이 279,629분이 된다.
+      minute: goalMinute(s.goalTime),
       spId: s.spId,
       player: names.get(s.spId) ?? String(s.spId),
       isGoal: goalCode !== null && s.result === goalCode,
