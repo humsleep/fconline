@@ -61,6 +61,8 @@ export async function POST(req: Request) {
       // 표시 사진(선택) — 반드시 같은 선수(pid)의 사진만. 다른 선수 사진으로 바꿔 끼우는 것을 막는다.
       // 선수별 포지션(선택) — FC온라인 포지션 라벨만 받는다. 앱에서 자리를 끌어 옮기면 그 선수만 라벨이 바뀐다.
       if (typeof s.pos === "string" && POSITION_LABELS.has(s.pos)) slot.pos = s.pos;
+      // 시즌 이름(선택) — 표시용. 불러온 스쿼드·공유 페이지에서 시즌 배지가 빠지지 않게.
+      if (typeof s.season === "string" && s.season.trim()) slot.season = s.season.trim().slice(0, 30);
       const img = s.imageSpid;
       if (typeof img === "number" && Number.isInteger(img) && img > 0 && img !== spid && img % 1_000_000 === pid) {
         slot.imageSpid = img;

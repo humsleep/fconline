@@ -206,6 +206,10 @@ export default function SquadPitch({
             >
               {p ? p.name : slot.pos}
             </span>
+            {/* 앱에서 끌어 옮겨 포지션이 바뀐 선수는 라벨을 함께 보여 준다(없으면 이름만) */}
+            {p?.pos && p.pos !== slot.pos && (
+              <span className="scoreboard -mt-0.5 rounded bg-gold/20 px-1 text-[10px] font-bold text-gold">{p.pos}</span>
+            )}
             {p && (
               <SeasonBadge
                 spid={p.spid}
