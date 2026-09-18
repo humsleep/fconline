@@ -53,6 +53,11 @@ export async function POST(req: Request) {
       seen.add(slotId);
       seenPid.add(pid);
       const slot: SquadSlot = { slotId, spid, name: nm.slice(0, 40) };
+      // 표시 사진(선택) — 반드시 같은 선수(pid)의 사진만. 다른 선수 사진으로 바꿔 끼우는 것을 막는다.
+      const img = s.imageSpid;
+      if (typeof img === "number" && Number.isInteger(img) && img > 0 && img !== spid && img % 1_000_000 === pid) {
+        slot.imageSpid = img;
+      }
       // 커스텀 좌표(선택) — 0~100 범위만
       const x = s.x;
       const y = s.y;

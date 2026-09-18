@@ -8,6 +8,7 @@ export interface FilledSlot {
   spid: number;
   name: string;
   season?: string; // 시즌(클래스) 이름
+  imageSpid?: number; // 표시 사진(같은 선수의 다른 시즌 카드). 없으면 spid
 }
 
 export interface Coord {
@@ -177,7 +178,7 @@ export default function SquadPitch({
           <span className="flex flex-col items-center gap-1">
             {p ? (
               <img
-                src={`/api/player-image/${p.spid}`}
+                src={`/api/player-image/${p.imageSpid ?? p.spid}`}
                 alt=""
                 width={44}
                 height={44}

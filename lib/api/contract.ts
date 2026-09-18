@@ -171,7 +171,7 @@ export const SHAPES: Record<string, Shape> = {
   },
   Viewer: { loggedIn: 'bool', isOwner: 'bool', canComment: 'bool' },
 
-  SquadSlot: { slotId: 'string', spid: 'int', name: 'string', 'season?': 'string', 'x?': 'number', 'y?': 'number' },
+  SquadSlot: { slotId: 'string', spid: 'int', name: 'string', 'season?': 'string', 'x?': 'number', 'y?': 'number', 'imageSpid?': 'int' },
   PlayerHit: { spid: 'int', pid: 'int', name: 'string', season: 'string', seasons: 'SeasonVariant[]' },
 
   // ── 구 라우트(/api/*) — 앱이 v1 과 똑같이 의존한다. 웹도 함께 쓰므로 오히려 리팩터링에 휩쓸리기 쉽다.

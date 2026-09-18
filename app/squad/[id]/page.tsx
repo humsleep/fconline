@@ -69,6 +69,7 @@ export default async function SquadViewPage({
       spid: s.spid,
       name: s.name,
       season: s.season ?? seasons.get(s.spid),
+      imageSpid: s.imageSpid,
     };
     if (typeof s.x === "number" && typeof s.y === "number") {
       coords[s.slotId] = { x: s.x, y: s.y };
