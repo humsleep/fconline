@@ -625,7 +625,7 @@ function RivalsPanel({ rivals, nickname }: { rivals: Rival[]; nickname: string }
         {rivals.map((r) => {
           const edge =
             r.win > r.lose ? "text-win" : r.win < r.lose ? "text-lose" : "text-muted";
-          // 천적/호구 — 이미 있는 승패 집계 재사용. 3경기 이상 + 2경기차 이상일 때만 라벨.
+          // 천적/강세 — 이미 있는 승패 집계 재사용. 실존 상대를 비하하는 라벨은 쓰지 않는다(lib/verdict.ts 정책). 3경기 이상 + 2경기차 이상일 때만 라벨.
           const diff = r.win - r.lose;
           const nemesis = r.games >= 3 && diff <= -2;
           const prey = r.games >= 3 && diff >= 2;
@@ -647,7 +647,7 @@ function RivalsPanel({ rivals, nickname }: { rivals: Rival[]; nickname: string }
                     )}
                     {prey && (
                       <span className="scoreboard flex-none rounded bg-win/15 px-1.5 py-0.5 text-[11px] font-bold text-win">
-                        호구
+                        강세
                       </span>
                     )}
                   </span>
@@ -673,7 +673,7 @@ function RivalsPanel({ rivals, nickname }: { rivals: Rival[]; nickname: string }
       <p className="mt-2 text-[12px] text-muted">
         최근 불러온 경기 기준 · 2회 이상 만난 상대만 · 탭하면 그 구단주 전적으로 이동
       </p>
-      {/* 라이벌 카드 공유 — 천적/호구 서사로 지목·저격 → 지목당한 사람이 검색 유입(바이럴 훅) */}
+      {/* 라이벌 카드 공유 — 천적/강세 서사로 맞대결 → 지목당한 사람이 검색 유입(바이럴 훅) */}
       <div className="mt-3">
         <ShareCardButton
           url={`/api/card/rival/${encodeURIComponent(nickname)}`}

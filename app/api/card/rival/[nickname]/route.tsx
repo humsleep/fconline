@@ -6,16 +6,16 @@ import { limitNexonFanout } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 
-/** 라이벌 서사(천적/호구) — 페이지 RivalsPanel과 동일 규칙. */
+/** 라이벌 서사(천적/강세) — 페이지 RivalsPanel과 동일 규칙. 실존 상대를 비하하는 라벨 금지. */
 function labelOf(r: Rival): { text: string; icon: string; color: "gold" | "lime" | "lose" } {
   const diff = r.win - r.lose;
   if (r.games >= 3 && diff <= -2) return { text: "천적", icon: "▼", color: "lose" };
-  if (r.games >= 3 && diff >= 2) return { text: "호구", icon: "▲", color: "lime" };
+  if (r.games >= 3 && diff >= 2) return { text: "강세", icon: "▲", color: "lime" };
   return { text: "라이벌", icon: "⚔", color: "gold" };
 }
 
 /**
- * 헤드라인 라이벌 선정: 천적(가장 크게 지는) 우선 → 호구(가장 크게 이기는) →
+ * 헤드라인 라이벌 선정: 천적(가장 크게 지는) 우선 → 강세(가장 크게 이기는) →
  * 없으면 최다 대전(topRivals 정렬상 [0]). ?vs= 로 특정 상대 지정 가능.
  */
 function pickRival(rivals: Rival[], vs: string | null): Rival | null {
