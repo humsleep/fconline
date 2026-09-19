@@ -1,5 +1,6 @@
 import { getAdmin } from '@/lib/supabase/admin';
 import { getRankerStatsCached, rankerKey } from '@/lib/nexon/ranker';
+import { getRankerStats } from '@/lib/nexon/api';
 import { unpackMatchDetail } from '@/lib/nexon/pack';
 import { popularCombos } from '@/lib/nexon/popular-combos';
 
@@ -30,6 +31,7 @@ export async function GET(req: Request) {
   }
 
   const summary: Record<string, number> = {};
+  const probes: Record<string, string> = {};
 
   for (const matchtype of MATCH_TYPES) {
     let rows: { payload: unknown }[] = [];
@@ -73,6 +75,18 @@ export async function GET(req: Request) {
         top = combos;
       } catch {
         // 폴백 실패 시 이번 타입은 건너뜀
+      }
+    }
+
+    // 진단 프로브: getRankerStatsCached 는 넥슨 에러를 삼킨다(tombstone 오염 방지). 결과가 계속 비어
+    // 원인을 알 수 없었으므로 인기 조합 1개로 한 번 직접 불러 응답 개수/에러 코드를 남긴다(넥슨 1콜).
+    if (top.length > 0) {
+      try {
+        const probe = await getRankerStats(matchtype, top.slice(0, 1));
+        probes[`type_${matchtype}`] = `ok:${probe.length}`;
+      } catch (err) {
+        const e = err as { name?: string; status?: number; code?: string; message?: string };
+        probes[`type_${matchtype}`] = `err:${e.status ?? '?'}:${e.code ?? e.name ?? '?'}:${(e.message ?? '').slice(0, 120)}`;
       }
     }
 
@@ -187,5 +201,7 @@ export async function GET(req: Request) {
     retention.app_events_deleted = -1;
   }
 
-  return Response.json({ ok: true, warmed: summary, retention });
+  // Vercel 로그에서 바로 볼 수 있게 남긴다(비밀값 없음).
+  console.log('[ranker-snapshot]', JSON.stringify({ warmed: summary, probes }));
+  return Response.json({ ok: true, warmed: summary, probes, retention });
 }
