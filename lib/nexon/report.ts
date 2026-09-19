@@ -254,7 +254,8 @@ export function reportInsights(r: MatchReport): Insight[] {
 
   const inbox = r.shotTypes.find((s) => s.key === 'inbox');
   const outbox = r.shotTypes.find((s) => s.key === 'outbox');
-  const totalShots = r.shotTypes.reduce((a, s) => a + s.tries, 0);
+  // 헤딩·프리킥·PK 는 박스 안/밖의 부분집합 — 전부 더하면 전체 슛이 부풀어 '박스 밖 비율'이 낮게 나왔다
+  const totalShots = (inbox?.tries ?? 0) + (outbox?.tries ?? 0);
   if (
     outbox &&
     totalShots > 0 &&
