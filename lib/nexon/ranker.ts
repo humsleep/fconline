@@ -11,7 +11,7 @@ export function rankerKey(spId: number, spPosition: number): string {
 }
 
 /** 스냅샷 날짜 키 (KST 기준 — UTC 자정~9시 경계에서 캐시 히트율 유지) */
-function kstToday(): string {
+export function kstToday(): string {
   const kst = new Date(Date.now() + 9 * 3600 * 1000);
   return kst.toISOString().slice(0, 10);
 }

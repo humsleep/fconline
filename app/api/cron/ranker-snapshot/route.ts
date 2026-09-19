@@ -1,8 +1,8 @@
 import { getAdmin } from '@/lib/supabase/admin';
-import { getRankerStatsCached, rankerKey } from '@/lib/nexon/ranker';
+import { getRankerStatsCached, kstToday, rankerKey } from '@/lib/nexon/ranker';
 import { getRankerStats } from '@/lib/nexon/api';
 import { unpackMatchDetail } from '@/lib/nexon/pack';
-import { popularCombos } from '@/lib/nexon/popular-combos';
+import { popularCombosCounted } from '@/lib/nexon/popular-combos';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -50,7 +50,10 @@ export async function GET(req: Request) {
 
     // payload 는 배열 패킹 저장이다(lib/nexon/pack.ts, 2026-09-08~). 예전엔 row.payload.matchInfo 를
     // 바로 읽어 패킹 행에서 항상 undefined → 조합 0개 → 랭커 예열이 직전 스냅샷 폴백에만 의존했다.
-    let top = popularCombos(rows.map((r) => unpackMatchDetail(r.payload)), TOP_PLAYERS);
+    let top: { id: number; po: number; n?: number }[] = popularCombosCounted(
+      rows.map((r) => unpackMatchDetail(r.payload)),
+      TOP_PLAYERS
+    );
 
     // 폴백: match_cache가 비면(콜드스타트) 직전 스냅샷의 조합을 재예열
     // → 한 번 시딩되면 검색이 없어도 랭킹이 매일 갱신·유지된다.
@@ -58,18 +61,19 @@ export async function GET(req: Request) {
       try {
         const { data: prev } = await db
           .from('ranker_stats_snapshot')
-          .select('sp_id, sp_position, snapshot_date')
+          .select('sp_id, sp_position, snapshot_date, payload')
           .eq('match_type', matchtype)
           .is('payload->empty', null)
           .order('snapshot_date', { ascending: false })
           .limit(TOP_PLAYERS * 3);
         const seen = new Set<string>();
-        const combos: { id: number; po: number }[] = [];
+        const combos: { id: number; po: number; n?: number }[] = [];
         for (const r of prev ?? []) {
           const key = rankerKey(r.sp_id as number, r.sp_position as number);
           if (seen.has(key)) continue;
           seen.add(key);
-          combos.push({ id: r.sp_id as number, po: r.sp_position as number });
+          const usage = (r.payload as { usage?: number } | null)?.usage;
+          combos.push({ id: r.sp_id as number, po: r.sp_position as number, n: usage });
           if (combos.length >= TOP_PLAYERS) break;
         }
         top = combos;
@@ -91,6 +95,28 @@ export async function GET(req: Request) {
     }
 
     const warmed = await getRankerStatsCached(matchtype, top);
+
+    // 사용 횟수(usage)를 오늘 스냅샷에 붙인다 — 픽 랭킹은 이 값으로 정렬한다(lib/meta/picks.ts).
+    // 유저 조회 중에 저장된 행(usage 없음)은 인기 순위에서 빠진다.
+    const usageRows = top
+      .filter((c) => typeof c.n === 'number' && c.n > 0 && warmed.has(rankerKey(c.id, c.po)))
+      .map((c) => ({
+        match_type: matchtype,
+        sp_id: c.id,
+        sp_position: c.po,
+        snapshot_date: kstToday(),
+        payload: { ...warmed.get(rankerKey(c.id, c.po))!, usage: c.n },
+      }));
+    if (usageRows.length > 0) {
+      try {
+        await db
+          .from('ranker_stats_snapshot')
+          .upsert(usageRows, { onConflict: 'match_type,sp_id,sp_position,snapshot_date' });
+      } catch {
+        // 실패해도 랭커 스탯 자체는 저장돼 있다
+      }
+    }
+    summary[`usage_${matchtype}`] = usageRows.length;
     summary[`type_${matchtype}`] = warmed.size;
     // 진단용: 조합 수(0 이면 match_cache/폴백 문제) vs 실데이터 수(0 이면 넥슨 ranker-stats 응답 문제)
     summary[`combos_${matchtype}`] = top.length;

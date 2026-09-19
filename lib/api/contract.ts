@@ -136,7 +136,7 @@ export const SHAPES: Record<string, Shape> = {
   },
   PickRow: {
     spId: 'int', position: 'int', matchCount: 'int', goalsPerMatch: 'number', passPct: 'number',
-    'delta?': 'int', name: 'string', season: 'string', positionLabel: 'string', imageUrl: 'string',
+    'delta?': 'int', 'usage?': 'int', name: 'string', season: 'string', positionLabel: 'string', imageUrl: 'string',
   },
   MetaLine: { line: 'string', title: 'string', rows: 'PickRow[]' },
 

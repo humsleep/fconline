@@ -11,6 +11,8 @@ export interface PickRow {
   goalsPerMatch: number;
   /** 패스 성공률 0~100 */
   passPct: number;
+  /** FC Scope 가 모은 최근 경기에서 이 카드×포지션이 선발로 뛴 횟수 — 인기 순위 기준. 크론 행에만 있다. */
+  usage?: number;
   /** 전일 대비 순위 변동 (+상승/−하락), null=NEW, undefined=비교 불가 */
   delta?: number | null;
 }
@@ -65,7 +67,7 @@ async function loadPicksUncached(
       .limit(400);
     const rows: PickRow[] = [];
     for (const r of data ?? []) {
-      const payload = r.payload as RankerStat | null;
+      const payload = r.payload as (RankerStat & { usage?: number }) | null;
       const st = payload?.status ?? {};
       const matchCount = st.matchCount ?? 0;
       if (matchCount <= 0) continue;
@@ -78,9 +80,13 @@ async function loadPicksUncached(
         matchCount,
         goalsPerMatch: Math.round((st.goal ?? 0) * 100) / 100,
         passPct: passTry > 0 ? Math.round(((st.passSuccess ?? 0) / passTry) * 100) : 0,
+        ...(typeof payload?.usage === 'number' ? { usage: payload.usage } : {}),
       });
     }
-    return rows;
+    // 인기 순위는 사용 횟수로만 매긴다. 넥슨 matchCount 는 조합마다 20 으로 같아 순위가 sp_id 순이 됐다.
+    // 크론이 usage 를 붙인 행이 있으면 그 행만 쓴다(유저 조회로 저장된 행은 인기와 무관).
+    const ranked = rows.filter((r) => (r.usage ?? 0) > 0);
+    return ranked.length > 0 ? ranked : rows;
   }
 
   function groupByLine(rows: PickRow[]): Map<string, PickRow[]> {
@@ -92,7 +98,7 @@ async function loadPicksUncached(
       byLine.set(line, arr);
     }
     for (const arr of byLine.values())
-      arr.sort((a, b) => b.matchCount - a.matchCount);
+      arr.sort((a, b) => (b.usage ?? 0) - (a.usage ?? 0) || b.matchCount - a.matchCount || a.spId - b.spId);
     return byLine;
   }
 

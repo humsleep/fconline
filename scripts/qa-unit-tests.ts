@@ -31,7 +31,7 @@ import type { MatchSummary } from '../lib/nexon/summary';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { slimMatchDetail } from '../lib/nexon/slim';
-import { popularCombos } from '../lib/nexon/popular-combos';
+import { popularCombos, popularCombosCounted } from '../lib/nexon/popular-combos';
 import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
 import { Semaphore } from '../lib/nexon/semaphore';
 import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
@@ -478,6 +478,8 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   ok(combos.every((c) => c.po !== 28), 'popularCombos: 교체 대기(28) 제외');
   eq(popularCombos([fx, fx], 3).length, 3, 'popularCombos: limit 컷');
   eq(popularCombos([null, undefined], 10), [], 'popularCombos: 빈 입력 방어');
+  const counted = popularCombosCounted([fx, fx], 60);
+  ok(counted.length === 22 && counted.every((c) => c.n === 2), 'popularCombosCounted: 같은 경기 2번 → 조합마다 사용 2회(픽 랭킹 정렬 기준)');
 }
 
 // ── 몰수 경기는 스코어 기반 진단에서 제외 ──
