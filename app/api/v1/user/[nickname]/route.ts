@@ -42,7 +42,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ nickname
   } catch (err) {
     return nexonErrorResponse(err, nickname);
   }
-  logNicknameSearch(basic.nickname, req.headers.get('user-agent'));
+  // 온보딩 확인(stage=profile)은 글자마다 호출된다 — 기록하면 타이핑 중인 부분 문자열이 홈 "지금 검색되는 구단주"에 공개됐다.
+  if (!profileOnly) logNicknameSearch(basic.nickname, req.headers.get('user-agent'));
 
   const divisionCards = await Promise.all(
     divisions.slice(0, 3).map(async (d) => ({

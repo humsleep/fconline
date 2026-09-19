@@ -82,7 +82,7 @@ async function loadIndex(): Promise<PlayerIndex> {
       if (res.ok) {
         const list = (await res.json()) as { id: number; name: string }[];
         for (const p of list) {
-          nameById.set(p.id, p.name);
+          nameById.set(p.id, p.name.trim()); // 넥슨 원본에 끝 공백이 섞인 이름이 있다("파우 쿠바르시 ")
           seasonById.set(p.id, seasonName(p.id));
           const pid = pidOf(p.id);
           const arr = spidsByPid.get(pid);

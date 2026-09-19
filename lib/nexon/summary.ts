@@ -26,12 +26,25 @@ export function summarizeMatch(
   if (!mine) return null;
   const other = info.find((e) => e.ouid !== mine.ouid) ?? null;
 
-  const result = mine.matchDetail?.matchResult;
+  const raw = mine.matchDetail?.matchResult;
+  // 몰수 경기는 matchResult 가 비어 오기도 한다 — "?"로 두면 승무패 합이 경기 수와 안 맞았다(E2E 2026-09-20).
+  // matchEndType(1 몰수승, 2 몰수패) → 그래도 없으면 스코어로 판정한다.
+  const endType = mine.matchDetail?.matchEndType ?? 0;
+  const result: MatchSummary['result'] =
+    raw === '승' || raw === '무' || raw === '패'
+      ? raw
+      : endType === 1
+        ? '승'
+        : endType === 2
+          ? '패'
+          : other
+            ? goalsOf(mine) > goalsOf(other) ? '승' : goalsOf(mine) < goalsOf(other) ? '패' : '무'
+            : '?';
   return {
     matchId: detail.matchId,
     matchDate: detail.matchDate,
     matchType: detail.matchType,
-    result: result === '승' || result === '무' || result === '패' ? result : '?',
+    result,
     forfeit: (mine.matchDetail?.matchEndType ?? 0) !== 0,
     me: {
       nickname: mine.nickname,
