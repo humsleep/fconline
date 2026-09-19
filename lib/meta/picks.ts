@@ -57,14 +57,19 @@ async function loadPicksUncached(
   async function rowsForDate(cand: string): Promise<PickRow[]> {
     const db2 = getAdmin();
     if (!db2) return [];
-    const { data } = await db2
-      .from('ranker_stats_snapshot')
-      .select('sp_id, sp_position, payload')
-      .eq('match_type', matchType)
-      .eq('snapshot_date', cand)
-      .is('payload->empty', null) // tombstone({empty:true}) 제외
-      .order('sp_id', { ascending: true }) // 결정적 순서 (임의 누락 방지)
-      .limit(400);
+    // 크론이 usage 를 붙인 행을 먼저 가져온다. 한 쿼리로 400행을 sp_id 순으로 자르면 유저 조회 행(usage 없음)이
+    // 많은 날 인기 카드(최신 시즌 = sp_id 큰 쪽)가 잘려 나갔다.
+    const base = () =>
+      db2
+        .from('ranker_stats_snapshot')
+        .select('sp_id, sp_position, payload')
+        .eq('match_type', matchType)
+        .eq('snapshot_date', cand)
+        .is('payload->empty', null); // tombstone({empty:true}) 제외
+    let { data } = await base().not('payload->usage', 'is', null).order('sp_id', { ascending: true }).limit(400);
+    if (!data || data.length === 0) {
+      ({ data } = await base().order('sp_id', { ascending: true }).limit(400)); // 결정적 순서 (임의 누락 방지)
+    }
     const rows: PickRow[] = [];
     for (const r of data ?? []) {
       const payload = r.payload as (RankerStat & { usage?: number }) | null;
@@ -105,15 +110,22 @@ async function loadPicksUncached(
 
   try {
     // 최근 날짜 후보를 뽑아, 유효 데이터가 충분한 날을 채택 (자정 직후 편향/빈 랭킹 방지)
-    const { data: dateRows } = await db
-      .from('ranker_stats_snapshot')
-      .select('snapshot_date')
-      .eq('match_type', matchType)
-      .order('snapshot_date', { ascending: false })
-      .limit(3000); // 날짜 열만 — 오늘 유저 조회 행이 많아도 이전 날짜 후보가 잘리지 않게
-    const candidates = [
-      ...new Set((dateRows ?? []).map((r) => r.snapshot_date as string)),
-    ].slice(0, 4);
+    // 최근 날짜 4개를 하나씩 거슬러 찾는다. 행을 한꺼번에 받아 중복 제거하면 PostgREST 행 상한(기본 1000)에
+    // 오늘 행만 걸려 이전 날짜 후보가 사라졌다.
+    const candidates: string[] = [];
+    for (let k = 0; k < 4; k++) {
+      let q = db
+        .from('ranker_stats_snapshot')
+        .select('snapshot_date')
+        .eq('match_type', matchType)
+        .order('snapshot_date', { ascending: false })
+        .limit(1);
+      if (candidates.length > 0) q = q.lt('snapshot_date', candidates[candidates.length - 1]);
+      const { data: d } = await q;
+      const next = d?.[0]?.snapshot_date as string | undefined;
+      if (!next) break;
+      candidates.push(next);
+    }
     if (candidates.length === 0) return empty;
 
     const MIN_ROWS = 20;

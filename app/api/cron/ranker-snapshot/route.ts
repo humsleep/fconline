@@ -72,8 +72,8 @@ export async function GET(req: Request) {
           const key = rankerKey(r.sp_id as number, r.sp_position as number);
           if (seen.has(key)) continue;
           seen.add(key);
-          const usage = (r.payload as { usage?: number } | null)?.usage;
-          combos.push({ id: r.sp_id as number, po: r.sp_position as number, n: usage });
+          // 전날 usage 를 오늘 값으로 옮기지 않는다(순위가 고정되고 "오늘 스냅샷"처럼 보였다). 예열만 한다.
+          combos.push({ id: r.sp_id as number, po: r.sp_position as number });
           if (combos.length >= TOP_PLAYERS) break;
         }
         top = combos;
@@ -108,15 +108,14 @@ export async function GET(req: Request) {
         payload: { ...warmed.get(rankerKey(c.id, c.po))!, usage: c.n },
       }));
     if (usageRows.length > 0) {
-      try {
-        await db
-          .from('ranker_stats_snapshot')
-          .upsert(usageRows, { onConflict: 'match_type,sp_id,sp_position,snapshot_date' });
-      } catch {
-        // 실패해도 랭커 스탯 자체는 저장돼 있다
-      }
+      // supabase-js 는 throw 하지 않고 { error } 를 준다 — 실패를 요약에 남긴다.
+      const { error } = await db
+        .from('ranker_stats_snapshot')
+        .upsert(usageRows, { onConflict: 'match_type,sp_id,sp_position,snapshot_date' });
+      summary[`usage_${matchtype}`] = error ? -1 : usageRows.length;
+    } else {
+      summary[`usage_${matchtype}`] = 0;
     }
-    summary[`usage_${matchtype}`] = usageRows.length;
     summary[`type_${matchtype}`] = warmed.size;
     // 진단용: 조합 수(0 이면 match_cache/폴백 문제) vs 실데이터 수(0 이면 넥슨 ranker-stats 응답 문제)
     summary[`combos_${matchtype}`] = top.length;

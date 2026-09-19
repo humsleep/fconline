@@ -219,7 +219,7 @@ export const PRESETS: TeamPreset[] = [
       { pos: "RB", name: "마르코스 요렌테", pid: 226161 },
       { pos: "CB", name: "로뱅 르노르망", pid: 233486 },
       { pos: "CB", name: "다비드 한츠코", pid: 247103 },
-      { pos: "LB", name: "N. 탈리아피코", pid: 211256 },
+      { pos: "LB", name: "M. 루제리", pid: 259584 },
       { pos: "CM", name: "코케", pid: 193747 },
       { pos: "CM", name: "파블로 바리오스", pid: 272449 },
       { pos: "RM", name: "G. 시메오네", pid: 253396 },
