@@ -2,7 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 
 import { getAdmin } from '@/lib/supabase/admin';
-import { resolvePlayer } from '@/lib/nexon/players';
+import { getPlayerBySpid, resolvePlayer } from '@/lib/nexon/players';
 import { getFormation } from './formations';
 import { getPreset } from './presets';
 import { assignByPosition, type AssignInput } from './assign';
@@ -145,7 +145,7 @@ export async function resolvePreset(presetId: string): Promise<{
   // 이름 → spid 해석(넥슨 호출 아님, spid.json 메모이즈) 후 포지션 기반 배치
   const resolved: AssignInput[] = [];
   for (const p of preset.players) {
-    const hit = await resolvePlayer(p.name);
+    const hit = p.pid ? await getPlayerBySpid(p.pid) : await resolvePlayer(p.name);
     if (hit)
       resolved.push({ pos: p.pos, name: hit.name, spid: hit.spid, season: hit.season });
   }
