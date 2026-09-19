@@ -10,7 +10,7 @@ export const maxDuration = 60;
 // 스냅샷 대상 매치 종류 (공식경기 / 감독모드)
 const MATCH_TYPES = [50, 52];
 const RECENT_MATCHES = 400; // 인기 집계에 쓸 최근 캐시 매치 수
-const TOP_PLAYERS = 60; // 매치 종류별 예열할 선수×포지션 조합 수
+const TOP_PLAYERS = 80; // 매치 종류별 예열할 선수×포지션 조합 수(라인당 20 — 넥슨 4콜)
 
 /**
  * 랭커 스냅샷 워밍 크론 (Vercel Cron, 일 1회).

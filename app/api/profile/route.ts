@@ -74,10 +74,10 @@ export async function GET() {
       const prev = snaps[1] ?? null;
       snapshot = {
         winRate: cur.win_rate,
-        avgRating: normalizeSnapshotRating(Number(cur.avg_rating)),
+        avgRating: normalizeSnapshotRating(Number(cur.avg_rating), cur.snapshot_date as string),
         played: cur.played,
         deltaWinRate: prev ? cur.win_rate - prev.win_rate : null,
-        deltaRating: prev ? Math.round((normalizeSnapshotRating(Number(cur.avg_rating)) - normalizeSnapshotRating(Number(prev.avg_rating))) * 100) / 100 : null,
+        deltaRating: prev ? Math.round((normalizeSnapshotRating(Number(cur.avg_rating), cur.snapshot_date as string) - normalizeSnapshotRating(Number(prev.avg_rating), prev.snapshot_date as string)) * 100) / 100 : null,
         prevDate: prev ? (prev.snapshot_date as string) : null,
       };
       // 응답은 오래된→최신으로 뒤집어 그래프가 좌→우 시간축이 되게
@@ -86,7 +86,7 @@ export async function GET() {
         .map((s) => ({
           date: s.snapshot_date as string,
           winRate: s.win_rate,
-          avgRating: normalizeSnapshotRating(Number(s.avg_rating)),
+          avgRating: normalizeSnapshotRating(Number(s.avg_rating), s.snapshot_date as string),
         }));
     }
   } catch {

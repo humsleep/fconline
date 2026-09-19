@@ -190,6 +190,8 @@ export interface TopMover {
   /** >0 = 라인 내 순위 상승폭, null = 오늘 새로 진입(NEW) */
   delta: number | null;
   matchCount: number;
+  /** 선발 횟수 — 동률 판정 기준(matchCount 는 늘 20) */
+  usage?: number;
   line: string;
 }
 
@@ -207,13 +209,13 @@ export function pickTopMover(byLine: Map<string, PickRow[]>): TopMover | null {
         if (
           !riser ||
           r.delta > riser.delta ||
-          (r.delta === riser.delta && r.matchCount > riser.matchCount)
+          (r.delta === riser.delta && (r.usage ?? 0) > (riser.usage ?? 0))
         ) {
-          riser = { spId: r.spId, position: r.position, delta: r.delta, matchCount: r.matchCount, line };
+          riser = { spId: r.spId, position: r.position, delta: r.delta, matchCount: r.matchCount, usage: r.usage, line };
         }
       } else if (r.delta === null) {
-        if (!newcomer || r.matchCount > newcomer.matchCount) {
-          newcomer = { spId: r.spId, position: r.position, delta: null, matchCount: r.matchCount, line };
+        if (!newcomer || (r.usage ?? 0) > (newcomer.usage ?? 0)) {
+          newcomer = { spId: r.spId, position: r.position, delta: null, matchCount: r.matchCount, usage: r.usage, line };
         }
       }
     }
@@ -231,14 +233,14 @@ export function topMovers(byLine: Map<string, PickRow[]>, limit = 6): TopMover[]
   for (const [line, rows] of byLine) {
     for (const r of rows.slice(0, 10)) {
       if (typeof r.delta === "number" && r.delta > 0) {
-        risers.push({ spId: r.spId, position: r.position, delta: r.delta, matchCount: r.matchCount, line });
+        risers.push({ spId: r.spId, position: r.position, delta: r.delta, matchCount: r.matchCount, usage: r.usage, line });
       } else if (r.delta === null) {
-        newcomers.push({ spId: r.spId, position: r.position, delta: null, matchCount: r.matchCount, line });
+        newcomers.push({ spId: r.spId, position: r.position, delta: null, matchCount: r.matchCount, usage: r.usage, line });
       }
     }
   }
-  risers.sort((a, b) => b.delta - a.delta || b.matchCount - a.matchCount);
-  newcomers.sort((a, b) => b.matchCount - a.matchCount);
+  risers.sort((a, b) => b.delta - a.delta || (b.usage ?? 0) - (a.usage ?? 0));
+  newcomers.sort((a, b) => (b.usage ?? 0) - (a.usage ?? 0));
   return [...risers, ...newcomers].slice(0, limit);
 }
 

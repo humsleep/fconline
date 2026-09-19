@@ -346,13 +346,14 @@ async function MatchSection({
 
   return (
     <>
-      {/* 본인 방문 시 하루 1스냅샷 기록 (지난 방문 대비 delta 재료) */}
-      <VisitRecorder
+      {/* 본인 방문 시 하루 1스냅샷 기록 (지난 방문 대비 delta 재료).
+          공식경기(50)만 기록 — 감독모드 탭을 먼저 연 날과 비교하면 서로 다른 모드끼리 ▲▼ 가 계산됐다. */}
+      {matchType === 50 && <VisitRecorder
         nickname={nickname}
         winRate={rec.winRate}
         avgRating={avgRating}
         played={rec.played}
-      />
+      />}
       {missing > 0 && (
         <p className="mt-4 rounded-lg bg-gold/10 px-3 py-2 text-sm text-muted">
           ⚠️ 최근 {matchIds.length}경기 중 {details.length}경기만 불러와{" "}

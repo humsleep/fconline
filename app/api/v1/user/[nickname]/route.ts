@@ -74,6 +74,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ nickname
   const rivals = topRivals(summaries);
   const nemesis = pickNemesis(rivals);
   const week = weeklyRecap(summaries);
+  // 30경기 상한에 걸렸고 가장 오래된 경기도 7일 안이면 "최근 7일"이 실제로는 "최근 30경기"다 — 앱이 문구를 바꾸게 알린다.
+  const oldest = summaries.length ? Math.min(...summaries.map((s) => Date.parse(s.matchDate.endsWith('Z') ? s.matchDate : `${s.matchDate}Z`))) : NaN;
+  const weekTruncated = summaries.length >= MATCH_COUNT && !Number.isNaN(oldest) && Date.now() - oldest < 7 * 86_400_000;
   const score = recentScore(summaries);
   const tier = scoreTier(score);
   const streak = streakLabel(perf);
@@ -94,7 +97,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ nickname
     streak: { ...streak, highlight: hasStreakHighlight(perf) },
     perf,
     diagnosis: { type: serializeRule(diagnosis.type), notes: diagnosis.notes.map((n) => serializeRule(n)) },
-    week,
+    week: { ...week, truncated: weekTruncated },
     rivals,
     nemesis,
     matches: summaries.map((m) => ({ ...m, score: matchScore(m) })),

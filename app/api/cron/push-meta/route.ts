@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     {
       tokens: devices.map((d) => d.token),
       payload: {
-        title: `⚡ 이번 주 메타 — ${name(mover.spId)} ${mover.delta === null ? 'NEW 진입' : `▲${mover.delta}`}`,
+        title: `⚡ 메타 급상승 — ${name(mover.spId)} ${mover.delta === null ? 'NEW 진입' : `전일 대비 ▲${mover.delta}`}`,
         body: `${LINE_TITLE[mover.line as keyof typeof LINE_TITLE] ?? mover.line} 급상승${rest ? ` · 함께 뜨는 카드: ${rest}` : ''}. 주말 스쿼드 점검은 픽 랭킹에서.`,
         link: 'https://www.fcscope.xyz/meta',
         collapseId: 'meta',

@@ -7,11 +7,18 @@ import { apiError, ok } from '@/lib/api/v1';
 export const dynamic = 'force-dynamic';
 
 /** GET /api/v1/player/:spid — 선수 도감(시즌 변형 + 랭커 포지션별 실사용 스탯 + 플레이스타일). */
-export async function GET(_req: Request, { params }: { params: Promise<{ spid: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ spid: string }> }) {
   const { spid: raw } = await params;
   if (!/^\d{4,10}$/.test(raw)) return apiError('bad_request', '잘못된 선수 ID', 400);
   const spid = Number(raw);
-  const [player, meta] = await Promise.all([getPlayerBySpid(spid).catch(() => null), getPlayerRankerMeta(spid)]);
+  // ?type=52 면 감독모드 랭커 기록. 지정이 없고 공식경기 기록이 없으면 감독모드로 폴백
+  // (감독모드 픽 랭킹에서 누른 선수가 "랭커 데이터 없음"으로 뜨던 문제).
+  const typeParam = Number(new URL(req.url).searchParams.get('type'));
+  const [player, meta50] = await Promise.all([
+    getPlayerBySpid(spid).catch(() => null),
+    getPlayerRankerMeta(spid, typeParam === 52 ? 52 : 50),
+  ]);
+  const meta = meta50.positions.length === 0 && typeParam !== 50 && typeParam !== 52 ? await getPlayerRankerMeta(spid, 52) : meta50;
   const positions = meta.positions.map((p) => ({
     ...p,
     positionLabel: getPositionLabel(p.position),

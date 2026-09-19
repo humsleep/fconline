@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     const nick = devices.find((d) => d.nickname?.toLowerCase() === nickLower)?.nickname ?? nickLower;
     try {
       const ouid = await getOuid(nick);
-      const ids = await getUserMatches(ouid, 50, 20);
+      const ids = await getUserMatches(ouid, 50, 30); // 앱 전적과 같은 30경기 — 숫자가 어긋나지 않게
       const details = await getMatchDetailsBatch(ids);
       const summaries = details.map((d) => summarizeMatch(d, ouid)).filter((m): m is MatchSummary => m !== null);
       const w = weeklyRecap(summaries);
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
         tokens,
         payload: {
           title: `📅 이번 주 성적표 — ${w.win}승 ${w.draw}무 ${w.lose}패`,
-          body: `승률 ${w.winRate}% · 평균 스코어 ${w.avgScore.toFixed(1)}${streak}. 주간 카드로 자랑해 보세요.`,
+          body: `승률 ${w.winRate}%${streak}. 주간 카드로 자랑해 보세요.`, // avgScore 는 앱 스코어와 척도가 달라 싣지 않는다
           link: `https://www.fcscope.xyz/user/${encodeURIComponent(nick)}`,
           collapseId: 'weekly',
         },

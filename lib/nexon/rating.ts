@@ -41,8 +41,14 @@ export function legacyToTeamRating(averageRating: number): number {
  * 섞인 채로 두면 폼 추세 그래프가 배포일에 +2.5 점프한다.
  */
 export const LEGACY_SNAPSHOT_MAX = 5.5;
-export function normalizeSnapshotRating(v: number): number {
+export const RATING_SCALE_CHANGED = '2026-09-18';
+/**
+ * @param snapshotDate 저장일(YYYY-MM-DD). 주면 척도 변경일 이후 값은 그대로 쓴다 — 값 크기만으로 판별하면
+ *   새 척도의 낮은 표본(예 5.12, 1~2경기)이 옛 척도로 오인돼 8점대로 부풀었다.
+ */
+export function normalizeSnapshotRating(v: number, snapshotDate?: string): number {
   if (!Number.isFinite(v) || v <= 0) return 0;
+  if (snapshotDate && snapshotDate >= RATING_SCALE_CHANGED) return v;
   return v < LEGACY_SNAPSHOT_MAX ? legacyToTeamRating(v) : v;
 }
 

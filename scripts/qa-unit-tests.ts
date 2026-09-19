@@ -32,6 +32,7 @@ import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
 import { slimMatchDetail } from '../lib/nexon/slim';
 import { popularCombos, popularCombosCounted } from '../lib/nexon/popular-combos';
+import { detectGoalCode } from '../lib/nexon/goal-code';
 import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
 import { Semaphore } from '../lib/nexon/semaphore';
 import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
@@ -1085,3 +1086,10 @@ void (async () => {
   }
   console.log('✓ 전부 통과');
 })();
+
+// ── 골 코드: 자책골로 전광판과 슛 기록이 어긋나도 3 을 골로 본다(유효슛 1 오판 회귀 방지) ──
+{
+  const shot = (result: number) => ({ result } as unknown as import('../lib/nexon/types').ShootDetail);
+  eq(detectGoalCode([{ shots: [3, 3, 1, 2, 2].map(shot), goals: 3 }, { shots: [3, 3, 1, 1, 1, 1, 2].map(shot), goals: 2 }]), 3, 'detectGoalCode: 자책골 경기에서도 3');
+  eq(detectGoalCode([{ shots: [1, 2].map(shot), goals: 0 }]), 3, 'detectGoalCode: 무득점 경기는 3(아무 슛도 골로 칠하지 않음)');
+}

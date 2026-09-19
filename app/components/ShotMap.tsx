@@ -8,29 +8,8 @@ export interface ShotMapShot {
   label: string; // 툴팁: "12' 손흥민 — 골"
 }
 
-/**
- * shootDetail.result의 골 코드는 문서상 불명확 → 경기 데이터로 자동 판별.
- * 각 result 값별 슛 개수를 실제 총득점과 대조해 일치하는 코드를 골로 간주.
- */
-export function detectGoalCode(
-  sides: { shots: ShootDetail[]; goals: number }[]
-): number | null {
-  const values = new Set<number>();
-  for (const s of sides) for (const shot of s.shots) values.add(shot.result);
-
-  const totalGoals = sides.reduce((a, s) => a + s.goals, 0);
-  const candidates = [...values].filter(
-    (v) =>
-      sides.reduce(
-        (a, s) => a + s.shots.filter((sh) => sh.result === v).length,
-        0
-      ) === totalGoals
-  );
-
-  if (candidates.length === 1) return candidates[0];
-  // 판별 실패 시 커뮤니티에서 통용되는 값(3)으로 폴백
-  return values.has(3) ? 3 : null;
-}
+// 골 코드 판별은 lib 로 옮겼다(자책골 오판 수정). 기존 import 경로 호환용 재수출.
+export { detectGoalCode } from "@/lib/nexon/goal-code";
 
 /** 좌표가 0~1 정규화 범위를 벗어나면 최대값 기준으로 자동 스케일 */
 function normalize(shots: { x: number; y: number }[]) {

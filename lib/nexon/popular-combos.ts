@@ -1,4 +1,5 @@
 import type { MatchDetail } from './types';
+import { baseLabelOfCode, posLineOf } from '../squad/assign';
 
 const SUB_POSITION = 28;
 
@@ -30,7 +31,31 @@ export function popularCombosCounted(
       }
     }
   }
-  return [...freq.values()]
-    .sort((a, b) => b.n - a.n || a.id - b.id || a.po - b.po)
-    .slice(0, limit);
+  // 같은 카드의 ST(24/25/26)·CB(4/5/6)처럼 세부 코드만 다른 사용량을 합친다 — 코드별로 쪼개면 컷에서 떨어져
+  // 공격 라인이 4명뿐이었다(2026-09-20 감사). 랭커 스탯은 가장 많이 쓴 세부 코드로 요청한다.
+  const merged = new Map<string, { id: number; po: number; n: number; best: number }>();
+  for (const f of freq.values()) {
+    const key = `${f.id}:${baseLabelOfCode(f.po)}`;
+    const cur = merged.get(key);
+    if (!cur) merged.set(key, { id: f.id, po: f.po, n: f.n, best: f.n });
+    else {
+      cur.n += f.n;
+      if (f.n > cur.best || (f.n === cur.best && f.po < cur.po)) { cur.po = f.po; cur.best = f.n; }
+    }
+  }
+  const sorted = [...merged.values()]
+    .map(({ id, po, n }) => ({ id, po, n }))
+    .sort((a, b) => b.n - a.n || a.id - b.id || a.po - b.po);
+  // 라인마다 고르게 뽑는다(전체 상위 N 만 뽑으면 미드필더가 자리를 다 차지했다).
+  const perLine = Math.max(1, Math.ceil(limit / 4));
+  const byLine = new Map<string, number>();
+  const picked: { id: number; po: number; n: number }[] = [];
+  const rest: { id: number; po: number; n: number }[] = [];
+  for (const c of sorted) {
+    const line = posLineOf(baseLabelOfCode(c.po));
+    const k = byLine.get(line) ?? 0;
+    if (k < perLine) { picked.push(c); byLine.set(line, k + 1); } else rest.push(c);
+  }
+  // 라인 몫을 못 채운 자리는 전체 사용량 순으로 채운다
+  return [...picked, ...rest].slice(0, limit).sort((a, b) => b.n - a.n || a.id - b.id || a.po - b.po);
 }

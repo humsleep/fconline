@@ -45,8 +45,10 @@ interface Acc {
 const SUB_POSITION = 28;
 
 function isPlayed(p: MatchPlayer): boolean {
-  // 실제 출전 = 평점이 잡힌 경우. 벤치(SUB, rating 0)는 제외.
-  return (p.status?.spRating ?? 0) > 0 && p.spPosition !== SUB_POSITION;
+  // 실제 출전 = 평점이 잡힌 경우. 교체 투입 선수는 포지션이 SUB(28)로 남아도 평점이 있으면 뛴 것이다
+  // (예전엔 28 을 통째로 빼서 조커 카드의 경기·골이 사라지고 선수 골 합계가 팀 득점보다 적었다).
+  // 벤치에만 있던 선수는 평점 0 이라 여기서 빠진다.
+  return (p.status?.spRating ?? 0) > 0;
 }
 
 /**
@@ -102,10 +104,10 @@ export function aggregatePlayers(
       acc.tackleTry += s.tackleTry ?? 0;
       acc.tackle += s.tackle ?? 0;
       acc.intercept += s.intercept ?? 0;
-      acc.positions.set(
-        p.spPosition,
-        (acc.positions.get(p.spPosition) ?? 0) + 1
-      );
+      // 주 포지션 계산에서는 교체(28)를 빼고 실제 선발 포지션만 센다
+      if (p.spPosition !== SUB_POSITION) {
+        acc.positions.set(p.spPosition, (acc.positions.get(p.spPosition) ?? 0) + 1);
+      }
     }
   }
 
@@ -114,7 +116,7 @@ export function aggregatePlayers(
     if (acc.games === 0) continue;
     result.push({
       spId: acc.spId,
-      mainPosition: dominantPosition(acc.positions),
+      mainPosition: acc.positions.size > 0 ? dominantPosition(acc.positions) : SUB_POSITION,
       games: acc.games,
       avgRating: round2(acc.ratingSum / acc.games),
       goals: acc.goals,

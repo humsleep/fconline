@@ -1,3 +1,4 @@
+import { detectGoalCode } from './goal-code';
 import type { MatchDetail, MatchInfoEntry, ShootDetail } from './types';
 import { summarizeMatch } from './summary';
 import { teamRating } from './rating';
@@ -54,20 +55,6 @@ function goalsOf(entry: MatchInfoEntry): number {
   return entry.shoot?.goalTotalDisplay ?? entry.shoot?.goalTotal ?? 0;
 }
 
-// ShotMap.detectGoalCode와 동일 휴리스틱을 lib 계층에 로컬 복제(app→lib 역참조 회피).
-function detectGoalCode(sides: { shots: ShootDetail[]; goals: number }[]): number | null {
-  const values = new Set<number>();
-  for (const s of sides) for (const shot of s.shots) values.add(shot.result);
-  const totalGoals = sides.reduce((a, s) => a + s.goals, 0);
-  const candidates = [...values].filter(
-    (v) =>
-      sides.reduce((a, s) => a + s.shots.filter((sh) => sh.result === v).length, 0) ===
-      totalGoals
-  );
-  if (candidates.length === 1) return candidates[0];
-  return values.has(3) ? 3 : null;
-}
-
 const BAND_LABELS = ['0-15', '16-30', '31-45', '46-60', '61-75', '76-90+'];
 
 // goalTime → 6개 밴드 인덱스(모바일 6밴드로 단순화).
@@ -89,7 +76,7 @@ const SHOT_TYPES: { key: string; label: string; try: keyof NonNullable<MatchInfo
   { key: 'penalty', label: '페널티킥', try: 'shootPenaltyKick', goal: 'goalPenaltyKick' },
 ];
 
-export function aggregateReport(details: MatchDetail[], ouid: string): MatchReport {
+export function aggregateReport(details: MatchDetail[], ouid: string, now: number = Date.now()): MatchReport {
   const bands: TimeBand[] = BAND_LABELS.map((label) => ({ label, forGoals: 0, againstGoals: 0 }));
   const shotAgg = new Map<string, { tries: number; goals: number }>();
   for (const t of SHOT_TYPES) shotAgg.set(t.key, { tries: 0, goals: 0 });
@@ -167,7 +154,7 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
     goals: shotAgg.get(t.key)!.goals,
   })).filter((s) => s.tries > 0);
 
-  const weekly = computeWeekly(dated);
+  const weekly = computeWeekly(dated, now);
 
   return {
     weekly,
@@ -183,12 +170,17 @@ export function aggregateReport(details: MatchDetail[], ouid: string): MatchRepo
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 
-/** 최근 7일 vs 직전 7일 승률 비교 — 기준 시각은 데이터의 최신 경기(now 비의존, 재현성↑). */
+/**
+ * 최근 7일 vs 직전 7일 승률 비교.
+ * `now` 를 주면 그 시각 기준(화면의 "이번 주 · 최근 7일" 카드와 같은 기준). 없으면 데이터의 최신 경기 기준(테스트 재현성).
+ * 두 기준이 섞이면 마지막 경기가 며칠 전인 유저에게 같은 "최근 7일"이 두 숫자로 보였다(2026-09-20 감사).
+ */
 export function computeWeekly(
-  dated: { time: number; result: '승' | '무' | '패' | '?' }[]
+  dated: { time: number; result: '승' | '무' | '패' | '?' }[],
+  now?: number
 ): WeeklyForm | null {
   if (dated.length === 0) return null;
-  const latest = Math.max(...dated.map((d) => d.time));
+  const latest = now ?? Math.max(...dated.map((d) => d.time));
   const recent = dated.filter((d) => d.time > latest - WEEK_MS);
   const prev = dated.filter((d) => d.time <= latest - WEEK_MS && d.time > latest - 2 * WEEK_MS);
   if (recent.length === 0) return null;

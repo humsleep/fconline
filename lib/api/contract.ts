@@ -49,7 +49,7 @@ export const SHAPES: Record<string, Shape> = {
   BestMatch: { matchId: 'string', score: 'number' },
   WeeklyRecap: {
     games: 'int', win: 'int', draw: 'int', lose: 'int', winRate: 'int', bestStreak: 'int',
-    goalsFor: 'int', goalsAgainst: 'int', avgScore: 'number', 'best?': 'BestMatch',
+    goalsFor: 'int', goalsAgainst: 'int', avgScore: 'number', 'best?': 'BestMatch', 'truncated?': 'bool',
   },
   Rival: {
     nickname: 'string', win: 'int', draw: 'int', lose: 'int',
@@ -131,7 +131,7 @@ export const SHAPES: Record<string, Shape> = {
 
   // delta 는 Int?? — 키가 있고 값이 null 이면 "신규 진입"을 뜻한다. 키 자체를 없애면 안 된다.
   Mover: {
-    spId: 'int', position: 'int', line: 'string', matchCount: 'int', 'delta?': 'int',
+    spId: 'int', position: 'int', line: 'string', matchCount: 'int', 'delta?': 'int', 'usage?': 'int',
     name: 'string', season: 'string', positionLabel: 'string', imageUrl: 'string', 'lineTitle?': 'string',
   },
   PickRow: {
