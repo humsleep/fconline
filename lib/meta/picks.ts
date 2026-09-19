@@ -88,6 +88,7 @@ async function loadPicksUncached(
     const ranked = rows.filter((r) => (r.usage ?? 0) > 0);
     return ranked.length > 0 ? ranked : rows;
   }
+  const hasUsage = (rows: PickRow[]) => rows.some((r) => (r.usage ?? 0) > 0);
 
   function groupByLine(rows: PickRow[]): Map<string, PickRow[]> {
     const byLine = new Map<string, PickRow[]>();
@@ -109,7 +110,7 @@ async function loadPicksUncached(
       .select('snapshot_date')
       .eq('match_type', matchType)
       .order('snapshot_date', { ascending: false })
-      .limit(300);
+      .limit(3000); // 날짜 열만 — 오늘 유저 조회 행이 많아도 이전 날짜 후보가 잘리지 않게
     const candidates = [
       ...new Set((dateRows ?? []).map((r) => r.snapshot_date as string)),
     ].slice(0, 4);
@@ -118,43 +119,41 @@ async function loadPicksUncached(
     const MIN_ROWS = 20;
     let date: string | null = null;
     let best: PickRow[] = [];
-    let chosenIdx = -1;
 
-    for (let i = 0; i < Math.min(candidates.length, 3); i++) {
-      const rows = await rowsForDate(candidates[i]);
-      if (rows.length >= MIN_ROWS) {
-        date = candidates[i];
-        best = rows;
-        chosenIdx = i;
-        break;
+    // 크론이 사용 횟수(usage)를 붙인 날을 우선한다. 자정(KST) 직후엔 오늘 날짜 행이 유저 조회분(usage 없음)뿐이라
+    // 그날을 고르면 순위가 matchCount(늘 20) 순 = 무의미해지고 전부 NEW 로 떴다(2026-09-20 실측).
+    const loaded: PickRow[][] = [];
+    for (let i = 0; i < candidates.length; i++) loaded.push(await rowsForDate(candidates[i]));
+    let chosenIdx = loaded.findIndex((rows) => hasUsage(rows) && rows.length >= MIN_ROWS);
+    if (chosenIdx < 0) chosenIdx = loaded.findIndex((rows) => hasUsage(rows));
+    if (chosenIdx < 0) {
+      for (let i = 0; i < Math.min(loaded.length, 3); i++) {
+        if (loaded[i].length >= MIN_ROWS) { chosenIdx = i; break; }
+        if (chosenIdx < 0 || loaded[i].length > loaded[chosenIdx].length) chosenIdx = i;
       }
-      if (rows.length > best.length) {
-        date = candidates[i];
-        best = rows;
-        chosenIdx = i;
-      }
+    }
+    if (chosenIdx >= 0) {
+      date = candidates[chosenIdx];
+      best = loaded[chosenIdx];
     }
 
     const byLine = groupByLine(best);
 
-    // 순위 변동(▲▼/NEW): 채택일 다음 후보(=직전 스냅샷)와 라인 내 순위 비교
-    if (withDelta) {
-      const prevDate = chosenIdx >= 0 ? candidates[chosenIdx + 1] : undefined;
-      if (prevDate) {
-        const prevRows = await rowsForDate(prevDate);
-        if (prevRows.length > 0) {
-          const prevRank = new Map<string, number>();
-          for (const [, arr] of groupByLine(prevRows)) {
-            arr.forEach((r, idx) =>
-              prevRank.set(`${r.spId}:${r.position}`, idx + 1)
-            );
-          }
-          for (const [, arr] of byLine) {
-            arr.forEach((r, idx) => {
-              const prev = prevRank.get(`${r.spId}:${r.position}`);
-              r.delta = prev === undefined ? null : prev - (idx + 1);
-            });
-          }
+    // 순위 변동(▲▼/NEW): 채택일 이전의 usage 있는 스냅샷과 라인 내 순위 비교. 기준이 다른 날(usage 없음)과는 비교하지 않는다.
+    if (withDelta && chosenIdx >= 0) {
+      const chosenHasUsage = hasUsage(best);
+      const prevIdx = loaded.findIndex((rows, i) => i > chosenIdx && hasUsage(rows) === chosenHasUsage && rows.length > 0);
+      if (prevIdx > 0) {
+        const prevRows = loaded[prevIdx];
+        const prevRank = new Map<string, number>();
+        for (const [, arr] of groupByLine(prevRows)) {
+          arr.forEach((r, idx) => prevRank.set(`${r.spId}:${r.position}`, idx + 1));
+        }
+        for (const [, arr] of byLine) {
+          arr.forEach((r, idx) => {
+            const prev = prevRank.get(`${r.spId}:${r.position}`);
+            r.delta = prev === undefined ? null : prev - (idx + 1);
+          });
         }
       }
     }
