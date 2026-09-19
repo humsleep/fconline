@@ -55,7 +55,7 @@ export default async function PlayerPage({
       <div className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 py-24 text-center">
         <h1 className="text-xl font-bold">잘못된 선수 링크예요</h1>
         <Link href="/meta" className="scoreboard mt-8 rounded-lg bg-accent px-5 py-2.5 text-sm font-bold text-accent-ink">
-          랭커 픽 랭킹 보기
+          픽 랭킹 보기
         </Link>
       </div>
     );
@@ -72,7 +72,7 @@ export default async function PlayerPage({
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "홈", item: `${SITE_URL}/` },
-      { "@type": "ListItem", position: 2, name: "랭커 픽 랭킹", item: `${SITE_URL}/meta` },
+      { "@type": "ListItem", position: 2, name: "픽 랭킹", item: `${SITE_URL}/meta` },
       { "@type": "ListItem", position: 3, name },
     ],
   };
@@ -178,7 +178,7 @@ export default async function PlayerPage({
           href="/meta"
           className="scoreboard rounded-lg bg-surface-2 px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-line"
         >
-          랭커 픽 랭킹
+          픽 랭킹
         </Link>
       </div>
     </div>

@@ -10,7 +10,7 @@ import PlayerSearch from "./PlayerSearch";
 export const revalidate = 3600; // 스냅샷은 일 단위 — 1시간 캐시면 충분
 
 export const metadata: Metadata = {
-  title: "랭커 픽 랭킹",
+  title: "픽 랭킹",
   description:
     "상위 랭커가 실제로 가장 많이 쓴 선수 카드. 감이 아니라 데이터로 보는 메타.",
 };
@@ -29,11 +29,11 @@ export default async function MetaPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 pb-24 md:pb-16">
       <p className="scoreboard text-[13px] font-bold tracking-[0.25em] text-accent">
-        RANKER PICKS
+        TOP PICKS
       </p>
-      <h1 className="mt-1 text-2xl font-bold sm:text-3xl">랭커 픽 랭킹</h1>
+      <h1 className="mt-1 text-2xl font-bold sm:text-3xl">픽 랭킹</h1>
       <p className="mt-1 text-sm text-muted">
-        상위 랭커가 실제 경기에서 가장 많이 쓴 카드.
+        최근 공식경기에서 선발로 가장 많이 쓰인 카드와, 그 카드의 넥슨 상위 랭커 성적.
         {date && <span className="ml-1">({date} 스냅샷 기준)</span>}
       </p>
       <Link
@@ -56,7 +56,7 @@ export default async function MetaPage() {
           </p>
           <p className="mt-2">
             먼저 내 전적부터 검색해 보세요 — 검색이 쌓일수록
-            <br className="hidden sm:block" /> 랭커 픽 랭킹이 빨리 채워져요.
+            <br className="hidden sm:block" /> 픽 랭킹이 빨리 채워져요.
           </p>
           <Link
             href="/?focus=1"
@@ -107,7 +107,8 @@ export default async function MetaPage() {
           {LINE_ORDER.map((line) => {
             const rows = (byLine.get(line) ?? []).slice(0, 10);
             if (rows.length === 0) return null;
-            const maxCount = rows[0]?.matchCount || 1;
+            const countOf = (r: (typeof rows)[number]) => r.usage ?? r.matchCount;
+            const maxCount = Math.max(1, ...rows.map(countOf));
             return (
               <section key={line}>
                 <h2 className="scoreboard text-sm font-bold tracking-[0.2em] text-muted">
@@ -168,9 +169,9 @@ export default async function MetaPage() {
                         </div>
                         <div className="w-20 flex-none text-right">
                           <p className="scoreboard text-lg font-bold text-ink">
-                            {r.matchCount.toLocaleString()}
+                            {countOf(r).toLocaleString()}
                           </p>
-                          <p className="text-[12px] text-muted">랭커 경기</p>
+                          <p className="text-[12px] text-muted">{r.usage != null ? "선발 횟수" : "랭커 경기"}</p>
                           {/* 라인 1위 대비 사용량 비례 바 */}
                           <div
                             className="ml-auto mt-1 h-1 w-full overflow-hidden rounded-full bg-surface-2"
@@ -178,7 +179,7 @@ export default async function MetaPage() {
                           >
                             <div
                               className="h-full rounded-full bg-accent"
-                              style={{ width: `${Math.max(4, Math.round((r.matchCount / maxCount) * 100))}%` }}
+                              style={{ width: `${Math.max(4, Math.round((countOf(r) / maxCount) * 100))}%` }}
                             />
                           </div>
                         </div>

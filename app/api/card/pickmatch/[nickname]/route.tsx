@@ -62,9 +62,9 @@ export async function GET(
     ).length;
 
     return renderCard({
-      kicker: "내 스쿼드 vs 랭커 대세픽",
+      kicker: "내 스쿼드 vs 대세픽",
       title: `${n}명`,
-      subtitle: `인기 랭커픽 TOP10 기준 · ${decoded}`,
+      subtitle: `포지션별 인기 TOP10 기준 · ${decoded}`,
       stamp: { text: "너는 몇 명?", icon: "", color: "lime" },
       badges: [
         { label: "내가 쓴 카드", value: `${total}명` },

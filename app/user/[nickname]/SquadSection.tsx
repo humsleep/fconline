@@ -141,7 +141,7 @@ export default async function SquadSection({
       {hasPickData && (
         <section className="panel mt-2 px-5 py-4">
           <p className="scoreboard text-[13px] font-semibold tracking-[0.2em] text-muted">
-            내 픽 vs 랭커 픽
+            내 픽 vs 인기 픽
           </p>
           <div className="mt-2 flex items-end gap-8">
             <div>
@@ -149,7 +149,7 @@ export default async function SquadSection({
                 {topPickCount}
                 <span className="ml-0.5 text-base font-semibold text-muted">명</span>
               </p>
-              <p className="text-[13px] text-muted">랭커 대세픽</p>
+              <p className="text-[13px] text-muted">인기 TOP10</p>
             </div>
             <div>
               <p className="scoreboard text-3xl font-bold text-ink">
@@ -160,7 +160,7 @@ export default async function SquadSection({
             </div>
           </div>
           <p className="mt-2 text-[12px] text-muted">
-            내가 쓴 {players.length}명 중 랭커 인기 TOP10과 겹치는 카드
+            내가 쓴 {players.length}명 중 포지션별 인기 TOP10과 겹치는 카드
             {pickDate ? ` · ${pickDate} 스냅샷` : ""} · 매일 갱신
           </p>
           {/* 챌린지 공유 카드 — "너는 몇 명?"으로 보는 사람→검색 전환 (바이럴 루프) */}
@@ -168,7 +168,7 @@ export default async function SquadSection({
             <ShareCardButton
               url={`/api/card/pickmatch/${encodeURIComponent(nickname)}?mt=${matchType}`}
               filename={`fcscope-pick-${nickname}.png`}
-              label="🔥 랭커 대세픽 카드"
+              label="🔥 대세픽 카드"
             />
           </div>
         </section>
