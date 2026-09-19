@@ -39,14 +39,12 @@ export const metadata: Metadata = {
   },
   description:
     "FC온라인 전적 검색, AI 스쿼드 진단, 랭커 데이터 비교. 감이 아니라 데이터로.",
-  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "FC Scope",
     title: "FC Scope — FC온라인 전적·스쿼드 진단 랩",
     description:
       "FC온라인 전적 검색, AI 스쿼드 진단, 랭커 데이터 비교. 감이 아니라 데이터로.",
-    url: "/",
     locale: "ko_KR",
   },
   twitter: {

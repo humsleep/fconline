@@ -45,9 +45,14 @@ export async function generateMetadata({
   } catch {
     decoded = nickname;
   }
+  const path = `/user/${encodeURIComponent(decoded)}`;
+  const title = `${decoded} 전적`;
+  const description = `${decoded}의 FC온라인 최근 경기 기록, 승률, 슛맵 매치 리포트`;
   return {
-    title: `${decoded} 전적`,
-    description: `${decoded}의 FC온라인 최근 경기 기록, 승률, 슛맵 매치 리포트`,
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: { type: 'website', siteName: 'FC Scope', locale: 'ko_KR', title: `${title} · FC Scope`, description, url: path },
   };
 }
 

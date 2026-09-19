@@ -13,12 +13,19 @@ export const metadata: Metadata = {
   title: "픽 랭킹",
   description:
     "최근 공식경기에서 선발로 가장 많이 쓰인 선수 카드와 넥슨 상위 랭커 성적. 감이 아니라 데이터로 보는 메타.",
+  alternates: { canonical: "/meta" },
 };
 
 const LINE_ORDER = ["ATT", "MID", "DEF", "GK"] as const;
 
-export default async function MetaPage() {
-  const { date, byLine } = await loadPicks();
+export default async function MetaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>;
+}) {
+  // 공식경기(50)·감독모드(52) — 앱과 같은 전환. 그 밖의 값은 공식경기.
+  const matchType = (await searchParams).type === "52" ? 52 : 50;
+  const { date, byLine } = await loadPicks(matchType);
   const allIds = [...byLine.values()].flat().map((r) => r.spId);
   const names = await getPlayerNames(allIds);
   const seasons = await getSeasonNames(allIds);
@@ -33,9 +40,24 @@ export default async function MetaPage() {
       </p>
       <h1 className="mt-1 text-2xl font-bold sm:text-3xl">픽 랭킹</h1>
       <p className="mt-1 text-sm text-muted">
-        최근 공식경기에서 선발로 가장 많이 쓰인 카드와, 그 카드의 넥슨 상위 랭커 성적.
+        최근 {matchType === 52 ? "감독모드" : "공식경기"}에서 선발로 가장 많이 쓰인 카드와, 그 카드의 넥슨 상위 랭커 성적.
         {date && <span className="ml-1">({date} 스냅샷 기준)</span>}
       </p>
+      <div className="mt-3 flex gap-2" role="tablist" aria-label="경기 종류">
+        {([50, 52] as const).map((t) => (
+          <Link
+            key={t}
+            href={t === 50 ? "/meta" : "/meta?type=52"}
+            role="tab"
+            aria-selected={matchType === t}
+            className={`flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold ${
+              matchType === t ? "bg-accent text-accent-ink" : "bg-surface-2 text-muted hover:text-ink"
+            }`}
+          >
+            {t === 50 ? "공식경기" : "감독모드"}
+          </Link>
+        ))}
+      </div>
       <Link
         href="/report/weekly"
         className="panel mt-3 flex min-h-11 items-center justify-between gap-2 px-4 py-2.5 transition-colors hover:border-accent"

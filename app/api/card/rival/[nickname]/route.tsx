@@ -58,7 +58,7 @@ export async function GET(
     const ouid = await getOuid(decoded);
     const basic = await getUserBasic(ouid);
 
-    const ids = await getUserMatches(ouid, 50, 20).catch(() => [] as string[]);
+    const ids = await getUserMatches(ouid, 50, 30) /* 앱·페이지와 같은 30경기 */.catch(() => [] as string[]);
     // 캐시 전용 — 카드는 링크 미리보기 봇이 반복 요청한다. 공유 직전 페이지 조회로
     // 이미 캐시가 채워져 있어 넥슨 재조회(최대 20콜)가 불필요하다.
     const details = await getMatchDetailsBatch(ids, true);

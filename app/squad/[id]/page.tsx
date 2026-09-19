@@ -19,19 +19,26 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const squad = await getSquad(id).catch(() => null);
-  if (!squad) return { title: "스쿼드", description: "스쿼드 공유" };
+  if (!squad) return { title: "스쿼드", description: "스쿼드 공유", robots: { index: false } };
 
   const title = squad.name;
   const description = `${squad.name} — ${squadFormationTitle(squad)} 스쿼드`;
   // 카톡·디시·에펨 링크 붙여넣기 시 카드 썸네일이 뜨도록 절대 URL OG 이미지 연결
   const image = `${SITE_URL}/api/card/squad/${id}`;
+  const path = `/squad/${id}`;
   return {
     title,
     description,
+    alternates: { canonical: path },
     openGraph: {
+      type: "website",
+      siteName: "FC Scope",
+      locale: "ko_KR",
       title,
       description,
-      images: [{ url: image, width: 1200, height: 630 }],
+      url: path,
+      // 카드 라우트는 스토리 비율(1080×1920)을 준다 — 크기를 틀리게 선언하면 미리보기가 잘렸다
+      images: [{ url: image, width: 1080, height: 1920 }],
     },
     twitter: { card: "summary_large_image", title, description, images: [image] },
   };

@@ -42,9 +42,11 @@ export default function NoticeBanner() {
   };
 
   const inner = (
-    <span className="min-w-0 flex-1 truncate">
-      📢 {notice.text}
-      {notice.link && <span className="ml-1.5 font-semibold underline underline-offset-2">자세히</span>}
+    // block + flex: inline span 에는 overflow 가 안 먹어 말줄임이 안 됐고, 긴 공지가 모든 페이지에 가로 스크롤을 만들었다.
+    // "자세히"는 말줄임 밖(flex-none)에 둬 항상 보이게 한다.
+    <span className="flex min-w-0 flex-1 items-center">
+      <span className="block min-w-0 truncate">📢 {notice.text}</span>
+      {notice.link && <span className="ml-1.5 flex-none font-semibold underline underline-offset-2">자세히</span>}
     </span>
   );
 
@@ -52,7 +54,7 @@ export default function NoticeBanner() {
     <div className="border-b border-gold/30 bg-gold/10">
       <div className="mx-auto flex w-full max-w-5xl items-center gap-2 px-4 py-2 text-sm text-ink">
         {notice.link ? (
-          <Link href={notice.link} className="min-w-0 flex-1" onClick={dismiss}>
+          <Link href={notice.link} className="flex min-w-0 flex-1" onClick={dismiss}>
             {inner}
           </Link>
         ) : (
@@ -61,7 +63,7 @@ export default function NoticeBanner() {
         <button
           onClick={dismiss}
           aria-label="공지 닫기"
-          className="flex-none px-1 text-muted hover:text-ink"
+          className="flex h-11 w-11 flex-none items-center justify-center text-muted hover:text-ink"
         >
           ✕
         </button>

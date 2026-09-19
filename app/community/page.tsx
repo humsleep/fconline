@@ -13,6 +13,7 @@ import { formatRelativeKr } from '@/lib/format';
 import BlockedAuthor from '@/app/components/BlockedAuthor';
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/community" },
   title: '커뮤니티',
   description:
     'FC온라인 스쿼드 자랑·평가, 클럽원 모집, 클럽전·대회 커뮤니티.',

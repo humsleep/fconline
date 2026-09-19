@@ -26,12 +26,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { spid: raw } = await params;
   const spid = parseSpid(raw);
-  if (!spid) return { title: "선수" };
+  if (!spid) return { title: "선수", robots: { index: false } };
   const player = await getPlayerBySpid(spid).catch(() => null);
   const name = player?.name ?? `선수 ${spid}`;
+  const path = `/player/${spid}`;
+  const title = `${name} — 랭커 성적 데이터`;
+  const description = `${name}의 넥슨 상위 랭커 성적 — 포지션별 득점·패스 성공률 등.`;
   return {
-    title: `${name} — 랭커 사용 데이터`,
-    description: `${name}을(를) 상위 랭커가 어느 포지션에서 어떻게 쓰는지 — 평균 평점·득점·패스 성공률 등 실사용 스탯.`,
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: { type: 'website', siteName: 'FC Scope', locale: 'ko_KR', title: `${title} · FC Scope`, description, url: path },
+    // 없는 선수 번호는 색인하지 않는다(가짜 "선수 999999999" 페이지)
+    ...(player ? {} : { robots: { index: false } }),
   };
 }
 

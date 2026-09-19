@@ -219,3 +219,9 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* 한글 줄바꿈을 어절 단위로 — "2연 / 승", "로테이 / 션"처럼 단어 중간에서 끊기던 문제(2026-09-20 QA) */
+body {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import SearchForm from "./components/SearchForm";
@@ -66,6 +67,9 @@ const FEATURES = [
     href: "/community?type=squad_battle",
   },
 ] as const;
+
+// 홈만 canonical "/" — 레이아웃에 두면 모든 하위 페이지가 홈을 canonical 로 물려받았다.
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default function Home() {
   return (
