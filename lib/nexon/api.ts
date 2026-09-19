@@ -50,13 +50,16 @@ export function getMatchDetail(matchid: string): Promise<MatchDetail> {
  * players = [{ id: spId, po: spPosition }, ...] (URL 인코딩 JSON)
  * 변동 데이터라 짧은 revalidate만; 장기 보관은 ranker_stats_snapshot 사용.
  */
-export function getRankerStats(
+export async function getRankerStats(
   matchtype: number,
   players: { id: number; po: number }[]
 ): Promise<RankerStat[]> {
-  return nexonFetch<RankerStat[]>(
+  const raw = await nexonFetch<(RankerStat & { spid?: number })[]>(
     'ranker-stats',
     { matchtype, players: JSON.stringify(players) },
     3600
   );
+  // 🔴 넥슨은 선수 ID 를 `spid`(소문자)로 준다(2026-09-19 라이브 실측). 다른 API 의 `spId` 와 다르다.
+  // 예전엔 stat.spId 를 그대로 읽어 키가 "undefined:25" 가 됐고, 랭커 데이터가 전부 버려졌다.
+  return (raw ?? []).map(({ spid, ...rest }) => ({ ...rest, spId: rest.spId ?? spid ?? 0 }));
 }

@@ -17,7 +17,8 @@ function kstToday(): string {
 }
 
 // 랭커 데이터가 없는 조합의 tombstone 마커 (재조회 방지용)
-const EMPTY_MARKER = { empty: true } as const;
+// v2: 2026-09-19 이전 표시는 spid 소문자 버그로 잘못 찍혔을 수 있어 무시하고 다시 조회한다.
+const EMPTY_MARKER = { empty: true, v: 2 } as const;
 
 /**
  * 랭커 스탯 조회 — ranker_stats_snapshot(당일) 우선, 미스만 라이브 배치 호출 후 저장.
@@ -55,8 +56,9 @@ export async function getRankerStatsCached(
       for (const row of data ?? []) {
         const key = rankerKey(row.sp_id, row.sp_position);
         if (!uniq.has(key)) continue;
+        const payload = row.payload as RankerStat | { empty: true; v?: number } | null;
+        if (payload && 'empty' in payload && payload.v !== 2) continue; // 옛 표시 → 재조회
         hit.add(key); // 당일 조회됨 — tombstone이어도 재요청 안 함
-        const payload = row.payload as RankerStat | { empty: true } | null;
         if (payload && !('empty' in payload)) out.set(key, payload);
       }
       for (const p of wanted) {
