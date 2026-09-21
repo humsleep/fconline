@@ -159,7 +159,7 @@ export default async function PostDetail({
           </dl>
         )}
 
-        <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed">
+        <p className="mt-4 whitespace-pre-wrap text-base leading-[1.85]">
           {post.body}
         </p>
 

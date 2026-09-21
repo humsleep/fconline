@@ -134,7 +134,7 @@ export default function Comments({
                   )}
                 </div>
                 <div className="mt-1 rounded-xl rounded-tl-sm bg-surface-2 px-3 py-2">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  <p className="whitespace-pre-wrap text-[15px] leading-[1.75]">
                     {c.body}
                   </p>
                   {c.squad_id && (
