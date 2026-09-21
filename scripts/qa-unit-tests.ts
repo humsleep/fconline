@@ -199,6 +199,15 @@ eq(sm!.me.goals, 3, 'summarizeMatch 내 골');
 eq(sm!.opponent?.goals, 1, 'summarizeMatch 상대 골');
 const smForfeit = summarizeMatch(mkMatch('f', 0, 0, { endType: 1 }), 'ME');
 ok(smForfeit!.forfeit === true, '몰수경기 플래그');
+// 몰수 경기는 matchResult 가 비어 오기도 한다 — matchEndType(2 몰수패)으로 판정('?' 금지)
+{
+  const m = mkMatch('f2', 0, 0, { endType: 2 });
+  (m.matchInfo[0].matchDetail as unknown as { matchResult: string }).matchResult = '';
+  ok(summarizeMatch(m, 'ME')!.result === '패', '몰수패 폴백: matchResult 빈 값 → 패');
+  const m2 = mkMatch('f3', 2, 0);
+  (m2.matchInfo[0].matchDetail as unknown as { matchResult: string }).matchResult = '';
+  ok(summarizeMatch(m2, 'ME')!.result === '승', '결과 누락 시 스코어로 판정');
+}
 const agg = aggregate([sm!, summarizeMatch(mkMatch('s2', 0, 2), 'ME')!]);
 eq(agg.win, 1, 'aggregate 승수');
 eq(agg.lose, 1, 'aggregate 패수');
