@@ -1,4 +1,5 @@
 'use client';
+import OperatorBadge from "@/app/components/OperatorBadge";
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -15,6 +16,7 @@ export interface CommentView {
   created_at: string;
   authorId: string;
   authorName: string;
+  isOperator?: boolean;
   isOwn: boolean;
 }
 
@@ -118,6 +120,7 @@ export default function Comments({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-[13px]">
                   <span className="font-semibold text-ink">{c.authorName}</span>
+                  {c.isOperator && <OperatorBadge />}
                   <span className="text-muted">{formatRelativeKr(c.created_at)}</span>
                   {c.isOwn ? (
                     <button

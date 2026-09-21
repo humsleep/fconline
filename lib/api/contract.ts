@@ -157,7 +157,7 @@ export const SHAPES: Record<string, Shape> = {
     type: 'string', label: 'string', emoji: 'string', blurb: 'string', accent: 'string',
     fields: 'string[]', template: 'string', bodyLabel: 'string', bodyPlaceholder: 'string',
   },
-  PostAuthor: { id: 'string', nickname: 'string', 'verifiedNickname?': 'string' },
+  PostAuthor: { id: 'string', nickname: 'string', 'verifiedNickname?': 'string', 'isOperator?': 'bool' },
   MetaRow: { key: 'string', label: 'string', value: 'string' },
   Post: {
     id: 'string', author_id: 'string', type: 'string', title: 'string', body: 'string',
@@ -166,7 +166,7 @@ export const SHAPES: Record<string, Shape> = {
     author: 'PostAuthor', typeLabel: 'string', typeEmoji: 'string',
     'preview?': 'string', 'metaRows?': 'MetaRow[]', 'squadB?': 'string',
   },
-  CommentAuthor: { id: 'string', nickname: 'string' },
+  CommentAuthor: { id: 'string', nickname: 'string', 'isOperator?': 'bool' },
   Comment: {
     id: 'string', post_id: 'string', author_id: 'string', body: 'string',
     'squad_id?': 'string', created_at: 'string', author: 'CommentAuthor', isOwn: 'bool',

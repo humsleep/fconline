@@ -1,5 +1,6 @@
 import { listPosts } from '@/lib/community/posts';
 import { getProfilesByIds } from '@/lib/community/profile';
+import { getOperatorIds } from '@/lib/community/operators';
 import { POST_TYPES, POST_TYPE_ORDER, isPostType, type PostType } from '@/lib/community/post-types';
 import { ok } from '@/lib/api/v1';
 
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   const type: PostType | null = typeRaw && isPostType(typeRaw) ? typeRaw : null;
   const page = Math.max(1, Math.floor(Number(sp.get('page') ?? 1) || 1));
   const { posts, count } = await listPosts({ type, limit: PAGE, offset: (page - 1) * PAGE });
-  const profiles = await getProfilesByIds(posts.map((p) => p.author_id));
+  const [profiles, operators] = await Promise.all([getProfilesByIds(posts.map((p) => p.author_id)), getOperatorIds(posts.map((p) => p.author_id))]);
   return ok({
     page,
     totalPages: Math.max(1, Math.ceil(count / PAGE)),
@@ -33,7 +34,7 @@ export async function GET(req: Request) {
       const a = profiles.get(p.author_id);
       return {
         ...p,
-        author: { id: p.author_id, nickname: a?.nickname ?? '알 수 없음', verifiedNickname: a?.verified_nickname ?? null },
+        author: { id: p.author_id, nickname: a?.nickname ?? '알 수 없음', verifiedNickname: a?.verified_nickname ?? null, isOperator: operators.has(p.author_id) },
         typeLabel: POST_TYPES[p.type]?.label ?? p.type,
         typeEmoji: POST_TYPES[p.type]?.emoji ?? '📝',
         preview: p.body.replace(/\s+/g, ' ').trim().slice(0, 120),

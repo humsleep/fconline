@@ -2,6 +2,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { listPosts } from '@/lib/community/posts';
 import { getProfilesByIds } from '@/lib/community/profile';
+import { getOperatorIds } from '@/lib/community/operators';
+import OperatorBadge from '@/app/components/OperatorBadge';
 import {
   POST_TYPES,
   POST_TYPE_ORDER,
@@ -54,7 +56,7 @@ export default async function CommunityBoard({
     page === reqPage
       ? first
       : await listPosts({ type, limit: PAGE, offset: (page - 1) * PAGE });
-  const profiles = await getProfilesByIds(posts.map((p) => p.author_id));
+  const [profiles, operators] = await Promise.all([getProfilesByIds(posts.map((p) => p.author_id)), getOperatorIds(posts.map((p) => p.author_id))]);
 
   const tabHref = (t: PostType | null) =>
     t ? `/community?type=${t}` : '/community';
@@ -207,6 +209,7 @@ export default async function CommunityBoard({
                       <span className="font-semibold text-ink">
                         {author?.nickname ?? '알 수 없음'}
                       </span>
+                      {operators.has(p.author_id) && <OperatorBadge />}
                       {author?.verified_nickname && (
                         <span className="text-accent">✓</span>
                       )}

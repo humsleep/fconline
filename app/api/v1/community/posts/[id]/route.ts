@@ -1,5 +1,6 @@
 import { getPost, listComments } from '@/lib/community/posts';
 import { getProfilesByIds } from '@/lib/community/profile';
+import { getOperatorIds } from '@/lib/community/operators';
 import { createClient } from '@/lib/supabase/server';
 import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
 import { apiError, ok } from '@/lib/api/v1';
@@ -12,7 +13,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const post = await getPost(id);
   if (!post) return apiError('not_found', '글을 찾을 수 없어요.', 404);
   const comments = await listComments(post.id);
-  const profiles = await getProfilesByIds([post.author_id, ...comments.map((c) => c.author_id)]);
+  const authorIds = [post.author_id, ...comments.map((c) => c.author_id)];
+  const [profiles, operators] = await Promise.all([getProfilesByIds(authorIds), getOperatorIds(authorIds)]);
 
   let userId: string | null = null;
   let canComment = false;
@@ -39,7 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       ...post,
       typeLabel: POST_TYPES[post.type]?.label ?? post.type,
       typeEmoji: POST_TYPES[post.type]?.emoji ?? '📝',
-      author: { id: post.author_id, nickname: author?.nickname ?? '알 수 없음', verifiedNickname: author?.verified_nickname ?? null },
+      author: { id: post.author_id, nickname: author?.nickname ?? '알 수 없음', verifiedNickname: author?.verified_nickname ?? null, isOperator: operators.has(post.author_id) },
       metaRows: Object.entries(post.meta)
         .filter(([k]) => k !== 'squad_b')
         .map(([k, v]) => ({ key: k, label: META_FIELD_LABELS[k] ?? k, value: v })),
@@ -47,7 +49,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     },
     comments: comments.map((c) => ({
       ...c,
-      author: { id: c.author_id, nickname: profiles.get(c.author_id)?.nickname ?? '알 수 없음' },
+      author: { id: c.author_id, nickname: profiles.get(c.author_id)?.nickname ?? '알 수 없음', isOperator: operators.has(c.author_id) },
       isOwn: Boolean(userId && c.author_id === userId),
     })),
     viewer: { loggedIn: Boolean(userId), isOwner, canComment },

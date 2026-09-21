@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getPost, listComments } from '@/lib/community/posts';
 import { getProfilesByIds } from '@/lib/community/profile';
+import { getOperatorIds } from '@/lib/community/operators';
+import OperatorBadge from '@/app/components/OperatorBadge';
 import { createClient } from '@/lib/supabase/server';
 import { formatRelativeKr } from '@/lib/format';
 import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
@@ -43,10 +45,11 @@ export default async function PostDetail({
 
   const cfg = POST_TYPES[post.type];
   const comments = await listComments(post.id);
-  const profiles = await getProfilesByIds([
+  const authorIds = [
     post.author_id,
     ...comments.map((c) => c.author_id),
-  ]);
+  ];
+  const [profiles, operators] = await Promise.all([getProfilesByIds(authorIds), getOperatorIds(authorIds)]);
   const author = profiles.get(post.author_id);
 
   let isOwner = false;
@@ -82,6 +85,7 @@ export default async function PostDetail({
     created_at: c.created_at,
     authorId: c.author_id,
     authorName: profiles.get(c.author_id)?.nickname ?? '알 수 없음',
+    isOperator: operators.has(c.author_id),
     isOwn: Boolean(userId && c.author_id === userId),
   }));
 
@@ -225,7 +229,10 @@ export default async function PostDetail({
         </p>
         <div className="mt-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-lg font-bold">{author?.nickname ?? '알 수 없음'}</p>
+            <p className="flex items-center gap-2 text-lg font-bold">
+              {author?.nickname ?? '알 수 없음'}
+              {operators.has(post.author_id) && <OperatorBadge />}
+            </p>
             {author?.verified_nickname ? (
               <p className="text-sm text-accent">
                 ✓ FC Online: {author.verified_nickname}
