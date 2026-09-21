@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: '커뮤니티',
   description:
     'FC온라인 스쿼드 자랑·평가, 클럽원 모집, 클럽전·대회 커뮤니티.',
+  openGraph: {
+    type: 'website', siteName: 'FC Scope', locale: 'ko_KR', url: '/community',
+    title: '커뮤니티 · FC Scope',
+    description: 'FC온라인 스쿼드 자랑·평가, 클럽원 모집, 클럽전·대회 커뮤니티.',
+  },
 };
 
 const PAGE = 20;

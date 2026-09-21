@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   description:
     "최근 공식경기에서 선발로 가장 많이 쓰인 선수 카드와 넥슨 상위 랭커 성적. 감이 아니라 데이터로 보는 메타.",
   alternates: { canonical: "/meta" },
+  openGraph: {
+    type: "website", siteName: "FC Scope", locale: "ko_KR", url: "/meta",
+    title: "픽 랭킹 · FC Scope",
+    description: "최근 공식경기에서 선발로 가장 많이 쓰인 선수 카드와 넥슨 상위 랭커 성적.",
+  },
 };
 
 const LINE_ORDER = ["ATT", "MID", "DEF", "GK"] as const;

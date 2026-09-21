@@ -20,8 +20,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const post = await getPost(id);
-  if (!post) return { title: '커뮤니티' };
-  return { title: `${post.title} · ${POST_TYPES[post.type].label}` };
+  if (!post) return { title: '커뮤니티', robots: { index: false } };
+  const title = `${post.title} · ${POST_TYPES[post.type].label}`;
+  const description = post.body.replace(/\s+/g, ' ').trim().slice(0, 120);
+  const path = `/community/${post.id}`;
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: { type: 'website', siteName: 'FC Scope', locale: 'ko_KR', url: path, title: `${title} · FC Scope`, description },
+  };
 }
 
 export default async function PostDetail({
