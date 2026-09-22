@@ -431,7 +431,7 @@ export default function MyPage() {
           <li className="flex min-h-11 flex-wrap items-center gap-x-4 py-1.5">
             <Link href="/terms" className="py-2 text-ink underline underline-offset-2">이용약관</Link>
             <Link href="/privacy" className="py-2 text-ink underline underline-offset-2">개인정보처리방침</Link>
-            <a href="mailto:boheme88@naver.com" className="py-2 text-ink underline underline-offset-2">문의</a>
+            <a href="mailto:humsleep@naver.com" className="py-2 text-ink underline underline-offset-2">문의</a>
           </li>
           {user && (
             <li className="flex min-h-11 flex-wrap items-center justify-between gap-3 py-1.5">

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "FC Scope 개인정보처리방침",
 };
 
-const CONTACT = "boheme88@naver.com";
+const CONTACT = "humsleep@naver.com";
 
 function H2({ children }: { children: React.ReactNode }) {
   return <h2 className="text-base font-bold">{children}</h2>;
@@ -299,7 +299,7 @@ export default function PrivacyPage() {
         <section>
           <H2>11. 개인정보 보호책임자</H2>
           <p className="mt-2 text-muted">
-            운영자(개인정보 보호책임자):{" "}
+            개인정보 보호책임자: 안혁 (운영자),{" "}
             <a href={`mailto:${CONTACT}`} className="text-accent underline underline-offset-2">
               {CONTACT}
             </a>

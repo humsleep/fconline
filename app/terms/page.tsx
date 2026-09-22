@@ -114,8 +114,8 @@ export default function TermsPage() {
           <h2 className="text-base font-bold">제7조 (문의)</h2>
           <p className="mt-2 text-muted">
             서비스 관련 문의:{" "}
-            <a href="mailto:boheme88@naver.com" className="text-accent underline underline-offset-2">
-              boheme88@naver.com
+            <a href="mailto:humsleep@naver.com" className="text-accent underline underline-offset-2">
+              humsleep@naver.com
             </a>
           </p>
         </section>

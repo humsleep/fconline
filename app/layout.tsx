@@ -157,7 +157,7 @@ export default function RootLayout({
               <Link href="/privacy" className="inline-block py-3 font-semibold hover:text-ink">
                 개인정보처리방침
               </Link>
-              <a href="mailto:boheme88@naver.com" className="inline-block py-3 hover:text-ink">
+              <a href="mailto:humsleep@naver.com" className="inline-block py-3 hover:text-ink">
                 문의
               </a>
             </p>
