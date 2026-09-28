@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import PlayerImage from "@/app/components/PlayerImage";
 import Link from "next/link";
 import { getPlayerBySpid } from "@/lib/nexon/players";
 import { getPlayerRankerMeta, type PlayerPositionStat } from "@/lib/nexon/player-meta";
@@ -101,12 +101,10 @@ export default async function PlayerPage({
           PLAYER
         </p>
         <div className="mt-2 flex items-center gap-4">
-          <Image
-            src={`/api/player-image/${spid}`}
-            alt=""
-            width={72}
-            height={72}
-            unoptimized
+          <PlayerImage
+            spid={spid}
+            size={72}
+            priority
             className="h-[72px] w-[72px] flex-none rounded-xl bg-surface-2 object-cover"
           />
           <div className="min-w-0">

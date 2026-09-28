@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import PlayerImage from "@/app/components/PlayerImage";
 import Link from "next/link";
 import ShotMap, { detectGoalCode, type ShotMapShot } from "@/app/components/ShotMap";
 import VerdictStamp from "@/app/components/VerdictStamp";
@@ -186,12 +186,9 @@ export default async function MatchPage({
       {/* POTM */}
       {potm && (
         <section className="panel rise rise-3 mt-6 flex items-center gap-4 p-4">
-          <Image
-            src={`/api/player-image/${potm.p.spId}`}
-            alt=""
-            width={64}
-            height={64}
-            unoptimized
+          <PlayerImage
+            spid={potm.p.spId}
+            size={64}
             className="h-16 w-16 flex-none rounded-xl bg-surface-2 object-cover"
           />
           <div className="min-w-0 flex-1">
@@ -309,12 +306,9 @@ function RatingList({
       <p className="truncate py-2 text-xs font-semibold text-muted">{entry.nickname}</p>
       {players.map((p, i) => (
         <div key={`${p.spId}-${i}`} className="flex items-center gap-2.5 py-2">
-          <Image
-            src={`/api/player-image/${p.spId}`}
-            alt=""
-            width={32}
-            height={32}
-            unoptimized
+          <PlayerImage
+            spid={p.spId}
+            size={32}
             className="h-8 w-8 flex-none rounded-lg bg-surface-2 object-cover"
           />
           <span className="scoreboard w-9 flex-none text-sm font-semibold text-muted">

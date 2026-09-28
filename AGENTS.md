@@ -58,8 +58,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
   동시 1은 약 9,000ms, **동시 3은 2,883ms이고 비200 응답 0건**. 429를 한 번이라도 보면
   해당 인스턴스는 남은 수명 동안 동시 1로 강등된다(자동 복귀 없음 — 되돌리면 진동한다).
   상한을 더 올리려면 반드시 실측부터 할 것.
-- **선수 이미지는 CORS 이슈** → 웹은 Next.js 이미지 프록시 경유.
-  단 **네이티브 앱에는 CORS가 없어** 넥슨 CDN을 직접 부른다(iOS 저장소 `FCScope/Core/API/NexonCDN.swift`). 프록시 대역폭 0.
+- **선수 이미지는 웹·앱 모두 넥슨 CDN 직접 로드**(`lib/nexon/player-image.ts`, iOS `NexonCDN.swift`).
+  `<img>` 는 CORS 가 필요 없고, 넥슨 CDN 은 핫링크를 막지 않는다(2026-09-28 실측).
+  `/api/player-image/:spid` 프록시는 **폴백으로만** 남아 있다 — 새 코드에서 기본 경로로 쓰지 말 것.
+  프록시를 기본으로 쓰던 2026-09 이전 구조가 Vercel Hobby 한도를 넘겨 계정 전체를 멈춰 세웠다
+  (Origin Transfer 19.5GB/10GB, 함수 호출 1M/1M — 전적 화면 1회당 0.9~1.3MB). 경위는 `docs/CLOUDFLARE.md`.
 - **iOS 앱은 별도 저장소**(https://github.com/humsleep/fcscope, SwiftUI). 이 저장소는 앱의 **백엔드**만
   담당한다 — `app/api/v1/*`, `lib/api/v1.ts`, `lib/push/*`(APNs), `app/api/me/delete/`,
   `app/.well-known/apple-app-site-association/`, `app/app-ads.txt/`.

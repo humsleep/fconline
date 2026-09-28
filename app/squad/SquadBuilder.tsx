@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import PlayerImage from "@/app/components/PlayerImage";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   formationsByLine,
@@ -625,12 +626,9 @@ export default function SquadBuilder() {
                         }
                         className={`flex items-center gap-2 rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing hover:bg-surface-2`}
                       >
-                        <img
-                          src={`/api/player-image/${r.spid}`}
-                          alt=""
-                          width={36}
-                          height={36}
-                          loading="lazy"
+                        <PlayerImage
+                          spid={r.spid}
+                          size={36}
                           draggable={false}
                           className="h-9 w-9 flex-none rounded-lg bg-surface-2 object-cover"
                         />

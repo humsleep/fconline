@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import PlayerImage from "@/app/components/PlayerImage";
 import Link from "next/link";
 import { loadPicks, topMovers, LINE_TITLE, type PickRow } from "@/lib/meta/picks";
 import { getPlayerNames } from "@/lib/nexon/players";
@@ -91,12 +91,9 @@ export default async function WeeklyReport() {
                       href={`/player/${m.spId}`}
                       className="panel flex items-center gap-3 px-3 py-2.5 transition-colors hover:border-accent"
                     >
-                      <Image
-                        src={`/api/player-image/${m.spId}`}
-                        alt=""
-                        width={36}
-                        height={36}
-                        unoptimized
+                      <PlayerImage
+                        spid={m.spId}
+                        size={36}
                         className="h-9 w-9 flex-none rounded-lg bg-surface-2 object-cover"
                       />
                       <span className="min-w-0 flex-1 truncate text-sm font-bold">
@@ -138,12 +135,9 @@ export default async function WeeklyReport() {
                         <span className="scoreboard w-5 flex-none text-center text-sm font-bold text-muted">
                           {i + 1}
                         </span>
-                        <Image
-                          src={`/api/player-image/${r.spId}`}
-                          alt=""
-                          width={36}
-                          height={36}
-                          unoptimized
+                        <PlayerImage
+                          spid={r.spId}
+                          size={36}
                           className="h-9 w-9 flex-none rounded-lg bg-surface-2 object-cover"
                         />
                         <span className="min-w-0 flex-1 truncate text-sm font-bold">

@@ -1,5 +1,20 @@
 # DEVLOG
 
+## 2026-09-28 — Vercel 한도 초과로 전면 중단 → 이미지 프록시 탈출
+
+- 🔴 Vercel Hobby 계정 전체가 **Paused**(402). 웹·앱 API·블로그가 동시에 멈췄다.
+  초과 항목: Fast Origin Transfer 19.53GB/10GB, Function Invocations 1M/1M, Fluid Active CPU 11h31m/4h.
+- 원인: **선수 이미지 프록시**(`/api/player-image/:spid`). 지역 통계 iad1(미국) 96.3% = 사실상 봇 트래픽이고,
+  sitemap 이 선수 페이지 8,000개를 광고해 크롤 1패스가 이미지 수천 장을 끌어왔다.
+- 대응 3종:
+  1. 이미지 캐시 7일 → **1년 + immutable**, robots 에 AI·SEO 크롤러 22종 차단.
+  2. 이미지 프록시에서 `isBot` 이면 넥슨을 부르지 않고 403(미들웨어가 이 경로를 제외하고 있었다).
+  3. **웹도 넥슨 CDN 직접 로드로 전환**(`PlayerImage` 클라이언트 컴포넌트, 12곳).
+     전제였던 "CORS 때문에 프록시가 필요하다"가 틀렸다 — `<img>` 는 CORS 무관이고 CDN 은 핫링크를 막지 않는다.
+- 함정: SSR 로 내려온 `<img>` 는 하이드레이션 전에 로드가 끝나 **onError 를 놓친다**. 액션샷 없는 선수가
+  빈칸으로 남았다(실측). `ref` 에서 `complete && naturalWidth===0` 을 확인해 다음 후보로 넘긴다.
+- 남은 일: Cloudflare 를 Vercel 앞단에 세우기(`docs/CLOUDFLARE.md`) — 네임서버 이전은 사용자 작업.
+
 ## 2026-09-22 — 연락처 통일 · 공용 안내 사이트 등록
 
 - 방침·약관·푸터·내 정보 문의 메일을 **humsleep@naver.com** 으로 통일, 방침 11항에 보호책임자 성명(안혁) 명시.

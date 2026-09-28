@@ -1,4 +1,4 @@
-import Image from "next/image";
+import PlayerImage from "@/app/components/PlayerImage";
 import { getPositionLabel } from "@/lib/nexon/meta";
 import {
   type SquadClinicResult,
@@ -208,12 +208,9 @@ function ChipCard({
         <ul className="mt-2 space-y-1.5">
           {players.map((p) => (
             <li key={p.spId} className="flex items-center gap-2">
-              <Image
-                src={`/api/player-image/${p.spId}`}
-                alt=""
-                width={28}
-                height={28}
-                unoptimized
+              <PlayerImage
+                spid={p.spId}
+                size={28}
                 className="h-7 w-7 flex-none rounded-md bg-surface-2 object-cover"
               />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold">

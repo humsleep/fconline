@@ -1,4 +1,4 @@
-import Image from "next/image";
+import PlayerImage from "@/app/components/PlayerImage";
 import Link from "next/link";
 import { getRecentMatchDetails } from "@/lib/nexon/recent";
 import { getPositionLabel } from "@/lib/nexon/meta";
@@ -255,12 +255,9 @@ function PlayerCard({
       className="panel block p-3 transition-colors hover:border-accent/50"
     >
       <div className="flex items-center gap-3">
-        <Image
-          src={`/api/player-image/${p.spId}`}
-          alt=""
-          width={48}
-          height={48}
-          unoptimized
+        <PlayerImage
+          spid={p.spId}
+          size={48}
           className="h-12 w-12 flex-none rounded-lg bg-surface-2 object-cover"
         />
 

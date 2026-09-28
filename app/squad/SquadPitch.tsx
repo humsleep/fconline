@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import PlayerImage from "@/app/components/PlayerImage";
 import { getFormation, type Slot } from "@/lib/squad/formations";
 import SeasonBadge from "@/app/components/SeasonBadge";
 
@@ -178,11 +179,9 @@ export default function SquadPitch({
         const content = (
           <span className="flex flex-col items-center gap-1">
             {p ? (
-              <img
-                src={`/api/player-image/${p.imageSpid ?? p.spid}`}
-                alt=""
-                width={44}
-                height={44}
+              <PlayerImage
+                spid={p.imageSpid ?? p.spid}
+                size={44}
                 draggable={false}
                 className={`h-11 w-11 rounded-full border-2 bg-surface-2 object-cover ${
                   active ? "border-gold ring-2 ring-gold/40" : "border-accent"

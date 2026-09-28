@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import PlayerImage from "@/app/components/PlayerImage";
 import Link from "next/link";
 import { getPlayerNames, getSeasonNames } from "@/lib/nexon/players";
 import { getPositionLabel } from "@/lib/nexon/meta";
@@ -100,12 +100,9 @@ export default async function MetaPage({
               href={`/player/${mover.spId}`}
               className="panel flex items-center gap-3 border-win/40 px-4 py-3 transition-colors hover:border-accent"
             >
-              <Image
-                src={`/api/player-image/${mover.spId}`}
-                alt=""
-                width={44}
-                height={44}
-                unoptimized
+              <PlayerImage
+                spid={mover.spId}
+                size={44}
                 className="h-11 w-11 flex-none rounded-lg bg-surface-2 object-cover"
               />
               <div className="min-w-0 flex-1">
@@ -165,12 +162,9 @@ export default async function MetaPage({
                             <span className="scoreboard text-[11px] font-bold text-lose">▼{-r.delta}</span>
                           ) : null}
                         </span>
-                        <Image
-                          src={`/api/player-image/${r.spId}`}
-                          alt=""
-                          width={40}
-                          height={40}
-                          unoptimized
+                        <PlayerImage
+                          spid={r.spId}
+                          size={40}
                           className="h-10 w-10 flex-none rounded-lg bg-surface-2 object-cover"
                         />
                         <div className="min-w-0 flex-1">

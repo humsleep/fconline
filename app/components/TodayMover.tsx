@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import PlayerImage from "@/app/components/PlayerImage";
 import { loadPicks, pickTopMover, LINE_TITLE } from "@/lib/meta/picks";
 import { getPlayerNames } from "@/lib/nexon/players";
 import { getPositionLabel } from "@/lib/nexon/meta";
@@ -20,12 +20,9 @@ export default async function TodayMover() {
       href={`/player/${mover.spId}`}
       className="panel mt-6 flex items-center gap-3 border-win/40 px-4 py-3 transition-colors hover:border-accent"
     >
-      <Image
-        src={`/api/player-image/${mover.spId}`}
-        alt=""
-        width={40}
-        height={40}
-        unoptimized
+      <PlayerImage
+        spid={mover.spId}
+        size={40}
         className="h-10 w-10 flex-none rounded-lg bg-surface-2 object-cover"
       />
       <div className="min-w-0 flex-1">
