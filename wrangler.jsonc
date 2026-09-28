@@ -25,6 +25,11 @@
       "id": "a29be0ee04d74f41b09cb4e21cba716d"
     }
   ],
+  // 배포 주소. 먼저 test 서브도메인에서 검증하고, 확인되면 www·루트를 추가한다.
+  // custom_domain: true 면 wrangler 가 DNS 레코드까지 만든다(존이 이미 Cloudflare 에 있으므로).
+  "routes": [
+    { "pattern": "boheme.fcscope.xyz", "custom_domain": true }
+  ],
   "observability": {
     "enabled": true
   }

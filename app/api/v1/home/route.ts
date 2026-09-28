@@ -1,6 +1,6 @@
 import { getRecentSearches } from '@/lib/search-log';
 import { loadPicks, pickTopMover, LINE_TITLE } from '@/lib/meta/picks';
-import { getPlayerNames } from '@/lib/nexon/players';
+import { getPlayerNames, getSeasonNames } from '@/lib/nexon/players';
 import { getPositionLabel } from '@/lib/nexon/meta';
 import { loadVideos } from '@/lib/youtube/feed';
 import { FCONLINE_CHANNELS } from '@/lib/youtube/channels';
@@ -21,10 +21,16 @@ export async function GET() {
   const mover = pickTopMover(picks.byLine);
   let moverOut = null;
   if (mover) {
-    const names = await getPlayerNames([mover.spId]);
+    // season 은 앱 계약(Mover)에서 필수다. 빠지면 Swift Decodable 이 홈 응답 전체를 버린다
+    // — 2026-09-28 verify:api 로 발견(그전엔 mover 가 null 이라 드러나지 않았다). /api/v1/meta 와 같은 방식.
+    const [names, seasons] = await Promise.all([
+      getPlayerNames([mover.spId]),
+      getSeasonNames([mover.spId]),
+    ]);
     moverOut = {
       ...mover,
       name: names.get(mover.spId) ?? `선수 ${mover.spId}`,
+      season: seasons.get(mover.spId) ?? '',
       positionLabel: getPositionLabel(mover.position),
       lineTitle: LINE_TITLE[mover.line as keyof typeof LINE_TITLE] ?? mover.line,
       imageUrl: `/api/player-image/${mover.spId}`,
