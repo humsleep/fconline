@@ -1,0 +1,31 @@
+{
+  // Cloudflare Workers 배포 설정 (@opennextjs/cloudflare).
+  // 왜 Vercel 을 떠났는지는 docs/CLOUDFLARE.md 참고 — Hobby 는 상업적 사용 불가이고,
+  // 무료 한도(Origin Transfer 10GB / 함수 1M)가 크롤러 한 번에 날아간다.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fcscope",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "fcscope"
+    }
+  ],
+  // ISR/데이터 캐시 저장소. 없으면 매 요청이 오리진 계산이 된다.
+  // KV 는 무료 플랜에도 있다(읽기 10만/일). 생성: npx wrangler kv namespace create NEXT_INC_CACHE_KV
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "PLACEHOLDER_KV_ID"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

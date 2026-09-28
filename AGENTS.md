@@ -15,7 +15,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **이름**: FC Online Lab (가칭) — FC온라인 유저를 위한 데이터 도구 + 커뮤니티
 - **운영자**: humsleep — Boheme BlogLab(bohemebloglab.com)과 동일 운영자
 - **저장소**: https://github.com/humsleep/fconline (웹) — **iOS 앱은 별도 저장소**(`fcscope-ios`)
-- **배포**: Vercel (예정)
+- **배포**: Cloudflare Workers (`npm run deploy` · 절차는 `docs/WORKERS.md`)
 
 ### 핵심 컨셉 (차별화)
 
@@ -38,12 +38,23 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | 인증/DB | Supabase (Auth + Postgres + RLS) — 예정 |
 | AI | Anthropic Claude (스쿼드 평가 리포트) — 예정 |
 | 외부 API | 넥슨 오픈API (FC온라인), API-Football, 넥슨 CDN 이미지 |
-| 호스팅 | Vercel |
+| 호스팅 | **Cloudflare Workers** (`@opennextjs/cloudflare`) — 2026-09-28 Vercel 에서 이전 |
 
 ### 외부 API 레퍼런스
 
 - 넥슨 오픈API 전체 분석: `docs/NEXON-API.md` (엔드포인트·응답 스키마·에러코드·주의사항)
 - DB 스키마 초안: `docs/DB-SCHEMA.md`
+
+### 배포
+
+- 호스팅은 **Cloudflare Workers**다(`wrangler.jsonc`, `open-next.config.ts`). `npm run deploy` 로 올린다.
+  Vercel 은 2026-09-28 에 떠났다 — Hobby 는 **상업적 사용 금지**이고 무료 한도(Origin Transfer 10GB,
+  함수 1M)가 크롤러 한 번에 날아갔다. 경위는 `docs/CLOUDFLARE.md`, 절차는 `docs/WORKERS.md`.
+- **Node 전용 API 를 새로 쓰지 말 것** — Workers 에는 `node:http2` 같은 모듈이 없다.
+  APNs 푸시가 그래서 `fetch` + WebCrypto 로 재작성됐다(`lib/push/apns.ts`).
+- 크론은 `workers/cron/` 별도 워커가 `/api/cron/*` 를 호출한다. 주기를 바꾸려면 그쪽 `wrangler.jsonc`.
+- Workers 무료 플랜 제약: 요청당 **CPU 10ms**, **외부 호출 50개**. `/user/[nickname]` 이 넥슨을
+  최대 36번 부르므로 여유가 크지 않다. 새 기능이 외부 호출을 늘리면 이 한도를 먼저 확인할 것.
 
 ## 3. 개발 원칙 (Boheme BlogLab에서 검증된 패턴 계승)
 

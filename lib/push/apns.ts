@@ -1,14 +1,18 @@
 import 'server-only';
-import http2 from 'node:http2';
-import { createPrivateKey, createSign } from 'node:crypto';
 import { apnsHost, type PushResult } from './policy';
 
 export { isDeadToken, type PushResult } from './policy';
 
 /**
- * APNs HTTP/2 발송 (토큰 기반 인증, .p8). 외부 의존성 없이 Node http2 + crypto 로 구현.
- * env: APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY(.p8 내용, \n 은 실제 개행 또는 "\\n"), APNS_BUNDLE_ID(기본 xyz.fcscope.app),
- *      APNS_SANDBOX=1|true(개발 — 그 외 값·미설정은 운영)
+ * APNs 발송 (토큰 기반 인증, .p8). 외부 의존성 없이 fetch + WebCrypto 로 구현.
+ *
+ * 2026-09-28 이전에는 `node:http2` 를 직접 썼다. Cloudflare Workers 에는 그 모듈이 없어서
+ * 호스팅을 옮기며 재작성했다. APNs 는 HTTP/2 만 받는데, **Workers 의 fetch 는 HTTP/2 로 나간다**.
+ * 반대로 로컬 Node 에서는 fetch 가 HTTP/1.1 이라 APNs 가 거절한다 —
+ * 즉 이 함수는 배포된 Worker 에서만 실제로 동작한다(로컬 크론 테스트는 401/000 이 정상).
+ *
+ * env: APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY(.p8 내용, \n 은 실제 개행 또는 "\\n"),
+ *      APNS_BUNDLE_ID(기본 xyz.fcscope.app), APNS_SANDBOX=1|true(개발 — 그 외·미설정은 운영)
  */
 export interface PushPayload {
   title: string;
@@ -36,30 +40,56 @@ export function apnsConfigured(): boolean {
   return config() !== null;
 }
 
+const b64url = (bytes: ArrayBuffer | Uint8Array): string => {
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let s = '';
+  for (const b of u8) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+
+const b64urlJson = (o: object) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+
+/** .p8(PKCS#8 PEM) → WebCrypto ECDSA P-256 개인키 */
+async function importKey(pem: string): Promise<CryptoKey> {
+  const body = pem
+    .replace(/-----BEGIN [^-]+-----/g, '')
+    .replace(/-----END [^-]+-----/g, '')
+    .replace(/\s+/g, '');
+  const der = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
+  return crypto.subtle.importKey(
+    'pkcs8',
+    der.buffer as ArrayBuffer,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+}
+
 let cachedJwt: { token: string; at: number } | null = null;
 
-/** ES256 JWT — 50분 캐시(애플 권장: 20분~1시간 재사용) */
-function providerToken(c: NonNullable<ReturnType<typeof config>>): string {
+/**
+ * ES256 JWT — 50분 캐시(애플 권장: 20분~1시간 재사용).
+ * WebCrypto 의 ECDSA 서명은 이미 raw r||s(64바이트, JOSE 형식)라 DER 변환이 필요 없다
+ * (node:crypto 의 createSign 은 DER 이라 잘라 붙여야 했다).
+ */
+async function providerToken(c: NonNullable<ReturnType<typeof config>>): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   if (cachedJwt && now - cachedJwt.at < 50 * 60) return cachedJwt.token;
-  const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
-  const unsigned = `${b64({ alg: 'ES256', kid: c.keyId })}.${b64({ iss: c.teamId, iat: now })}`;
-  const signer = createSign('SHA256');
-  signer.update(unsigned);
-  const der = signer.sign(createPrivateKey(c.key));
-  // DER(r,s) → raw 64바이트(JOSE)
-  const r = der.subarray(4, 4 + der[3]);
-  const s = der.subarray(6 + der[3]);
-  const pad = (b: Buffer) => (b.length > 32 ? b.subarray(b.length - 32) : Buffer.concat([Buffer.alloc(32 - b.length), b]));
-  const sig = Buffer.concat([pad(r), pad(s)]).toString('base64url');
-  const token = `${unsigned}.${sig}`;
+  const unsigned = `${b64urlJson({ alg: 'ES256', kid: c.keyId })}.${b64urlJson({ iss: c.teamId, iat: now })}`;
+  const key = await importKey(c.key);
+  const sig = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    key,
+    new TextEncoder().encode(unsigned)
+  );
+  const token = `${unsigned}.${b64url(sig)}`;
   cachedJwt = { token, at: now };
   return token;
 }
 
-/** 한 세션에서 동시에 여는 스트림 수. APNs 는 연결당 수백 스트림을 허용하지만 보수적으로. */
+/** 동시 발송 수. APNs 는 넉넉히 받지만 Worker 의 동시 연결을 고려해 보수적으로. */
 const CONCURRENCY = 10;
-const STREAM_TIMEOUT_MS = 10_000;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 function parseReason(data: string): string | undefined {
   try {
@@ -72,85 +102,55 @@ function parseReason(data: string): string | undefined {
 /**
  * 여러 토큰에 같은 페이로드 발송. 410/400(BadDeviceToken 등)은 호출부가 토큰을 지운다.
  *
- * 절대 throw·hang 하지 않는다: 세션 오류(error)는 진행 중 스트림을 status 0 으로 끝내고,
- * GOAWAY 는 새 스트림만 멈춘다(이미 보낸 스트림은 응답을 받는다). 남은 토큰은 status 0.
- * status 0 은 무효 토큰이 아니므로 삭제되지 않는다. 세션은 항상 닫는다.
+ * 절대 throw 하지 않는다. 네트워크 오류·타임아웃은 status 0 으로 보고하며,
+ * status 0 은 APNs 판정이 아니므로 토큰 삭제 대상이 되지 않는다(`policy.isDeadToken`).
  */
 export async function sendPush(tokens: string[], payload: PushPayload): Promise<PushResult[]> {
   const c = config();
   if (!c || tokens.length === 0) return [];
-  const jwt = providerToken(c); // 키 오류는 연결을 열기 전에 터지게(세션 누수 방지)
+
+  let jwt: string;
+  try {
+    jwt = await providerToken(c);
+  } catch {
+    // 키 형식 오류 등 — 한 건도 보내지 않는다(토큰은 그대로 보존).
+    return tokens.map((token) => ({ token, status: 0, reason: 'jwt' }));
+  }
+
   const body = JSON.stringify({
-    aps: { alert: { title: payload.title, body: payload.body }, sound: 'default', ...(payload.badge !== undefined ? { badge: payload.badge } : {}) },
+    aps: {
+      alert: { title: payload.title, body: payload.body },
+      sound: 'default',
+      ...(payload.badge !== undefined ? { badge: payload.badge } : {}),
+    },
     ...(payload.link ? { link: payload.link } : {}),
   });
 
-  let client: http2.ClientHttp2Session;
-  try {
-    client = http2.connect(c.host);
-  } catch {
-    return tokens.map((token) => ({ token, status: 0, reason: 'connect' }));
-  }
+  const headers: Record<string, string> = {
+    authorization: `bearer ${jwt}`,
+    'apns-topic': c.bundleId,
+    'apns-push-type': 'alert',
+    'apns-priority': '10',
+    'content-type': 'application/json',
+    ...(payload.collapseId ? { 'apns-collapse-id': payload.collapseId } : {}),
+  };
 
-  let stopReason: string | null = null;
-  const inflight = new Set<(reason: string) => void>();
-  client.on('error', () => {
-    stopReason ??= 'session_error';
-    for (const abort of [...inflight]) abort('session_error');
-  });
-  client.on('goaway', () => {
-    stopReason ??= 'goaway';
-  });
-
-  const sendOne = (token: string) =>
-    new Promise<PushResult>((resolve) => {
-      let settled = false;
-      let status = 0;
-      let data = '';
-      let req: http2.ClientHttp2Stream | null = null;
-      const done = (r: PushResult) => {
-        if (settled) return;
-        settled = true;
-        inflight.delete(abort);
-        resolve(r);
-      };
-      const abort = (reason: string) => {
-        done({ token, status: 0, reason });
-        try {
-          req?.close(http2.constants.NGHTTP2_CANCEL);
-        } catch {
-          /* 이미 닫힘 */
-        }
-      };
-      inflight.add(abort);
-      try {
-        req = client.request({
-          ':method': 'POST',
-          ':path': `/3/device/${token}`,
-          authorization: `bearer ${jwt}`,
-          'apns-topic': c.bundleId,
-          'apns-push-type': 'alert',
-          'apns-priority': '10',
-          ...(payload.collapseId ? { 'apns-collapse-id': payload.collapseId } : {}),
-          'content-type': 'application/json',
-        });
-      } catch {
-        done({ token, status: 0, reason: 'session_closed' });
-        return;
-      }
-      req.setEncoding('utf8');
-      req.on('response', (h) => {
-        status = Number(h[':status'] ?? 0);
+  const sendOne = async (token: string): Promise<PushResult> => {
+    try {
+      const res = await fetch(`${c.host}/3/device/${token}`, {
+        method: 'POST',
+        headers,
+        body,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
-      req.on('data', (d: string) => {
-        data += d;
-      });
-      req.on('end', () => done({ token, status, reason: parseReason(data) }));
-      req.on('close', () => done(status ? { token, status, reason: parseReason(data) } : { token, status: 0, reason: 'closed' }));
-      req.on('error', () => done({ token, status: 0, reason: 'network' }));
-      req.setTimeout(STREAM_TIMEOUT_MS, () => abort('timeout'));
-      req.end(body);
-    });
+      if (res.ok) return { token, status: res.status };
+      const text = await res.text().catch(() => '');
+      return { token, status: res.status, reason: parseReason(text) };
+    } catch (e) {
+      const name = e instanceof Error ? e.name : '';
+      return { token, status: 0, reason: name === 'TimeoutError' ? 'timeout' : 'network' };
+    }
+  };
 
   const results: PushResult[] = new Array(tokens.length);
   let next = 0;
@@ -158,23 +158,9 @@ export async function sendPush(tokens: string[], payload: PushPayload): Promise<
     for (;;) {
       const i = next++;
       if (i >= tokens.length) return;
-      if (stopReason || client.closed || client.destroyed) {
-        results[i] = { token: tokens[i], status: 0, reason: stopReason ?? 'session_closed' };
-        continue;
-      }
       results[i] = await sendOne(tokens[i]);
     }
   };
-
-  try {
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, tokens.length) }, worker));
-  } finally {
-    try {
-      if (stopReason === 'session_error') client.destroy();
-      else client.close();
-    } catch {
-      /* 이미 닫힘 */
-    }
-  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, tokens.length) }, worker));
   return results;
 }

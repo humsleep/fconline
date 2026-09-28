@@ -1,5 +1,22 @@
 # DEVLOG
 
+## 2026-09-28 (2) — Vercel → Cloudflare Workers 이전
+
+- Vercel Hobby 는 **상업적 사용 금지**다(광고 수익이 있는 앱의 백엔드 = 위반). 한도 초과로 멈춘 김에
+  임시 방어 대신 호스팅을 옮겼다. Workers 무료는 상업적 사용 허용 + 대역폭 무제한.
+- 이전 중 걸린 것:
+  - `@opennextjs/cloudflare` 가 next `>=16.3.3` 을 요구 → **16.2.10 → 16.3.6 업그레이드**(빌드·444 테스트 통과).
+  - `lib/push/apns.ts` 가 `node:http2` 사용 → Workers 에 없음. `fetch` + WebCrypto(ECDSA P-256)로 재작성.
+    WebCrypto 서명은 이미 raw r||s 라 기존의 DER 자르기가 사라졌다. **로컬 Node 에서는 fetch 가 HTTP/1.1 이라
+    APNs 가 거절한다** — 배포된 Worker 에서만 실제 발송된다.
+  - Vercel Cron 3개 → `workers/cron/` 별도 워커(Cron Triggers). OpenNext 가 만드는 worker.js 를
+    건드리지 않으려고 분리했다. `vercel.json` 의 crons 는 제거(Vercel 이 되살아나도 이중 실행 방지).
+- 검증: 로컬 `workerd` 에서 페이지 렌더·넥슨 CDN 이미지·시즌 이미지 프록시 정상. 서버 번들 1.7MB(gzip).
+- 남은 일(사용자): `wrangler login` → KV 생성 → `.env.local` + 시크릿 입력 → `npm run deploy` →
+  Workers 커스텀 도메인 연결. 절차 `docs/WORKERS.md`.
+- 무료 플랜 관찰 포인트: `exceededCpu`(1102), `/user/[nickname]` 500(외부 호출 50개 한도).
+  걸리면 $5 유료로 클릭 전환(코드 변경 없음).
+
 ## 2026-09-28 — Vercel 한도 초과로 전면 중단 → 이미지 프록시 탈출
 
 - 🔴 Vercel Hobby 계정 전체가 **Paused**(402). 웹·앱 API·블로그가 동시에 멈췄다.

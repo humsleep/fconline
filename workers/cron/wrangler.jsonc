@@ -1,0 +1,21 @@
+{
+  // 크론 전용 워커 — 본체(fcscope)의 /api/cron/* 를 시간 맞춰 호출만 한다.
+  // 본체 워커에 scheduled 핸들러를 끼워 넣는 대신 분리한 이유:
+  // OpenNext 가 생성하는 worker.js 를 건드리지 않아야 어댑터 업그레이드가 안전하다.
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "fcscope-cron",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "triggers": {
+    // Vercel 의 vercel.json crons 를 그대로 옮긴 것(UTC 기준도 동일).
+    "crons": [
+      "0 18 * * *",  // ranker-snapshot — 매일 KST 03:00
+      "0 12 * * 0",  // push-weekly   — 일요일 KST 21:00
+      "0 9 * * 5"    // push-meta     — 금요일 KST 18:00
+    ]
+  },
+  "vars": {
+    "SITE_ORIGIN": "https://www.fcscope.xyz"
+  },
+  "observability": { "enabled": true }
+}
