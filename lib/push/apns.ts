@@ -1,4 +1,5 @@
 import 'server-only';
+import { es256Jwt } from '@/lib/crypto/es256';
 import { apnsHost, type PushResult } from './policy';
 
 export { isDeadToken, type PushResult } from './policy';
@@ -40,49 +41,16 @@ export function apnsConfigured(): boolean {
   return config() !== null;
 }
 
-const b64url = (bytes: ArrayBuffer | Uint8Array): string => {
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  let s = '';
-  for (const b of u8) s += String.fromCharCode(b);
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-};
-
-const b64urlJson = (o: object) => b64url(new TextEncoder().encode(JSON.stringify(o)));
-
-/** .p8(PKCS#8 PEM) → WebCrypto ECDSA P-256 개인키 */
-async function importKey(pem: string): Promise<CryptoKey> {
-  const body = pem
-    .replace(/-----BEGIN [^-]+-----/g, '')
-    .replace(/-----END [^-]+-----/g, '')
-    .replace(/\s+/g, '');
-  const der = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
-  return crypto.subtle.importKey(
-    'pkcs8',
-    der.buffer as ArrayBuffer,
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    false,
-    ['sign']
-  );
-}
-
 let cachedJwt: { token: string; at: number } | null = null;
 
 /**
  * ES256 JWT — 50분 캐시(애플 권장: 20분~1시간 재사용).
- * WebCrypto 의 ECDSA 서명은 이미 raw r||s(64바이트, JOSE 형식)라 DER 변환이 필요 없다
- * (node:crypto 의 createSign 은 DER 이라 잘라 붙여야 했다).
+ * 서명은 `lib/crypto/es256.ts` 공용 모듈(WebCrypto).
  */
 async function providerToken(c: NonNullable<ReturnType<typeof config>>): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   if (cachedJwt && now - cachedJwt.at < 50 * 60) return cachedJwt.token;
-  const unsigned = `${b64urlJson({ alg: 'ES256', kid: c.keyId })}.${b64urlJson({ iss: c.teamId, iat: now })}`;
-  const key = await importKey(c.key);
-  const sig = await crypto.subtle.sign(
-    { name: 'ECDSA', hash: 'SHA-256' },
-    key,
-    new TextEncoder().encode(unsigned)
-  );
-  const token = `${unsigned}.${b64url(sig)}`;
+  const token = await es256Jwt({ alg: 'ES256', kid: c.keyId }, { iss: c.teamId, iat: now }, c.key);
   cachedJwt = { token, at: now };
   return token;
 }

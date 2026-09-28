@@ -962,13 +962,16 @@ section('squad-title');
 
 // ── Sign in with Apple 토큰 폐기: client_secret ─────────
 section('apple-revoke');
-{
+// 서명이 WebCrypto(비동기)가 되면서 동기 블록으로는 못 쓴다 → 기존 asyncTests 러너에 등록.
+asyncTests.push({
+  name: 'apple-revoke',
+  run: async () => {
   eq(appleSiwaConfig({ APPLE_TEAM_ID: 'T' }), null, 'apple: 키 없으면 미설정(null) — 삭제는 폐기 없이 진행');
   const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
   const pem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
   const cfg = appleSiwaConfig({ APPLE_TEAM_ID: '68BP5NY48R', APPLE_SIWA_KEY_ID: 'KEY123', APPLE_SIWA_PRIVATE_KEY: pem.replace(/\n/g, '\\n') });
   ok(cfg !== null && cfg.clientId === 'xyz.fcscope.app', 'apple: 이스케이프된 개행 키 해석 + 기본 client_id');
-  const jwt = buildAppleClientSecret(cfg!, Date.UTC(2026, 8, 15));
+  const jwt = await buildAppleClientSecret(cfg!, Date.UTC(2026, 8, 15));
   const [h, p, sig] = jwt.split('.');
   const header = JSON.parse(Buffer.from(h, 'base64url').toString());
   const payload = JSON.parse(Buffer.from(p, 'base64url').toString());
@@ -978,7 +981,8 @@ section('apple-revoke');
   const v = createVerify('SHA256');
   v.update(`${h}.${p}`);
   ok(v.verify({ key: publicKey, dsaEncoding: 'ieee-p1363' }, Buffer.from(sig, 'base64url')), 'apple: 서명 검증');
-}
+  },
+});
 
 // ── 넥슨 오류 분류 (없는 닉네임 → 404, 매치 ID 형식) ─────────
 section('nexon-errors');

@@ -1,4 +1,4 @@
-import { createPrivateKey, createSign } from 'node:crypto';
+import { es256Jwt } from '@/lib/crypto/es256';
 
 /**
  * Sign in with Apple 토큰 폐기 — App Store 5.1.1(v): Apple 로그인을 제공하는 앱은 계정 삭제 시
@@ -33,16 +33,17 @@ export function appleSiwaConfig(env: Record<string, string | undefined> = proces
   return { teamId, keyId, key, clientId };
 }
 
-/** client_secret — ES256 JWT, 5분 유효(Apple 상한 6개월이지만 요청마다 새로 만든다). */
-export function buildAppleClientSecret(c: AppleSiwaConfig, nowMs = Date.now()): string {
+/**
+ * client_secret — ES256 JWT, 5분 유효(Apple 상한 6개월이지만 요청마다 새로 만든다).
+ * 2026-09-28 Workers 이전으로 node:crypto → WebCrypto(`lib/crypto/es256.ts`), 그래서 async 다.
+ */
+export async function buildAppleClientSecret(c: AppleSiwaConfig, nowMs = Date.now()): Promise<string> {
   const iat = Math.floor(nowMs / 1000);
-  const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
-  const unsigned = `${b64({ alg: 'ES256', kid: c.keyId })}.${b64({ iss: c.teamId, iat, exp: iat + 300, aud: APPLE, sub: c.clientId })}`;
-  const signer = createSign('SHA256');
-  signer.update(unsigned);
-  // JOSE 는 DER 이 아니라 r||s 64바이트 — ieee-p1363 으로 바로 받는다.
-  const sig = signer.sign({ key: createPrivateKey(c.key), dsaEncoding: 'ieee-p1363' }).toString('base64url');
-  return `${unsigned}.${sig}`;
+  return es256Jwt(
+    { alg: 'ES256', kid: c.keyId },
+    { iss: c.teamId, iat, exp: iat + 300, aud: APPLE, sub: c.clientId },
+    c.key
+  );
 }
 
 async function postForm(path: string, form: Record<string, string>): Promise<Response> {
@@ -61,7 +62,7 @@ export async function revokeAppleAuthorization(
 ): Promise<AppleRevokeResult> {
   if (!config) return 'not_configured';
   try {
-    const client_secret = buildAppleClientSecret(config);
+    const client_secret = await buildAppleClientSecret(config);
     const tokenRes = await postForm('/auth/token', {
       client_id: config.clientId,
       client_secret,
