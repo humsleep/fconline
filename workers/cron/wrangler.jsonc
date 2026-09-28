@@ -7,11 +7,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
   "triggers": {
-    // Vercel 의 vercel.json crons 를 그대로 옮긴 것(UTC 기준도 동일).
+    // Vercel 의 vercel.json crons 를 옮긴 것(UTC 기준 동일).
+    // ⚠️ Cloudflare 는 요일 0 을 거부한다(invalid cron string) — SUN/FRI 같은 이름을 쓴다.
     "crons": [
       "0 18 * * *",  // ranker-snapshot — 매일 KST 03:00
-      "0 12 * * 0",  // push-weekly   — 일요일 KST 21:00
-      "0 9 * * 5"    // push-meta     — 금요일 KST 18:00
+      "0 12 * * SUN",  // push-weekly   — 일요일 KST 21:00
+      "0 9 * * FRI"    // push-meta     — 금요일 KST 18:00
     ]
   },
   "vars": {

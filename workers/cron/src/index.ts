@@ -19,15 +19,19 @@ interface Env {
 }
 
 // wrangler.jsonc 의 crons 와 1:1. cron 표현식으로 어떤 작업인지 가른다.
+// Cloudflare 가 표현식을 되돌려줄 때 표기(SUN vs 0 vs 7, 대소문자)가 달라질 수 있어 별칭을 함께 둔다.
 const ROUTES: Record<string, string> = {
   '0 18 * * *': '/api/cron/ranker-snapshot',
+  '0 12 * * sun': '/api/cron/push-weekly',
   '0 12 * * 0': '/api/cron/push-weekly',
+  '0 12 * * 7': '/api/cron/push-weekly',
+  '0 9 * * fri': '/api/cron/push-meta',
   '0 9 * * 5': '/api/cron/push-meta',
 };
 
 export default {
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    const path = ROUTES[event.cron];
+    const path = ROUTES[event.cron.trim().toLowerCase()];
     if (!path) {
       console.error(`unknown cron: ${event.cron}`);
       return;
