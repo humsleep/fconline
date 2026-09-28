@@ -113,6 +113,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
   이적시장 기능 전체를 제거했다. 되살리려는 시도 전에 이 제약부터 재확인할 것.
 - 화폐개혁(2026-08-20, 옛 1억 BP = 새 1 BP): 넥슨은 **거래 시점 단위로 값을 보관**한다.
   과거 데이터를 다시 다루게 되면 거래일 기준으로만 환산할 것(전량 환산은 개혁 후 값을 1억배 축소시킴).
+- 🔴 **APNs 키는 환경(Sandbox / Production)이 키 자체에 박힌다.** 2026-09-28 확인: 첫 키(`A4BRC4R22X`)가
+  **Sandbox 전용**이라 TestFlight·App Store 빌드에는 애초에 발송이 불가능했다(키 파일이 있었어도).
+  새 키는 반드시 생성 시 **Sandbox & Production** 으로 만든다. 코드의 `APNS_SANDBOX` 는 *호스트* 선택일 뿐
+  키의 환경 제약을 이기지 못한다. 검증법: 가짜 토큰(0 64자)으로 `api.push.apple.com` 에 쏴서
+  `BadDeviceToken`(400)이면 인증 정상, `InvalidProviderToken`(403)이면 키·팀·환경 문제.
 - `matchResult`는 "승"/"무"/"패" **한글 문자열**
 - `ballPossesionTry` 등 오타가 공식 스펙 — 그대로 사용
 - 몰수/비정상 종료는 `matchEndType`(0 정상/1 몰수승/2 몰수패)으로 판별

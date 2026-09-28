@@ -1,5 +1,20 @@
 # DEVLOG
 
+## 2026-09-28 (3) — 도메인 전환 완료 · 푸시 키 재발급
+
+- `www.fcscope.xyz` / `fcscope.xyz` / `boheme.fcscope.xyz`(검증용) 모두 Workers 커스텀 도메인.
+  전환 전 Vercel DNS 레코드를 지워야 했다(Cloudflare 가 externally managed 라며 거부).
+- 🔴 **이전 중 앱 버그 발견**: `/api/v1/home` 이 계약 필수 필드 `mover.season` 을 안 채웠다.
+  mover 가 null 이던 동안 숨어 있었고, 데이터가 차면 앱 홈 응답 전체가 디코딩 실패했을 것이다.
+  `verify:api` 가 잡았다 — 배포 전 계약 검증이 값을 한 번 더 증명했다.
+- Cloudflare Cron Triggers 는 **요일 `0` 을 거부**한다(invalid cron string). `SUN`/`FRI` 로 바꾸고
+  표기 흔들림 대비 별칭 매핑을 뒀다.
+- 🔴 **APNs 키가 Sandbox 전용이었다**(`A4BRC4R22X`). 키 파일 분실로 재발급하며 발견 —
+  출시했어도 푸시는 안 갔다. 새 키 `FKD979RF27`(Sandbox & Production)로 교체, 가짜 토큰 검증에서
+  운영·개발 모두 `BadDeviceToken`(= 인증 통과).
+- 남은 것: `APPLE_SIWA_PRIVATE_KEY`(계정 삭제 시 Apple 토큰 폐기) — 키 파일 분실, 재발급 대기.
+  없어도 계정 삭제 자체는 동작한다.
+
 ## 2026-09-28 (2) — Vercel → Cloudflare Workers 이전
 
 - Vercel Hobby 는 **상업적 사용 금지**다(광고 수익이 있는 앱의 백엔드 = 위반). 한도 초과로 멈춘 김에
