@@ -61,12 +61,12 @@ export async function GET(
   if (!url) return new Response('not found', { status: 404 });
 
   try {
-    const res = await fetch(url, { next: { revalidate: 604800 } });
+    const res = await fetch(url, { next: { revalidate: 31536000 } });
     if (res.ok) {
       return new Response(res.body, {
         headers: {
           'Content-Type': res.headers.get('Content-Type') ?? 'image/png',
-          'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+          'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable',
         },
       });
     }

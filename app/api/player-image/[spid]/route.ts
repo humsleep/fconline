@@ -20,12 +20,14 @@ export async function GET(
 
   for (const url of candidates) {
     try {
-      const res = await fetch(url, { next: { revalidate: 604800 } });
+      const res = await fetch(url, { next: { revalidate: 31536000 } });
       if (res.ok) {
         return new Response(res.body, {
           headers: {
             'Content-Type': 'image/png',
-            'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+            // 이미지는 내용이 바뀌지 않는다(새 카드는 새 spid). 1년 + immutable 로
+            // 엣지·브라우저 재검증을 없애 오리진 전송·함수 호출을 줄인다.
+            'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable',
           },
         });
       }
