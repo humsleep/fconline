@@ -1,3 +1,5 @@
+import { isBot } from '@/lib/security/bot';
+
 // 시즌(클래스) 아이콘 프록시 — seasonid.json의 seasonImg를 서버 경유로 제공.
 // 넥슨 CDN 직접 로드의 CORS/핫링크 이슈 회피. 이미지 없으면 404 → 클라이언트는 텍스트 폴백.
 
@@ -48,9 +50,17 @@ async function seasonImgMap(): Promise<Map<number, string>> {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ seasonId: string }> }
 ) {
+  // 선수 이미지 프록시와 같은 이유로 봇 차단 (docs/CLOUDFLARE.md)
+  if (isBot(req.headers.get('user-agent'))) {
+    return new Response(null, {
+      status: 403,
+      headers: { 'Cache-Control': 'public, max-age=86400' },
+    });
+  }
+
   const { seasonId } = await params;
   if (!/^\d{1,4}$/.test(seasonId)) {
     return new Response('invalid seasonId', { status: 400 });

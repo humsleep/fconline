@@ -1,11 +1,24 @@
+import { isBot } from '@/lib/security/bot';
+
 const CDN = 'https://fco.dn.nexoncdn.co.kr/live/externalAssets/common';
 
 // 넥슨 CDN은 브라우저 직접 로드 시 CORS 이슈 → 서버 프록시.
 // 폴백 체인: 액션샷(spid) → 기본 이미지(pid, spid 뒤 6자리) → 실루엣 SVG
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ spid: string }> }
 ) {
+  // 2026-09-28: 이 라우트가 Vercel Hobby 한도를 넘긴 주범이었다(오리진 19.5GB/10GB,
+  // 함수 호출 1M/1M). sitemap 이 선수 페이지 8,000개를 광고하므로 크롤 1패스마다
+  // 이미지 수천 장을 넥슨에서 다시 받아 왔다. 봇에겐 넥슨을 부르지 않고 바로 끊는다.
+  // (사람 UA 로 위장한 봇은 Cloudflare 가 막는다 — docs/CLOUDFLARE.md)
+  if (isBot(req.headers.get('user-agent'))) {
+    return new Response(null, {
+      status: 403,
+      headers: { 'Cache-Control': 'public, max-age=86400' },
+    });
+  }
+
   const { spid } = await params;
 
   if (!/^\d{1,9}$/.test(spid)) {
