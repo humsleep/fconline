@@ -1,5 +1,14 @@
 # DEVLOG
 
+## 2026-10-03 (2) — 대세픽 오탐 수정 · 랭커 태클 추가 (배포 대기)
+
+- 🔴 **대세픽 "16/18 vs 0/18"**: 크론 usage 가 없는 날(2026-09-28, 122행 중 0)엔 `loadPicks` 가
+  유저 조회 행으로 대체하는데, 그 행이 **조회한 유저 본인의 선수**라 자기 스쿼드가 인기 TOP10 으로 잡혔다.
+  `topPickIdsByLine` 이 usage 있는 행만 보게 고쳐 그런 날은 `picks=null`(비교 불가).
+- `/api/v1/user/:nick/players` 의 `ranker` 에 `tackle`(랭커 경기당 태클) **필드 추가** — 앱이 수비수·GK 의
+  "랭커 대비 경기당 골 +0.00" 대신 태클/패스로 비교한다(iOS `fix(data)` 커밋).
+- `npm test` 446 PASS, `npm run build` 통과. 남은 것(사용자): `npm run verify:api` 후 `npm run deploy`.
+
 ## 2026-10-03 — 새 아이콘(S-spot) · 정적 아이콘 전환
 
 - 앱 아이콘을 플라스크 → **S-spot**(인디고 배경, 오렌지→마젠타→바이올렛 S + 끝에 흰 공)으로 교체.
