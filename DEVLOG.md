@@ -1,5 +1,22 @@
 # DEVLOG
 
+## 2026-10-03 (3) — 커뮤니티 v2 백엔드 (배포·SQL 대기)
+
+- 앱 Community v2 리디자인(iOS `docs/community-v2/SPEC.md`)용 **필드 추가만**(v1 계약 무파괴).
+  - 글: `view_count`(상세 GET 에서 RPC `increment_post_view` +1, 봇 UA 제외 — 웹 상세도 집계) ·
+    `like_count` · `viewerLiked`(로그인 시)
+  - 댓글: `parent_id`(1단 — 답글의 답글은 원 댓글로 평면화, 원 댓글 삭제 시 `set null`) · `like_count` ·
+    `viewerLiked` · `author.verifiedNickname`. 댓글 POST 가 `parent_id` 를 받는다.
+  - `POST/DELETE /api/community/posts/:id/like`, `/api/community/comments/:id/like` → `{ ok, liked, like_count }`
+  - v1 목록: `sort=new|hot|comments`, `types=a,b` · 응답 `sort`(실제 적용값) · `hot[]`(1페이지만, 72시간
+    likes×3+comments×2+views/50 TOP 3) · `types[].shortLabel`. `isHot` 대신 `hot[]` 로 정했다.
+  - battle GET/POST: `mine`("A"/"B"/null). 로그인 또는 `?voter=` 일 때만 계산, 그때는 `private, no-store`.
+- `supabase/migrations/0023_community_v2.sql` — **코드보다 늦게 실행돼도 안전**. 스키마가 없으면
+  (42703/42P01/PGRST202/204) 새 필드·정렬·좋아요만 꺼진다(`lib/community/v2.ts#isMissingSchema`).
+  hot/comments 요청은 `sort:"new"` 로 강등돼 앱이 미지원을 알 수 있다.
+- `npm test` 484 PASS, `npm run build` 통과. 남은 것(사용자): SQL Editor 에서 0023 실행 → `npm run verify:api`
+  → `npm run deploy`.
+
 ## 2026-10-03 (2) — 대세픽 오탐 수정 · 랭커 태클 추가 (배포 대기)
 
 - 🔴 **대세픽 "16/18 vs 0/18"**: 크론 usage 가 없는 날(2026-09-28, 122행 중 0)엔 `loadPicks` 가
