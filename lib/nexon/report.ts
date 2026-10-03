@@ -46,7 +46,7 @@ export interface MatchReport {
   goalsAgainst: number;
   avgRating: number; // 몰수 제외 · 출전 선수 평균(teamRating)
   timeBands: TimeBand[]; // 몰수 제외(실제 슛 이벤트만)
-  shotTypes: ShotTypeStat[]; // 내 결정력
+  shotTypes: ShotTypeStat[]; // 내 결정력 · 몰수 제외. inbox+outbox+penalty 가 분할, heading·freekick 은 부분집합
   form: FormGame[]; // 최신 → 과거
   weekly: WeeklyForm | null; // 최근 7일 vs 직전 7일
 }
@@ -75,6 +75,44 @@ const SHOT_TYPES: { key: string; label: string; try: keyof NonNullable<MatchInfo
   { key: 'freekick', label: '프리킥', try: 'shootFreekick', goal: 'goalFreekick' },
   { key: 'penalty', label: '페널티킥', try: 'shootPenaltyKick', goal: 'goalPenaltyKick' },
 ];
+
+type ShootStats = NonNullable<MatchInfoEntry['shoot']>;
+const n0 = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+
+/**
+ * 한 경기의 슛 타입별 골 — 전광판 골(`scoreboard`, goalTotalDisplay)을 넘지 않게 자른다.
+ *
+ * 넥슨 shoot 집계 구조(2026-10-04 라이브 실측, 공식경기 40경기·80 엔트리에서 80/80 일치):
+ *   goalTotal = goalInPenalty + goalOutPenalty + goalPenaltyKick   ← 서로 겹치지 않는 분할(PK 는 박스 안에 안 들어간다)
+ *   goalHeading ⊂ 박스 안/밖, goalFreekick ⊂ 박스 밖(실측)          ← 부분집합. 다섯 행을 다 더하면 이중 집계다.
+ * 리포트 "슛 76골 vs 실제 68골"의 원인은 **몰수 경기**였다 — 몰수는 전광판이 3:0/0:3 으로 덮이지만
+ * shoot.goal* 은 중단 전 실제 골(예: 5골·2골)을 그대로 갖는다. 몰수는 호출부에서 뺀다.
+ * 여기서는 그 밖의 어긋남(승부차기 골이 shoot 집계에 섞이는 모드 등 — 공식경기 표본엔 없었다)을 막는 상한만 건다:
+ * 분할 합이 전광판을 넘으면 넘친 만큼을 PK → 박스 안 → 박스 밖 순으로 깎는다(승부차기는 PK 이므로 PK 부터).
+ */
+export function shotTypeGoals(shoot: ShootStats, scoreboard: number): Record<string, number> {
+  let pk = n0(shoot.goalPenaltyKick);
+  let inbox = n0(shoot.goalInPenalty);
+  let outbox = n0(shoot.goalOutPenalty);
+  let excess = pk + inbox + outbox - Math.max(0, scoreboard);
+  if (excess > 0) {
+    const cut = (v: number) => {
+      const d = Math.min(v, excess);
+      excess -= d;
+      return v - d;
+    };
+    pk = cut(pk);
+    inbox = cut(inbox);
+    outbox = cut(outbox);
+  }
+  return {
+    inbox,
+    outbox,
+    penalty: pk,
+    heading: Math.min(n0(shoot.goalHeading), inbox + outbox),
+    freekick: Math.min(n0(shoot.goalFreekick), inbox + outbox),
+  };
+}
 
 export function aggregateReport(details: MatchDetail[], ouid: string, now: number = Date.now()): MatchReport {
   const bands: TimeBand[] = BAND_LABELS.map((label) => ({ label, forGoals: 0, againstGoals: 0 }));
@@ -136,13 +174,14 @@ export function aggregateReport(details: MatchDetail[], ouid: string, now: numbe
           if (s.result === goalCode) bands[bandIndex(s.goalTime)].againstGoals += 1;
     }
 
-    // 슛 타입 결정력 (내 기록)
+    // 슛 타입 결정력 (내 기록) — 몰수 경기는 뺀다(시간대 밴드와 같은 기준).
     const shoot = mine.shoot;
-    if (shoot) {
+    if (shoot && !forfeit) {
+      const goals = shotTypeGoals(shoot, myGoals);
       for (const t of SHOT_TYPES) {
         const agg = shotAgg.get(t.key)!;
         agg.tries += (shoot[t.try] as number) ?? 0;
-        agg.goals += (shoot[t.goal] as number) ?? 0;
+        agg.goals += goals[t.key] ?? 0;
       }
     }
   }
@@ -254,7 +293,7 @@ export function reportInsights(r: MatchReport): Insight[] {
 
   const inbox = r.shotTypes.find((s) => s.key === 'inbox');
   const outbox = r.shotTypes.find((s) => s.key === 'outbox');
-  // 헤딩·프리킥·PK 는 박스 안/밖의 부분집합 — 전부 더하면 전체 슛이 부풀어 '박스 밖 비율'이 낮게 나왔다
+  // 헤딩·프리킥은 박스 안/밖의 부분집합(PK 는 별도 분할) — 전부 더하면 전체 슛이 부풀어 '박스 밖 비율'이 낮게 나왔다
   const totalShots = (inbox?.tries ?? 0) + (outbox?.tries ?? 0);
   if (
     outbox &&

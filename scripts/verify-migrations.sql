@@ -102,7 +102,11 @@ with checks(migration, object, ok) as (values
   ('0021 column_grants',   'profiles.verified_ouid UPDATE 회수됨',
     not has_column_privilege('authenticated', 'public.profiles', 'verified_ouid', 'UPDATE')),
   ('0021 column_grants',   'constraint profiles_nickname_len',
-    exists(select 1 from pg_constraint where conname = 'profiles_nickname_len'))
+    exists(select 1 from pg_constraint where conname = 'profiles_nickname_len')),
+
+  -- 0024 comment_count 숨김 제외
+  ('0024 comment_count_hidden', 'trigger community_comments_count_hidden',
+    exists(select 1 from pg_trigger where tgname = 'community_comments_count_hidden' and not tgisinternal))
 )
 select
   case when ok then '✅ OK' else '❌ 미실행' end as status,

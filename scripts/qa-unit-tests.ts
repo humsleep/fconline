@@ -8,7 +8,7 @@ process.env.IP_HASH_SALT = process.env.IP_HASH_SALT ?? 'qa-salt-1234567890abcdef
 import type { MatchDetail } from '../lib/nexon/types';
 import { pickKeyPlayers, topSeason } from '../lib/squad/card-badges';
 import { getFormation, formationsByLine } from '../lib/squad/formations';
-import { aggregateReport, reportInsights, computeWeekly, bandIndex } from '../lib/nexon/report';
+import { aggregateReport, reportInsights, computeWeekly, bandIndex, shotTypeGoals } from '../lib/nexon/report';
 import { goalMinute, goalMinuteExact, splitGoalTime } from '../lib/nexon/goal-time';
 import { teamRating, legacyToTeamRating, normalizeSnapshotRating } from '../lib/nexon/rating';
 import { summarizeMatch, aggregate, topRivals, pickNemesis } from '../lib/nexon/summary';
@@ -74,7 +74,7 @@ function mkMatch(
   id: string,
   myGoals: number,
   oppGoals: number,
-  opts: { myTimes?: number[]; oppTimes?: number[]; rating?: number; heading?: [number, number]; outbox?: [number, number]; endType?: number } = {}
+  opts: { myTimes?: number[]; oppTimes?: number[]; rating?: number; heading?: [number, number]; outbox?: [number, number]; endType?: number; shoot?: Record<string, number> } = {}
 ): MatchDetail {
   const shoot = (goals: number, extra: Record<string, number> = {}) => ({
     shootTotal: goals + 3, effectiveShootTotal: goals, goalTotal: goals, goalTotalDisplay: goals, ownGoal: 0,
@@ -86,6 +86,7 @@ function mkMatch(
   const myExtra: Record<string, number> = {};
   if (opts.heading) { myExtra.shootHeading = opts.heading[0]; myExtra.goalHeading = opts.heading[1]; }
   if (opts.outbox) { myExtra.shootOutPenalty = opts.outbox[0]; myExtra.goalOutPenalty = opts.outbox[1]; }
+  if (opts.shoot) Object.assign(myExtra, opts.shoot);
   return {
     matchId: id, matchDate: '2026-01-01T00:00:00', matchType: 50,
     matchInfo: [
@@ -530,6 +531,27 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   ok(!reportInsights(rf).some((i) => i.text.includes('대패')), '리포트: 몰수 0:3 두 경기는 대패 인사이트 아님');
 }
 
+// ── 리포트 슛 타입 골 ≤ 실제 골 (iOS QA P1-3: "슛 76골" > 실제 68골) ──
+{
+  // 몰수승: 전광판 3:0 이지만 shoot.goal* 은 중단 전 실제 5골을 갖는다(라이브 실측) → 슛 타입에서 제외
+  const fw = mkMatch('fw', 3, 0, { endType: 1, shoot: { goalTotal: 5, goalInPenalty: 5, shootInPenalty: 7 } });
+  // 몰수패: 전광판 0 이지만 실제 2골
+  const fl = mkMatch('fl', 0, 3, { endType: 2, shoot: { goalTotal: 2, goalInPenalty: 1, goalOutPenalty: 1 } });
+  const nm = mkMatch('nm', 2, 1, { myTimes: [100, 200], oppTimes: [300] });
+  const r = aggregateReport([fw, fl, nm], 'ME');
+  const g = (k: string) => r.shotTypes.find((s) => s.key === k)?.goals ?? 0;
+  eq(g('inbox') + g('outbox') + g('penalty'), 2, 'shotTypes: 몰수 경기 골 제외 → 정상 경기 골만');
+  ok(g('inbox') + g('outbox') + g('penalty') <= r.goalsFor, 'shotTypes: 분할 합 ≤ goalsFor');
+  // 승부차기 골이 shoot 집계에 섞여 전광판을 넘으면 PK → 박스 안 순으로 깎는다
+  const so = shotTypeGoals({ goalInPenalty: 4, goalOutPenalty: 1, goalPenaltyKick: 4, goalHeading: 2, goalFreekick: 3 } as never, 3);
+  eq(so.penalty + so.inbox + so.outbox, 3, 'shotTypeGoals: 분할 합을 전광판으로 자름');
+  eq([so.penalty, so.inbox, so.outbox], [0, 2, 1], 'shotTypeGoals: PK 부터 깎음');
+  ok(so.heading <= so.inbox + so.outbox && so.freekick <= so.inbox + so.outbox, 'shotTypeGoals: 헤딩·프리킥은 분할 합 이하');
+  // 정상 경기(상대 자책골로 전광판 > 슛 골)는 그대로
+  eq(shotTypeGoals({ goalInPenalty: 2, goalOutPenalty: 0, goalPenaltyKick: 0, goalHeading: 1, goalFreekick: 0 } as never, 3),
+    { inbox: 2, outbox: 0, penalty: 0, heading: 1, freekick: 0 }, 'shotTypeGoals: 전광판 이하면 그대로');
+}
+
 // ── 유튜브 RSS 파서 ──
 {
   const xml = `<?xml version="1.0"?><feed>
@@ -781,7 +803,10 @@ asyncTests.push({
   eq(streakLabel({ ...base, currentStreak: -3 }).color, 'lose', 'streak: 3연패 lose');
   eq(streakLabel({ ...base, momentum: 25 }).text, '폼 상승 중', 'streak: 모멘텀 상승');
   eq(streakLabel({ ...base, momentum: -25 }).color, 'lose', 'streak: 모멘텀 하락 lose');
-  eq(streakLabel(base).text, '안정적인 폼', 'streak: 사건 없으면 안정');
+  eq(streakLabel(base).text, '꾸준한 폼', 'streak: 사건 없고 승률 50%면 꾸준');
+  eq(streakLabel(base).color, 'lime', 'streak: 꾸준 lime');
+  eq(streakLabel({ ...base, winRate: 30 }).text, '반등 준비 중', 'streak: 승률 30%면 꾸준 아님');
+  eq(streakLabel({ ...base, winRate: 49 }).color, 'lose', 'streak: 승률 50% 미만 lose 색');
   ok(['▲', '▼', '◆'].includes(streakLabel(base).icon), 'streak: icon은 카드 안전 기호');
 
   ok(hasStreakHighlight({ ...base, currentStreak: 2 }), 'highlight: 2연승 노출');

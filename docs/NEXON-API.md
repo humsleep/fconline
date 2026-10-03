@@ -127,6 +127,13 @@ GET /fconline/v1/match-detail?matchid={matchId}
 
 경기 결과는 불변 → matchId 기준 영구 캐시 가능.
 
+- `shoot` 골 집계 구조(2026-10-04 라이브 실측, 공식경기 80 엔트리 80/80 일치):
+  `goalTotal = goalInPenalty + goalOutPenalty + goalPenaltyKick` — **PK 는 박스 안에 안 들어가는 별도 분할**.
+  `goalHeading`·`goalFreekick` 은 박스 안/밖의 **부분집합**이라 다섯 값을 다 더하면 이중 집계다.
+- 🔴 **몰수 경기**: 전광판(`goalTotalDisplay`)은 3:0/0:3 으로 덮이지만 `goalTotal`·`goal*`·`shootDetail` 은
+  중단 전 실제 기록(예: 5골·2골)을 그대로 갖는다. 득점 집계에 섞으면 "슛 골 > 실제 골"이 된다(`lib/nexon/report.ts`).
+- `shootOutScore`(승부차기)는 공식경기 표본에서 항상 0. 승부차기 슛은 `goalTime` 2^26 이상(`lib/nexon/goal-time.ts`).
+
 ## 4. 랭커 정보
 
 ```

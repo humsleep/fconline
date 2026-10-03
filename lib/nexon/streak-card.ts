@@ -15,14 +15,20 @@ export interface StreakLabel {
   icon: string; // ▲ / ▼ / ◆ (카드 안전)
 }
 
-/** 지금 폼을 한 줄로. 연승>연패>모멘텀>안정 순. */
+/**
+ * 지금 폼을 한 줄로. 연승>연패>모멘텀>꾸준 순.
+ * 사건이 없을 때 예전엔 승률과 상관없이 "안정적인 폼"을 줬다 — 승률 30% 유저 카드에도 떠서 모순으로 읽혔다
+ * (iOS 유저 패널). iOS `FCCopy.streak` 과 같은 규칙: 승률 50% 이상만 "꾸준한 폼", 아래면 "반등 준비 중"(lose 색).
+ * lose 색이면 iOS 스토리 카드는 라벨을 싣지 않는다. color 는 기존 3값(lime/gold/lose)만 쓴다 — 앱 매핑 호환.
+ */
 export function streakLabel(s: StreakInput): StreakLabel {
   if (s.currentStreak >= 5) return { text: `${s.currentStreak}연승 중`, color: "gold", icon: "▲" };
   if (s.currentStreak >= 2) return { text: `${s.currentStreak}연승 중`, color: "lime", icon: "▲" };
   if (s.currentStreak <= -2) return { text: `${Math.abs(s.currentStreak)}연패 중`, color: "lose", icon: "▼" };
   if (s.momentum >= 20) return { text: "폼 상승 중", color: "lime", icon: "▲" };
   if (s.momentum <= -20) return { text: "폼 하락 중", color: "lose", icon: "▼" };
-  return { text: "안정적인 폼", color: "lime", icon: "◆" };
+  if (s.winRate >= 50) return { text: "꾸준한 폼", color: "lime", icon: "◆" };
+  return { text: "반등 준비 중", color: "lose", icon: "◆" };
 }
 
 /** 히어로 배너를 띄울 만한 '사건'이 있는가 (연승/연패 2+ 또는 뚜렷한 모멘텀). */
