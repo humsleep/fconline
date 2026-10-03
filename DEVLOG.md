@@ -1,5 +1,21 @@
 # DEVLOG
 
+## 2026-10-04 — iOS 보고 데이터 버그 3건 (배포·SQL 대기)
+
+- **댓글 수 불일치**: 0009 트리거가 INSERT/DELETE 만 세서 신고로 숨겨진 댓글이 `comment_count` 에 남았다.
+  `0024_comment_count_hidden.sql` — 보이는 댓글만 세고, `after update of hidden` 트리거로 숨김/복구 반영,
+  숨김 댓글 삭제 시 이중 차감 방지, 기존 글 1회 재집계. `verify-migrations.sql` 에 체크 추가.
+- 🔴 **리포트 "슛 76골 > 실제 68골"**: 원인은 승부차기가 아니라 **몰수 경기**였다(라이브 실측 40경기).
+  몰수는 전광판이 3:0/0:3 으로 덮이지만 `shoot.goal*` 은 중단 전 실제 골을 그대로 갖는다.
+  `shotTypes` 에서 몰수 경기 제외 + 경기당 `inbox+outbox+penalty ≤ 전광판` 상한(넘치면 PK→박스 안→밖 순으로 깎음 —
+  승부차기류 대비). 실측: `goalTotal = 박스안+박스밖+PK`(80/80), 헤딩·프리킥은 부분집합. 응답 형태 그대로.
+  보엠 30경기 기준 박스 안+밖 골 80 → 69(몰수 제외 실제 득점 71 이하).
+- **"안정적인 폼"이 승률 30%에도 뜸**: `streakLabel` 이 사건 없을 때 승률 50% 이상만 `꾸준한 폼`(lime),
+  아니면 `반등 준비 중`(lose). iOS `FCCopy.streak` 규칙과 동일, color 는 기존 3값만. 웹 배너는 사건 있을 때만
+  나와 영향 없고, 폼 공유 카드(`/api/card/streak`)·v1 `streak.text` 가 바뀐다.
+- `npm test` 493 PASS, `npm run build` 통과. 남은 것(사용자): SQL Editor 에서 0024 실행 → `npm run verify:api`
+  → `npm run deploy`.
+
 ## 2026-10-03 (3) — 커뮤니티 v2 백엔드 (배포·SQL 대기)
 
 - 앱 Community v2 리디자인(iOS `docs/community-v2/SPEC.md`)용 **필드 추가만**(v1 계약 무파괴).
