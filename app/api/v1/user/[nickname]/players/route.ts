@@ -63,6 +63,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ nickname
               goal: Math.round((st.goal ?? 0) * 100) / 100,
               passRate: (st.passTry ?? 0) > 0 ? Math.round(((st.passSuccess ?? 0) / (st.passTry ?? 1)) * 100) : 0,
               matchCount: st.matchCount ?? 0,
+              // 수비 라인 비교용(경기당 평균 태클 성공). 추가 필드 — v1 계약은 필드 추가만 허용.
+              // 수비수·GK 에게 "랭커 대비 경기당 골"은 늘 0 이라 앱이 포지션별 지표로 바꾼다.
+              tackle: Math.round((st.tackle ?? 0) * 100) / 100,
             }
           : null;
       return {

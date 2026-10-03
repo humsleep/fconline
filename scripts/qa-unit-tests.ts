@@ -364,6 +364,7 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
     matchCount: 100,
     goalsPerMatch: 1,
     passPct: 80,
+    usage: 10,
   });
   // 랭커 TOP픽: 100번 카드가 ST 코드 25로 ATT 라인에 있음
   const byLine = new Map([['ATT', [pr(100, 25)]]]);
@@ -381,6 +382,11 @@ for (const st of [hot, cold, computeMatchPerfStats([])]) {
   const top10 = topPickIdsByLine(many, 10);
   eq(top10.get('ATT')?.size, 10, 'topPickIdsByLine: topN=10 컷');
   eq(isTopPick(top10, 211, 25), false, 'isTopPick: TOP10 밖 카드는 미매칭');
+  // 크론 usage 가 없는 날(유저 조회 행만 있음)은 인기 순위가 아니다 — 본인 선수가 "대세픽"으로 잡히던 회귀(16/18 vs 0/18)
+  const noUsage = new Map([['ATT', [{ ...pr(300, 25), usage: undefined }]]]);
+  const none = topPickIdsByLine(noUsage, 10);
+  eq(none.get('ATT')?.size, 0, 'topPickIdsByLine: usage 없는 행은 인기 TOP 에서 제외');
+  eq([...none.values()].some((v) => v.size > 0), false, 'topPickIdsByLine: usage 없는 날은 비교 불가(빈 집합)');
 }
 
 // ── FC Scope 스코어 (경기 퍼포먼스 0~10) ──

@@ -255,7 +255,11 @@ export function topPickIdsByLine(
 ): Map<string, Set<number>> {
   const out = new Map<string, Set<number>>();
   for (const [line, arr] of byLine) {
-    out.set(line, new Set(arr.slice(0, topN).map((r) => r.spId)));
+    // 인기 TOP 은 크론이 붙인 사용 횟수(usage)로만 정한다. usage 없는 날(크론 누락 — 2026-09-28 실측 0/122행)엔
+    // loadPicks 가 유저 조회로 저장된 행으로 대체하는데, 그 행은 **조회한 유저 본인의 선수**라 자기 스쿼드가
+    // "인기 TOP10 16/18명"으로 나왔다(다음 날 같은 계정 0/18). 그런 날은 비교 불가로 비워 둔다 → picks=null.
+    const ranked = arr.filter((r) => (r.usage ?? 0) > 0);
+    out.set(line, new Set(ranked.slice(0, topN).map((r) => r.spId)));
   }
   return out;
 }

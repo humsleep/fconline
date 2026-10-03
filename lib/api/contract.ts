@@ -92,7 +92,7 @@ export const SHAPES: Record<string, Shape> = {
     rankerCoverage: 'number', players: 'int', sampleGames: 'int',
   },
   PicksInfo: { 'date?': 'string', topPickCount: 'int', total: 'int', cardUrl: 'string' },
-  RankerCompare: { goal: 'number', passRate: 'int', matchCount: 'int' },
+  RankerCompare: { goal: 'number', passRate: 'int', matchCount: 'int', 'tackle?': 'number' },
   PlayerCard: {
     spId: 'int', mainPosition: 'int', games: 'int', avgRating: 'number', goals: 'int', assists: 'int',
     goalsPerGame: 'number', assistsPerGame: 'number', passRate: 'number', name: 'string',
