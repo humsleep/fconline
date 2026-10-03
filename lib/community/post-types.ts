@@ -24,6 +24,8 @@ export type PostField =
 
 export interface PostTypeConfig {
   label: string;
+  /** 칩·말머리용 짧은 이름(앱 v2 2차 칩) */
+  shortLabel: string;
   emoji: string;
   blurb: string; // 목록/작성에서 유형 설명
   accent: 'lime' | 'gold' | 'ink';
@@ -47,6 +49,7 @@ export const POST_TYPE_ORDER: PostType[] = [
 export const POST_TYPES: Record<PostType, PostTypeConfig> = {
   squad_show: {
     label: '스쿼드 자랑',
+    shortLabel: '자랑',
     emoji: '✨',
     blurb: '내가 만든 스쿼드를 공유하고 자랑해요.',
     accent: 'gold',
@@ -58,6 +61,7 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
   },
   squad_rate: {
     label: '스쿼드 평가 요청',
+    shortLabel: '평가',
     emoji: '📝',
     blurb: '내 스쿼드, 어떤가요? 피드백을 받아보세요.',
     accent: 'lime',
@@ -69,6 +73,7 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
   },
   squad_make: {
     label: '스쿼드 만들어줘',
+    shortLabel: '만들어줘',
     emoji: '🛠️',
     blurb: '조건을 알려주면 다른 유저가 스쿼드를 제안해줘요.',
     accent: 'ink',
@@ -80,6 +85,7 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
   },
   club_recruit: {
     label: '클럽원 모집',
+    shortLabel: '클럽모집',
     emoji: '🛡️',
     blurb: '같이 뛸 클럽원을 찾아요.',
     accent: 'lime',
@@ -91,6 +97,7 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
   },
   club_match: {
     label: '클럽전 상대 구함',
+    shortLabel: '클럽전',
     emoji: '⚔️',
     blurb: '클럽 친선전·연습경기 상대를 구해요.',
     accent: 'ink',
@@ -102,6 +109,7 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
   },
   tournament: {
     label: '대회',
+    shortLabel: '대회',
     emoji: '🏆',
     blurb: '유저 대회를 열거나 참가자를 모집해요.',
     accent: 'gold',
@@ -113,6 +121,7 @@ export const POST_TYPES: Record<PostType, PostTypeConfig> = {
   },
   squad_battle: {
     label: '스쿼드 배틀',
+    shortLabel: '배틀',
     emoji: '⚔️',
     blurb: '두 스쿼드를 올리고 어느 쪽이 나은지 투표받아요.',
     accent: 'gold',

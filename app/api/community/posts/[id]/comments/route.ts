@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { shortId } from '@/lib/community/posts';
 import { MODERATION_MESSAGE, containsBannedWords } from '@/lib/community/moderation';
+import { isMissingSchema, resolveReplyParent } from '@/lib/community/v2';
 
 const BODY_MAX = 1000;
 
@@ -60,14 +61,37 @@ export async function POST(
   const rawSquad = payload.squad_id ? String(payload.squad_id).trim() : '';
   const squad_id = /^[a-zA-Z0-9]{1,32}$/.test(rawSquad) ? rawSquad : null;
 
+  // 1단 답글(0023) — 답글의 답글은 원 댓글에 붙인다(인스타식 평면화).
+  // 0023 미적용이면 parent_id 를 조용히 버리고 일반 댓글로 단다(구 클라이언트와 같은 동작).
+  let parent_id: string | null = null;
+  const rawParent = payload.parent_id ? String(payload.parent_id).trim() : '';
+  if (rawParent) {
+    if (!/^[a-zA-Z0-9]{1,32}$/.test(rawParent))
+      return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 });
+    const { data: target, error: pErr } = await supabase
+      .from('community_comments')
+      .select('id, post_id, parent_id')
+      .eq('id', rawParent)
+      .maybeSingle();
+    if (pErr && !isMissingSchema(pErr))
+      return NextResponse.json({ error: '등록에 실패했습니다.' }, { status: 500 });
+    if (!pErr) {
+      parent_id = resolveReplyParent(target, postId);
+      if (!parent_id)
+        return NextResponse.json({ error: '답글을 달 댓글을 찾을 수 없어요.' }, { status: 404 });
+    }
+  }
+
   const id = shortId();
-  const { error } = await supabase.from('community_comments').insert({
-    id,
-    post_id: postId,
-    author_id: user.id,
-    body,
-    squad_id,
-  });
+  const row: Record<string, string | null> = { id, post_id: postId, author_id: user.id, body, squad_id };
+  let { error } = await supabase
+    .from('community_comments')
+    .insert(parent_id ? { ...row, parent_id } : row);
+  // 컬럼은 있는데 쓰기 grant 가 아직 없는 등 스키마 불일치 → 답글 없이 한 번 더
+  if (error && parent_id && isMissingSchema(error)) {
+    parent_id = null;
+    ({ error } = await supabase.from('community_comments').insert(row));
+  }
 
   if (error) {
     if (error.code === '23503')
@@ -84,7 +108,7 @@ export async function POST(
       );
     return NextResponse.json({ error: '등록에 실패했습니다.' }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, id });
+  return NextResponse.json({ ok: true, id, parent_id });
 }
 
 export async function DELETE(

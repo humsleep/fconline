@@ -156,6 +156,8 @@ export const SHAPES: Record<string, Shape> = {
   PostTypeInfo: {
     type: 'string', label: 'string', emoji: 'string', blurb: 'string', accent: 'string',
     fields: 'string[]', template: 'string', bodyLabel: 'string', bodyPlaceholder: 'string',
+    // 2026-10-03 커뮤니티 v2(옵셔널): 칩용 짧은 이름
+    'shortLabel?': 'string',
   },
   PostAuthor: { id: 'string', nickname: 'string', 'verifiedNickname?': 'string', 'isOperator?': 'bool' },
   MetaRow: { key: 'string', label: 'string', value: 'string' },
@@ -165,11 +167,15 @@ export const SHAPES: Record<string, Shape> = {
     meta: 'any', status: 'string', created_at: 'string', 'comment_count?': 'int',
     author: 'PostAuthor', typeLabel: 'string', typeEmoji: 'string',
     'preview?': 'string', 'metaRows?': 'MetaRow[]', 'squadB?': 'string',
+    // 2026-10-03 커뮤니티 v2(옵셔널) — 0023 마이그레이션 전에는 키가 없다. viewerLiked 는 로그인 시에만.
+    'view_count?': 'int', 'like_count?': 'int', 'viewerLiked?': 'bool',
   },
-  CommentAuthor: { id: 'string', nickname: 'string', 'isOperator?': 'bool' },
+  CommentAuthor: { id: 'string', nickname: 'string', 'isOperator?': 'bool', 'verifiedNickname?': 'string' },
   Comment: {
     id: 'string', post_id: 'string', author_id: 'string', body: 'string',
     'squad_id?': 'string', created_at: 'string', author: 'CommentAuthor', isOwn: 'bool',
+    // 2026-10-03 커뮤니티 v2(옵셔널): 1단 답글의 원 댓글 id · 좋아요
+    'parent_id?': 'string', 'like_count?': 'int', 'viewerLiked?': 'bool',
   },
   Viewer: { loggedIn: 'bool', isOwner: 'bool', canComment: 'bool' },
 
@@ -226,6 +232,8 @@ export const ROUTES: Record<string, Shape> = {
   },
   'GET /api/v1/community/posts': {
     page: 'int', totalPages: 'int', types: 'PostTypeInfo[]', posts: 'Post[]',
+    // 2026-10-03 커뮤니티 v2(옵셔널): 실제 적용 정렬(new|hot|comments) · 1페이지 "지금 뜨는 글" TOP 3
+    'sort?': 'string', 'hot?': 'Post[]',
   },
   'GET /api/v1/community/posts/:id': {
     post: 'Post', comments: 'Comment[]', viewer: 'Viewer',
@@ -248,11 +256,17 @@ export const ROUTES: Record<string, Shape> = {
     id: 'string', name: 'string', formation: 'string', slots: 'SquadSlot[]',
     'teamTag?': 'string', 'createdAt?': 'string',
   },
-  // 서버는 소문자 a/b 로 내려준다(웹 BattleVote 도 소문자를 읽는다). mine 은 서버가 주지 않는다.
-  'GET /api/community/battle': { a: 'int', b: 'int' },
+  // 서버는 소문자 a/b 로 내려준다(웹 BattleVote 도 소문자를 읽는다).
+  // mine(2026-10-03, 옵셔널): 로그인 또는 ?voter= 일 때 내가 고른 쪽 "A"/"B", 아니면 null.
+  'GET /api/community/battle': { a: 'int', b: 'int', 'mine?': 'string' },
 
   // ── 쓰기 라우트 — 검증기가 자동 호출하지 않는다(상태를 바꾸므로). 형태만 고정해 둔다.
-  'POST /api/community/battle': { a: 'int', b: 'int' },
+  'POST /api/community/battle': { a: 'int', b: 'int', 'mine?': 'string' },
+  // 커뮤니티 v2 좋아요(POST=누르기, DELETE=취소, 멱등). like_count 는 읽기 실패 시 null.
+  'POST /api/community/posts/:id/like': { ok: 'bool', liked: 'bool', 'like_count?': 'int' },
+  'DELETE /api/community/posts/:id/like': { ok: 'bool', liked: 'bool', 'like_count?': 'int' },
+  'POST /api/community/comments/:id/like': { ok: 'bool', liked: 'bool', 'like_count?': 'int' },
+  'DELETE /api/community/comments/:id/like': { ok: 'bool', liked: 'bool', 'like_count?': 'int' },
   'POST /api/squad': { id: 'string' },
   'POST /api/profile': { ok: 'bool', nickname: 'string' },
   'POST /api/profile/verify': { ok: 'bool' },

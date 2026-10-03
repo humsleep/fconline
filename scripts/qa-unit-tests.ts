@@ -44,6 +44,7 @@ import { readFileSync } from 'node:fs';
 import { aggregatePlayers } from '../lib/nexon/player-stats';
 import { squadCardTree } from '../lib/card/squad-card';
 import { POST_TYPES, isPostType } from '../lib/community/post-types';
+import { parseSort, parseTypes, isBotUA, hotScore, rankHot, resolveReplyParent, isMissingSchema, HOT_WINDOW_HOURS } from '../lib/community/v2';
 import type { Squad } from '../lib/squad/store';
 import { isOuidLookupNotFound, MATCH_ID_RE } from '../lib/nexon/errors';
 import { containsBannedWords, findBannedTerm } from '../lib/community/moderation';
@@ -1084,6 +1085,72 @@ section('device-input');
   eq(sanitizeFavorites(Array.from({ length: 30 }, (_, i) => `n${i}`)).length, 12, 'favorites: 최대 12개');
   eq(sanitizeFavorites([...Array.from({ length: 20 }, () => ''), 'late']), ['late'], 'favorites: 빈 값은 12개 상한에 안 셈');
   eq(sanitizeFavorites('abc'), [], 'favorites: 배열 아니면 빈 배열');
+}
+
+// ── 커뮤니티 v2: 정렬·유형 파싱 / 봇 필터 / 인기 점수 / 답글 평면화 / 스키마 미적용 감지 ──
+{
+  eq(parseSort('hot'), 'hot', 'v2 parseSort: hot');
+  eq(parseSort('comments'), 'comments', 'v2 parseSort: comments');
+  eq(parseSort('HOT'), 'new', 'v2 parseSort: 모르는 값은 new');
+  eq(parseSort(null), 'new', 'v2 parseSort: 없으면 new');
+  eq(parseTypes('squad_show, squad_rate,bogus,squad_show'), ['squad_show', 'squad_rate'], 'v2 parseTypes: 알려진 유형만·중복 제거·순서 유지');
+  eq(parseTypes('bogus'), null, 'v2 parseTypes: 유효 유형 없으면 null(전체)');
+  eq(parseTypes(''), null, 'v2 parseTypes: 빈 값 null');
+
+  const safari = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  eq(isBotUA(safari), false, 'v2 isBotUA: 모바일 사파리는 사람');
+  eq(isBotUA('FCScope/1.4 CFNetwork/1568.100.1 Darwin/24.0.0'), false, 'v2 isBotUA: iOS 앱(URLSession)은 사람');
+  eq(isBotUA('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'), true, 'v2 isBotUA: Googlebot');
+  eq(isBotUA('facebookexternalhit/1.1'), true, 'v2 isBotUA: 링크 미리보기');
+  eq(isBotUA('Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd) kakaotalk-scrap/1.0'), true, 'v2 isBotUA: 카톡 스크랩');
+  eq(isBotUA('curl/8.4.0'), true, 'v2 isBotUA: curl');
+  eq(isBotUA(null), true, 'v2 isBotUA: UA 없음은 집계 안 함');
+  eq(isBotUA('node'), true, 'v2 isBotUA: verify:api(node fetch)는 조회수 안 올림');
+
+  eq(hotScore({ like_count: 2, comment_count: 3, view_count: 100 }), 2 * 3 + 3 * 2 + 2, 'v2 hotScore: likes*3 + comments*2 + views/50');
+  eq(hotScore({}), 0, 'v2 hotScore: 컬럼 없으면 0');
+
+  const now = Date.parse('2026-10-03T12:00:00Z');
+  const h = (hours: number) => new Date(now - hours * 3600_000).toISOString();
+  const rows = [
+    { id: 'old', created_at: h(HOT_WINDOW_HOURS + 1), like_count: 100 },
+    { id: 'hid', created_at: h(1), like_count: 50, hidden: true },
+    { id: 'a', created_at: h(10), like_count: 1 },
+    { id: 'b', created_at: h(5), comment_count: 2 },
+    { id: 'c', created_at: h(2), like_count: 1 },
+    { id: 'z', created_at: h(1) },
+  ];
+  eq(rankHot(rows, now).map((r) => r.id), ['b', 'c', 'a', 'z'], 'v2 rankHot: 창 밖·숨김 제외, 점수순, 동점은 최신 먼저');
+  eq(rankHot(rows, now, 0).map((r) => r.id), ['b', 'c', 'a'], 'v2 rankHot: minScore=0 이면 0점 글 제외(hot[])');
+
+  eq(resolveReplyParent({ id: 'c1', post_id: 'p', parent_id: null }, 'p'), 'c1', 'v2 reply: 원 댓글에 답글');
+  eq(resolveReplyParent({ id: 'c2', post_id: 'p', parent_id: 'c1' }, 'p'), 'c1', 'v2 reply: 답글의 답글은 원 댓글로 평면화');
+  eq(resolveReplyParent({ id: 'c1', post_id: 'other', parent_id: null }, 'p'), null, 'v2 reply: 다른 글 댓글은 거부');
+  eq(resolveReplyParent(null, 'p'), null, 'v2 reply: 없는 댓글은 거부');
+
+  eq(isMissingSchema({ code: '42703', message: 'column community_posts.like_count does not exist' }), true, 'v2 schema: 컬럼 없음');
+  eq(isMissingSchema({ code: 'PGRST202', message: 'Could not find the function public.increment_post_view' }), true, 'v2 schema: RPC 없음');
+  eq(isMissingSchema({ code: 'PGRST204', message: "Could not find the 'parent_id' column of 'community_comments' in the schema cache" }), true, 'v2 schema: insert 컬럼 없음');
+  eq(isMissingSchema({ code: '42501', message: 'new row violates row-level security policy' }), false, 'v2 schema: RLS 거부는 스키마 문제가 아님');
+  eq(isMissingSchema(null), false, 'v2 schema: 오류 없음');
+
+  eq(POST_TYPES.squad_battle.shortLabel, '배틀', 'v2 shortLabel: 배틀');
+  ok(Object.values(POST_TYPES).every((t) => t.shortLabel.length > 0 && t.shortLabel.length <= 5), 'v2 shortLabel: 전 유형 1~5자');
+
+  // 계약: 0023 전(키 없음)·후(값 있음) 응답 모두 통과, 구 앱 필수 필드는 그대로 필수
+  const basePost = {
+    id: 'p1', author_id: 'u', type: 'squad_show', title: 't', body: 'b', positions: [], meta: {}, status: 'open',
+    created_at: h(1), author: { id: 'u', nickname: 'n' }, typeLabel: 'L', typeEmoji: 'E',
+  };
+  eq(checkShape(SHAPES.Post, basePost), [], 'v2 contract: 0023 전 Post 통과');
+  eq(checkShape(SHAPES.Post, { ...basePost, view_count: 3, like_count: 1, viewerLiked: true }), [], 'v2 contract: 0023 후 Post 통과');
+  ok(checkShape(SHAPES.Post, { ...basePost, like_count: 1.5 }).length > 0, 'v2 contract: like_count 는 int');
+  const baseComment = { id: 'c', post_id: 'p1', author_id: 'u', body: 'x', created_at: h(1), author: { id: 'u', nickname: 'n' }, isOwn: false };
+  eq(checkShape(SHAPES.Comment, { ...baseComment, parent_id: null, like_count: 0, viewerLiked: false }), [], 'v2 contract: Comment 답글/좋아요 필드');
+  eq(checkRoute('GET /api/v1/community/posts', { page: 1, totalPages: 1, types: [], posts: [basePost], sort: 'hot', hot: [basePost] }), [], 'v2 contract: 목록 sort/hot');
+  eq(checkRoute('GET /api/v1/community/posts', { page: 1, totalPages: 1, types: [], posts: [] }), [], 'v2 contract: 목록 sort/hot 없어도 통과(구 서버)');
+  eq(checkRoute('GET /api/community/battle', { a: 1, b: 2, mine: null }), [], 'v2 contract: battle mine null');
+  eq(checkRoute('GET /api/community/battle', { a: 1, b: 2, mine: 'A' }), [], 'v2 contract: battle mine A');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

@@ -35,16 +35,70 @@ async function counts(vsKey: string): Promise<{ a: number; b: number }> {
   return { a: ra.count ?? 0, b: rb.count ?? 0 };
 }
 
+/**
+ * 투표자 키 서버 파생 — 로그인이면 계정 기반(기기 무관 1인 1표),
+ * 아니면 기기 id(앱/웹이 보내는 voter) + IP 해시. 기기 id 가 없거나 형식이 틀리면 null.
+ */
+async function deriveVoter(req: Request, deviceRaw: unknown): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user)
+      return `u${createHash("sha256").update(`fcscope-vote:${user.id}`).digest("hex").slice(0, 32)}`;
+  } catch {
+    // Supabase 미설정 → 익명 경로
+  }
+  // 익명: 기기 id(localStorage) + IP 해시 결합 — 기기 id만 바꾸는 조작은 IP가 묶고,
+  // 공유 IP(CGNAT)의 서로 다른 사용자는 기기 id가 분리한다.
+  const deviceId = String(deviceRaw ?? "").trim().slice(0, 64);
+  if (!/^[a-zA-Z0-9_-]{6,64}$/.test(deviceId)) return null;
+  const ipPart = hashIp(clientIp(req.headers)) ?? "noip";
+  return `a${createHash("sha256").update(`${ipPart}:${deviceId}`).digest("hex").slice(0, 32)}`;
+}
+
+async function myPick(vsKey: string, voter: string): Promise<"A" | "B" | null> {
+  const db = getAdmin();
+  if (!db) return null;
+  try {
+    const { data } = await db
+      .from("vs_votes")
+      .select("pick")
+      .eq("vs_key", vsKey)
+      .eq("voter", voter)
+      .maybeSingle();
+    const p = (data as { pick?: string } | null)?.pick;
+    return p === "A" || p === "B" ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * GET ?postId=&voter= — `{ a, b, mine }`.
+ * mine(v2 추가) = 이 요청자가 고른 쪽("A"/"B") 또는 null. 로그인(Bearer/쿠키)이면 계정 기준,
+ * 아니면 voter(기기 id)를 함께 보낼 때만 계산한다. 개인화 응답이라 그때는 공유 캐시를 끈다.
+ */
 export async function GET(req: Request) {
-  const postId = new URL(req.url).searchParams.get("postId") ?? "";
-  const vsKey = keyOf(postId);
+  const sp = new URL(req.url).searchParams;
+  const vsKey = keyOf(sp.get("postId") ?? "");
   if (!vsKey) return NextResponse.json({ error: "invalid" }, { status: 400 });
-  // 짧은 edge 캐시 — 인기글에서 GET이 매 조회마다 DB를 치지 않게(≤10s 지연 허용).
-  return NextResponse.json(await counts(vsKey), {
-    headers: {
-      "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
-    },
-  });
+
+  const personal =
+    Boolean(req.headers.get("authorization")) ||
+    Boolean(req.headers.get("cookie")?.includes("auth-token")) ||
+    Boolean(sp.get("voter"));
+  if (!personal) {
+    // 짧은 edge 캐시 — 인기글에서 GET이 매 조회마다 DB를 치지 않게(≤10s 지연 허용).
+    return NextResponse.json(
+      { ...(await counts(vsKey)), mine: null },
+      { headers: { "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30" } }
+    );
+  }
+  const voter = await deriveVoter(req, sp.get("voter"));
+  const [c, mine] = await Promise.all([counts(vsKey), voter ? myPick(vsKey, voter) : Promise.resolve(null)]);
+  return NextResponse.json({ ...c, mine }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 export async function POST(req: Request) {
@@ -71,27 +125,8 @@ export async function POST(req: Request) {
   if (!vsKey || !pick)
     return NextResponse.json({ error: "invalid" }, { status: 400 });
 
-  // voter 서버 파생 — 로그인이면 계정 기반(기기 무관 1인 1표)
-  let voter: string | null = null;
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user)
-      voter = `u${createHash("sha256").update(`fcscope-vote:${user.id}`).digest("hex").slice(0, 32)}`;
-  } catch {
-    // Supabase 미설정 → 익명 경로
-  }
-  if (!voter) {
-    // 익명: 기기 id(localStorage) + IP 해시 결합 — 기기 id만 바꾸는 조작은 IP가 묶고,
-    // 공유 IP(CGNAT)의 서로 다른 사용자는 기기 id가 분리한다.
-    const deviceId = String(body.voter ?? "").trim().slice(0, 64);
-    if (!/^[a-zA-Z0-9_-]{6,64}$/.test(deviceId))
-      return NextResponse.json({ error: "invalid" }, { status: 400 });
-    const ipPart = hashIp(ip) ?? "noip";
-    voter = `a${createHash("sha256").update(`${ipPart}:${deviceId}`).digest("hex").slice(0, 32)}`;
-  }
+  const voter = await deriveVoter(req, body.voter);
+  if (!voter) return NextResponse.json({ error: "invalid" }, { status: 400 });
 
   try {
     await db
@@ -103,5 +138,5 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "save failed" }, { status: 500 });
   }
-  return NextResponse.json(await counts(vsKey));
+  return NextResponse.json({ ...(await counts(vsKey)), mine: pick });
 }

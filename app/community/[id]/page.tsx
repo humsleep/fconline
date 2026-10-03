@@ -6,6 +6,8 @@ import { getProfilesByIds } from '@/lib/community/profile';
 import { getOperatorIds } from '@/lib/community/operators';
 import OperatorBadge from '@/app/components/OperatorBadge';
 import { createClient } from '@/lib/supabase/server';
+import { headers } from 'next/headers';
+import { recordView } from '@/lib/community/engagement';
 import { formatRelativeKr } from '@/lib/format';
 import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
 import PostActions from './PostActions';
@@ -44,7 +46,11 @@ export default async function PostDetail({
   if (!post) notFound();
 
   const cfg = POST_TYPES[post.type];
-  const comments = await listComments(post.id);
+  // 조회수 +1(봇 UA 제외) — 앱 v1 상세와 같은 RPC. 댓글 조회와 병렬.
+  const [comments] = await Promise.all([
+    listComments(post.id),
+    headers().then((h) => recordView(post.id, h.get('user-agent'))),
+  ]);
   const authorIds = [
     post.author_id,
     ...comments.map((c) => c.author_id),
