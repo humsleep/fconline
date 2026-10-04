@@ -45,8 +45,16 @@ export function cleanNickname(raw: unknown): string | null {
 }
 
 /**
- * 작성 요청의 `attach` 를 meta 항목으로. 없거나 형식이 틀리면 null(글은 첨부 없이 저장된다 — 400 을 내지 않는다:
- * 첨부는 부가 정보라 글 작성 자체를 막을 이유가 없다).
+ * 같은 구단주인가 — `cleanNickname` 을 거친 값(NFC·trim)끼리 **대소문자만 무시**하고 비교한다.
+ * iOS `PostAttach.sameNickname` 이 같은 규칙(lowercased 비교)을 쓴다 — 한쪽을 바꾸면 다른 쪽도 바꿀 것.
+ */
+export function sameNickname(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
+/**
+ * 작성 요청의 `attach` 를 meta 항목으로. 없거나 형식이 틀리면 null.
+ * 작성 라우트는 attach 를 보냈는데 null 이면 400 으로 이유를 돌려준다(조용히 첨부만 빠지지 않게).
  */
 export function parseAttachInput(raw: unknown): Record<string, string> | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
@@ -60,7 +68,7 @@ export function parseAttachInput(raw: unknown): Record<string, string> | null {
   const out: Record<string, string> = { attach_kind: kind, attach_me: me, attach_mode: String(mode) };
   if (kind === 'versus') {
     const w = cleanNickname(o.with);
-    if (!w || w.localeCompare(me, undefined, { sensitivity: 'accent' }) === 0) return null;
+    if (!w || sameNickname(w, me)) return null;
     out.attach_with = w;
   }
   return out;

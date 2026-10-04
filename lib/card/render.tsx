@@ -2,30 +2,27 @@ import { ImageResponse } from "next/og";
 import { loadKoreanFont } from "./font";
 import type { VerdictColor } from "@/lib/verdict";
 import { APPSTORE_QR_DATA_URI, APPSTORE_QR_SIZE, APPSTORE_CAPTION } from "./appstore-qr";
+import { CARD, CARD_GLOW, VERDICT_HEX, Wordmark } from "./brand";
 
 // 9:16 세로 카드 (모바일 커뮤니티 업로드 최적 비율)
 const W = 1080;
 const H = 1920;
 
-const HEX: Record<VerdictColor, string> = {
-  gold: "#f2c14e",
-  lime: "#c8f542",
-  ink: "#e9eef6",
-  muted: "#8fa0b5",
-  lose: "#fb7185",
-};
+/** 카드 색 — 판정색(VerdictColor) + 중립 강조 tint(바이올렛, iOS CardStamp 기본값). */
+export type CardColor = VerdictColor | "tint";
+const HEX: Record<CardColor, string> = { ...VERDICT_HEX, tint: CARD.tint };
 
 export interface CardBadge {
   label: string;
   value: string;
-  color?: VerdictColor;
+  color?: CardColor;
 }
 
 export interface CardData {
   kicker: string; // 상단 라벨 (예: "매치 리포트")
   title: string; // 대형 헤드라인 (예: "3 : 1")
   subtitle?: string; // 보조 (예: "승리 · 완벽한 경기력")
-  stamp?: { text: string; icon: string; color: VerdictColor };
+  stamp?: { text: string; icon: string; color: CardColor };
   badges?: CardBadge[]; // 최대 3
   footerUrl: string;
 }
@@ -40,7 +37,7 @@ export async function renderCard(
   opts?: { cacheControl?: string }
 ): Promise<ImageResponse> {
   const badges = (data.badges ?? []).slice(0, 3);
-  const stampHex = data.stamp ? HEX[data.stamp.color] : HEX.lime;
+  const stampHex = data.stamp ? HEX[data.stamp.color] : CARD.tint;
 
   const fontText =
     "FC SCOPE FC온라인 데이터 랩 내 전적도 검색 " +
@@ -64,28 +61,22 @@ export async function renderCard(
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          backgroundColor: "#0a1119",
-          backgroundImage:
-            "radial-gradient(900px 500px at 50% 0%, rgba(200,245,66,0.16), transparent)",
+          backgroundColor: CARD.bg,
+          backgroundImage: CARD_GLOW,
           padding: 96,
           fontFamily: font ? "NotoKR" : "sans-serif",
-          color: "#e9eef6",
+          color: CARD.ink,
         }}
       >
         {/* 상단 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontSize: 44, fontWeight: 700, color: "#c8f542" }}>
-              FC
-            </span>
-            <span style={{ fontSize: 44, fontWeight: 700 }}>SCOPE</span>
-          </div>
+          <Wordmark size={44} />
           <span
             style={{
               fontSize: 34,
               fontWeight: 700,
               letterSpacing: 6,
-              color: "#8fa0b5",
+              color: CARD.muted,
             }}
           >
             {data.kicker}
@@ -94,11 +85,11 @@ export async function renderCard(
 
         {/* 중앙 히어로 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <span style={{ fontSize: 200, fontWeight: 700, lineHeight: 1 }}>
+          <span style={{ fontSize: titleFontSize(data.title), fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
             {data.title}
           </span>
           {data.subtitle && (
-            <span style={{ fontSize: 48, fontWeight: 700, color: "#8fa0b5" }}>
+            <span style={{ fontSize: 48, fontWeight: 700, color: CARD.muted }}>
               {data.subtitle}
             </span>
           )}
@@ -138,18 +129,19 @@ export async function renderCard(
                     gap: 8,
                     padding: "24px 28px",
                     borderRadius: 20,
-                    backgroundColor: "#101a26",
-                    border: "1px solid #22334a",
+                    backgroundColor: CARD.surface,
+                    border: `1px solid ${CARD.line}`,
                   }}
                 >
-                  <span style={{ fontSize: 28, color: "#8fa0b5" }}>
+                  <span style={{ fontSize: 28, color: CARD.muted }}>
                     {b.label}
                   </span>
                   <span
                     style={{
-                      fontSize: 56,
+                      // 긴 값(날짜 등)은 배지 폭을 넘쳤다 — iOS minimumScaleFactor 처럼 글자 수로 줄인다
+                      fontSize: badgeFontSize(b.value),
                       fontWeight: 700,
-                      color: b.color ? HEX[b.color] : "#e9eef6",
+                      color: b.color ? HEX[b.color] : CARD.ink,
                     }}
                   >
                     {b.value}
@@ -164,7 +156,7 @@ export async function renderCard(
               justifyContent: "space-between",
               alignItems: "center",
               fontSize: 30,
-              color: "#8fa0b5",
+              color: CARD.muted,
             }}
           >
             {/* 리포스트된 카드가 곧 광고 — 도메인 대신 App Store QR(카메라로 바로 설치, iOS 카드와 같은 문법) */}
@@ -189,6 +181,22 @@ export async function renderCard(
         : undefined,
     }
   );
+}
+
+/**
+ * 히어로 제목 크기 — 200px 기준으로 한 줄(본문 폭 888px)에 들어가게 줄인다(iOS minimumScaleFactor 0.35 대응).
+ * "반등 준비 중" 같은 긴 라벨이 두 줄로 꺾이던 것을 막는다. 폭은 글자 종류로 어림(한글 1em · 그 외 0.6em · 공백 0.3em).
+ */
+function titleFontSize(title: string): number {
+  let em = 0;
+  for (const ch of title) em += /[\u3131-\uD7A3]/.test(ch) ? 1 : ch === " " ? 0.3 : 0.6;
+  return Math.max(70, Math.min(200, Math.floor(880 / Math.max(em, 1))));
+}
+
+/** 배지 값 글자 크기 — 3칸 배지 내부 폭(~230px)에 맞춘다. */
+function badgeFontSize(value: string): number {
+  const n = [...value].length;
+  return n <= 6 ? 56 : n <= 8 ? 44 : 36;
 }
 
 /** 흰 둥근 타일 + 검정 모듈 QR(원본 크기 그대로) — 공유 카드 공용 */

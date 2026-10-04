@@ -7,6 +7,7 @@ import type { Squad } from "@/lib/squad/store";
 import { topSeason } from "@/lib/squad/card-badges";
 import { QrTile } from "./render";
 import { APPSTORE_CAPTION } from "./appstore-qr";
+import { CARD, CARD_GLOW, Wordmark } from "./brand";
 
 // 9:16 세로 카드
 const W = 1080;
@@ -136,26 +137,24 @@ export function buildSquadCardElement(opts: {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "#0a1119",
-        backgroundImage:
-          "radial-gradient(900px 500px at 50% 0%, rgba(200,245,66,0.16), transparent)",
+        backgroundColor: CARD.bg,
+        backgroundImage: CARD_GLOW,
         padding: 70,
         fontFamily: fontLoaded ? "NotoKR" : "sans-serif",
-        color: "#e9eef6",
+        color: CARD.ink,
       }}
     >
       {/* 헤더 */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 40, fontWeight: 700, color: "#c8f542" }}>FC</span>
-          <span style={{ fontSize: 40, fontWeight: 700 }}>SCOPE</span>
-          <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: 6, color: "#8fa0b5", marginLeft: 8 }}>
+          <Wordmark size={40} />
+          <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: 6, color: CARD.muted, marginLeft: 8 }}>
             스쿼드
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 20 }}>
-          <span style={{ fontSize: 96, fontWeight: 700, lineHeight: 1, color: "#c8f542" }}>{formationName}</span>
-          <span style={{ fontSize: 44, fontWeight: 700, color: "#e9eef6" }}>{squadName}</span>
+          <span style={{ fontSize: 96, fontWeight: 700, lineHeight: 1, color: CARD.tint }}>{formationName}</span>
+          <span style={{ fontSize: 44, fontWeight: 700, color: CARD.ink }}>{squadName}</span>
         </div>
       </div>
 
@@ -168,15 +167,15 @@ export function buildSquadCardElement(opts: {
           width: PITCH_W,
           height: PITCH_H,
           borderRadius: 32,
-          border: "2px solid #22334a",
-          backgroundImage: "linear-gradient(180deg, rgba(200,245,66,0.10) 0%, #0d1620 55%)",
+          border: `2px solid ${CARD.line}`,
+          backgroundImage: "linear-gradient(180deg, #123322 0%, #0d2419 100%)",
           display: "flex",
         }}
       >
-        <div style={{ position: "absolute", left: 0, top: PITCH_H / 2, width: PITCH_W, height: 2, backgroundColor: "rgba(233,238,246,0.12)" }} />
-        <div style={{ position: "absolute", left: PITCH_W / 2 - 90, top: PITCH_H / 2 - 90, width: 180, height: 180, borderRadius: 90, border: "2px solid rgba(233,238,246,0.12)" }} />
-        <div style={{ position: "absolute", left: PITCH_W / 2 - 170, top: 0, width: 340, height: 150, border: "2px solid rgba(233,238,246,0.10)" }} />
-        <div style={{ position: "absolute", left: PITCH_W / 2 - 170, top: PITCH_H - 150, width: 340, height: 150, border: "2px solid rgba(233,238,246,0.10)" }} />
+        <div style={{ position: "absolute", left: 0, top: PITCH_H / 2, width: PITCH_W, height: 2, backgroundColor: "rgba(255,255,255,0.14)" }} />
+        <div style={{ position: "absolute", left: PITCH_W / 2 - 90, top: PITCH_H / 2 - 90, width: 180, height: 180, borderRadius: 90, border: "2px solid rgba(255,255,255,0.14)" }} />
+        <div style={{ position: "absolute", left: PITCH_W / 2 - 170, top: 0, width: 340, height: 150, border: "2px solid rgba(255,255,255,0.12)" }} />
+        <div style={{ position: "absolute", left: PITCH_W / 2 - 170, top: PITCH_H - 150, width: 340, height: 150, border: "2px solid rgba(255,255,255,0.12)" }} />
 
         {nodes.map((n, i) => {
           const cx = (n.x / 100) * PITCH_W;
@@ -186,9 +185,9 @@ export function buildSquadCardElement(opts: {
               key={i}
               style={{
                 position: "absolute",
-                left: cx - 78,
+                left: cx - 100,
                 top: cy - 88,
-                width: 156,
+                width: 200,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -199,7 +198,7 @@ export function buildSquadCardElement(opts: {
                   src={n.photo}
                   width={96}
                   height={96}
-                  style={{ width: 96, height: 96, borderRadius: 48, objectFit: "cover", border: "3px solid #c8f542", backgroundColor: "#101a26" }}
+                  style={{ width: 96, height: 96, borderRadius: 48, objectFit: "cover", border: `3px solid ${CARD.tint}`, backgroundColor: CARD.surface }}
                 />
               ) : (
                 <div
@@ -210,9 +209,9 @@ export function buildSquadCardElement(opts: {
                     width: 92,
                     height: 92,
                     borderRadius: 46,
-                    backgroundColor: "#101a26",
-                    border: "3px solid #c8f542",
-                    color: "#c8f542",
+                    backgroundColor: CARD.surface,
+                    border: `3px solid ${CARD.tint}`,
+                    color: CARD.tint,
                     fontSize: 30,
                     fontWeight: 700,
                   }}
@@ -228,10 +227,11 @@ export function buildSquadCardElement(opts: {
                     marginTop: 8,
                     padding: "4px 10px",
                     borderRadius: 8,
-                    backgroundColor: "rgba(10,17,25,0.78)",
-                    fontSize: 26,
+                    backgroundColor: "rgba(11,10,31,0.78)",
+                    fontSize: 24,
                     fontWeight: 700,
-                    color: "#e9eef6",
+                    color: CARD.ink,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {n.name}
@@ -256,7 +256,7 @@ export function buildSquadCardElement(opts: {
           justifyContent: "space-between",
           alignItems: "center",
           fontSize: 30,
-          color: "#8fa0b5",
+          color: CARD.muted,
         }}
       >
         <span>

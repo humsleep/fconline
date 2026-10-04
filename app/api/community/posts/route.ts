@@ -104,7 +104,15 @@ export async function POST(request: Request) {
   }
 
   // 첨부(내 전적 카드 · VS 카드) — meta 에 평평한 문자열 키로(구버전 앱 호환, lib/community/attach.ts)
-  const attach = parseAttachInput(payload.attach);
+  // 첨부를 보냈는데 형식이 틀리면 글을 저장하지 않고 이유를 돌려준다 — 조용히 첨부만 빠진 채 올라가면 작성자가 모른다.
+  // (구버전 앱은 attach 를 보내지 않으므로 영향 없음)
+  const hasAttach = payload.attach !== undefined && payload.attach !== null;
+  const attach = hasAttach ? parseAttachInput(payload.attach) : null;
+  if (hasAttach && !attach)
+    return NextResponse.json(
+      { error: '첨부한 구단주명을 확인해 주세요. (공백·특수문자 없이 20자 이하, VS 는 서로 다른 두 구단주)' },
+      { status: 400 }
+    );
   if (attach) Object.assign(meta, attach);
 
   // UGC 금칙어(App Store 1.2) — 사용자가 쓴 모든 자유 텍스트(첨부 구단주명 포함)
@@ -153,5 +161,6 @@ export async function POST(request: Request) {
       );
     return NextResponse.json({ error: '등록에 실패했습니다.' }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, id });
+  // attach: 첨부를 저장했으면 "saved" — 앱이 첨부 지원 서버인지 확인한다(필드 추가만)
+  return NextResponse.json({ ok: true, id, ...(attach ? { attach: 'saved' } : {}) });
 }

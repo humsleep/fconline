@@ -58,7 +58,7 @@ export async function GET(
         divisionName ? ` · ${divisionName}` : ""
       }`,
       stamp: rec.played
-        ? { text: `${rec.win}승 ${rec.draw}무 ${rec.lose}패`, icon: "▲", color: "lime" }
+        ? { text: `${rec.win}승 ${rec.draw}무 ${rec.lose}패`, icon: "▲", color: "tint" }
         : undefined,
       badges: [
         // FC Scope 스코어를 대표 배지로 (표본 있을 때만)

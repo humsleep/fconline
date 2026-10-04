@@ -65,7 +65,7 @@ export async function GET(
       kicker: "내 스쿼드 vs 대세픽",
       title: `${n}명`,
       subtitle: `포지션별 인기 TOP10 기준 · ${decoded}`,
-      stamp: { text: "너는 몇 명?", icon: "", color: "lime" },
+      stamp: { text: "너는 몇 명?", icon: "", color: "tint" },
       badges: [
         { label: "내가 쓴 카드", value: `${total}명` },
         { label: "TOP10 외", value: `${total - n}명`, color: "muted" },

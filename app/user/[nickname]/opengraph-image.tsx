@@ -6,6 +6,7 @@ import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { getDivisionName } from "@/lib/nexon/meta";
 import { aggregate, summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
 import { SITE_HOST } from "@/lib/site";
+import { CARD, Wordmark } from "@/lib/card/brand";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 콜드 조회(넥슨 순차 호출) 대비
@@ -79,7 +80,7 @@ export default async function OgImage({
   const font = await loadKoreanFont(textUsed);
 
   const resultColor = (r: string) =>
-    r === "승" ? "#4ade80" : r === "패" ? "#fb7185" : "#94a3b8";
+    r === "승" ? CARD.win : r === "패" ? CARD.lose : CARD.muted;
 
   return new ImageResponse(
     (
@@ -90,31 +91,29 @@ export default async function OgImage({
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          backgroundColor: "#0a1119",
-          backgroundImage:
-            "radial-gradient(800px 400px at 50% -100px, rgba(200,245,66,0.15), transparent)",
+          backgroundColor: CARD.bg,
+          backgroundImage: "radial-gradient(800px 420px at 50% -100px, rgba(224,33,138,0.18), transparent)",
           padding: 64,
-          color: "#e9eef6",
+          color: CARD.ink,
           fontFamily: font ? "NotoKR" : "sans-serif",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 32, fontWeight: 700, color: "#c8f542" }}>FC</span>
-          <span style={{ fontSize: 32, fontWeight: 700 }}>SCOPE</span>
-          <span style={{ fontSize: 22, color: "#8fa0b5", marginLeft: 8 }}>전적 카드</span>
+          <Wordmark size={32} />
+          <span style={{ fontSize: 22, color: CARD.muted, marginLeft: 8 }}>전적 카드</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 20 }}>
             <span style={{ fontSize: 76, fontWeight: 700, lineHeight: 1 }}>{nickname}</span>
             {level !== null && (
-              <span style={{ fontSize: 30, color: "#8fa0b5", paddingBottom: 8 }}>
+              <span style={{ fontSize: 30, color: CARD.muted, paddingBottom: 8 }}>
                 LV.{level}
               </span>
             )}
           </div>
           {division && (
-            <span style={{ fontSize: 30, color: "#f2c14e", fontWeight: 700 }}>{division}</span>
+            <span style={{ fontSize: 30, color: CARD.gold, fontWeight: 700 }}>{division}</span>
           )}
         </div>
 
@@ -122,13 +121,13 @@ export default async function OgImage({
           {rec ? (
             <div style={{ display: "flex", alignItems: "flex-end", gap: 40 }}>
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: 22, color: "#8fa0b5" }}>최근 {rec.played}경기 승률</span>
-                <span style={{ fontSize: 88, fontWeight: 700, color: "#c8f542", lineHeight: 1 }}>
+                <span style={{ fontSize: 22, color: CARD.muted }}>최근 {rec.played}경기 승률</span>
+                <span style={{ fontSize: 88, fontWeight: 700, color: CARD.tint, lineHeight: 1 }}>
                   {rec.winRate}%
                 </span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", paddingBottom: 6 }}>
-                <span style={{ fontSize: 26, color: "#8fa0b5" }}>
+                <span style={{ fontSize: 26, color: CARD.muted }}>
                   {rec.win}승 {rec.draw}무 {rec.lose}패
                 </span>
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -145,7 +144,7 @@ export default async function OgImage({
                         fontSize: 22,
                         fontWeight: 700,
                         color: resultColor(m.result),
-                        backgroundColor: "rgba(233,238,246,0.08)",
+                        backgroundColor: CARD.surface2,
                       }}
                     >
                       {m.result}
@@ -155,9 +154,9 @@ export default async function OgImage({
               </div>
             </div>
           ) : (
-            <span style={{ fontSize: 28, color: "#8fa0b5" }}>FC온라인 전적 · 슛맵 리포트</span>
+            <span style={{ fontSize: 28, color: CARD.muted }}>FC온라인 전적 · 슛맵 리포트</span>
           )}
-          <span style={{ fontSize: 22, color: "#8fa0b5" }}>{SITE_HOST}</span>
+          <span style={{ fontSize: 22, color: CARD.muted }}>{SITE_HOST}</span>
         </div>
       </div>
     ),
