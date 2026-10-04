@@ -34,6 +34,7 @@ import { slimMatchDetail } from '../lib/nexon/slim';
 import { popularCombos, popularCombosCounted } from '../lib/nexon/popular-combos';
 import { detectGoalCode } from '../lib/nexon/goal-code';
 import { packMatchDetail, unpackMatchDetail } from '../lib/nexon/pack';
+import { parseAttachInput, readAttach, publicMetaEntries, pickAttachMeta, cleanNickname } from '../lib/community/attach';
 import { Semaphore } from '../lib/nexon/semaphore';
 import { checkShape, checkRoute, ROUTES, SHAPES } from '../lib/api/contract';
 import { sanitizeEvents, MAX_EVENTS } from '../lib/analytics/events';
@@ -1176,6 +1177,32 @@ section('device-input');
   eq(checkRoute('GET /api/v1/community/posts', { page: 1, totalPages: 1, types: [], posts: [] }), [], 'v2 contract: 목록 sort/hot 없어도 통과(구 서버)');
   eq(checkRoute('GET /api/community/battle', { a: 1, b: 2, mine: null }), [], 'v2 contract: battle mine null');
   eq(checkRoute('GET /api/community/battle', { a: 1, b: 2, mine: 'A' }), [], 'v2 contract: battle mine A');
+}
+
+// ── 커뮤니티 첨부(내 전적 · VS) — meta 평평한 문자열 키, 구버전 앱 호환 ──
+section('community attach');
+{
+  eq(parseAttachInput({ kind: 'record', me: '보엠', mode: 50 }), { attach_kind: 'record', attach_me: '보엠', attach_mode: '50' }, 'attach: record');
+  eq(parseAttachInput({ kind: 'versus', me: '보엠', with: '팔디', mode: 52 }),
+    { attach_kind: 'versus', attach_me: '보엠', attach_mode: '52', attach_with: '팔디' }, 'attach: versus');
+  eq(parseAttachInput({ kind: 'versus', me: '보엠' }), null, 'attach: versus 는 상대 필수');
+  eq(parseAttachInput({ kind: 'versus', me: 'Abc', with: 'abc' }), null, 'attach: 자기 자신과 VS 불가(대소문자 무시)');
+  eq(parseAttachInput({ kind: 'record', me: '../admin' }), null, 'attach: 경로 문자 거부');
+  eq(parseAttachInput({ kind: 'record', me: 'a b' }), null, 'attach: 공백 거부');
+  eq(parseAttachInput({ kind: 'record', me: 'x'.repeat(21) }), null, 'attach: 21자 거부');
+  eq(parseAttachInput({ kind: 'squad', me: '보엠' }), null, 'attach: 모르는 kind 거부');
+  eq(parseAttachInput('record'), null, 'attach: 객체가 아니면 무시');
+  eq(parseAttachInput({ kind: 'record', me: '보엠', mode: 999 })?.attach_mode, '50', 'attach: 모르는 모드는 50');
+  eq(cleanNickname('\u1107\u1169\u110b\u1166\u11b7'), '보엠', 'attach: NFD 닉 → NFC');
+  // 저장값은 전부 문자열 — 구버전 iOS 는 meta 를 [String: String] 으로 디코딩한다
+  const stored = { budget: '3천억', ...parseAttachInput({ kind: 'versus', me: '보엠', with: '팔디' })! };
+  ok(Object.values(stored).every((v) => typeof v === 'string'), 'attach: meta 값은 모두 문자열');
+  eq(readAttach(stored), { kind: 'versus', me: '보엠', with: '팔디', mode: 50 }, 'attach: readAttach 왕복');
+  eq(readAttach({ attach_kind: 'versus', attach_me: '보엠' }), null, 'attach: 깨진 versus 는 null');
+  eq(readAttach({ budget: '1' }), null, 'attach: 없음');
+  // 메타 표에서 첨부·배틀 키는 빠진다(구버전 앱이 "attach_kind" 행을 그리지 않게)
+  eq(publicMetaEntries({ ...stored, squad_b: 'abc' }), [['budget', '3천억']], 'attach: publicMetaEntries 숨김');
+  eq(pickAttachMeta({ ...stored, squad_b: 'x' }), { attach_kind: 'versus', attach_me: '보엠', attach_with: '팔디', attach_mode: '50' }, 'attach: 수정 시 보존 키');
 }
 
 // ── 결과 ─────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import {
 } from '@/lib/community/post-types';
 import { REGIONS, POSITION_OPTIONS } from '@/lib/community/constants';
 import { MODERATION_MESSAGE, containsBannedWords } from '@/lib/community/moderation';
+import { parseAttachInput } from '@/lib/community/attach';
 
 const REGION_SET = new Set<string>(REGIONS);
 const POSITION_SET = new Set<string>(POSITION_OPTIONS);
@@ -102,7 +103,11 @@ export async function POST(request: Request) {
     }
   }
 
-  // UGC 금칙어(App Store 1.2) — 사용자가 쓴 모든 자유 텍스트
+  // 첨부(내 전적 카드 · VS 카드) — meta 에 평평한 문자열 키로(구버전 앱 호환, lib/community/attach.ts)
+  const attach = parseAttachInput(payload.attach);
+  if (attach) Object.assign(meta, attach);
+
+  // UGC 금칙어(App Store 1.2) — 사용자가 쓴 모든 자유 텍스트(첨부 구단주명 포함)
   if (containsBannedWords(title, body, contact, ...Object.values(meta)))
     return NextResponse.json({ error: MODERATION_MESSAGE }, { status: 400 });
 

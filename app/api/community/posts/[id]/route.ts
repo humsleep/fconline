@@ -10,6 +10,7 @@ import {
 } from '@/lib/community/post-types';
 import { REGIONS, POSITION_OPTIONS } from '@/lib/community/constants';
 import { MODERATION_MESSAGE, containsBannedWords } from '@/lib/community/moderation';
+import { pickAttachMeta } from '@/lib/community/attach';
 
 const REGION_SET = new Set<string>(REGIONS);
 const POSITION_SET = new Set<string>(POSITION_OPTIONS);
@@ -80,7 +81,7 @@ export async function PATCH(
   // 모드 2: 내용 수정 — 유형은 변경 불가, 해당 유형의 허용 필드만 반영
   const { data: current } = await supabase
     .from('community_posts')
-    .select('type')
+    .select('type, meta')
     .eq('id', id)
     .maybeSingle();
   const type = current?.type as PostType | undefined;
@@ -122,6 +123,9 @@ export async function PATCH(
       if (v) meta[k] = v;
     }
   }
+
+  // 첨부는 수정 폼이 다루지 않는다 — 기존 값을 그대로 둔다(수정하면 첨부가 사라지던 일 방지)
+  Object.assign(meta, pickAttachMeta(current?.meta as Record<string, unknown> | null));
 
   // UGC 금칙어(App Store 1.2) — 수정으로 우회하지 못하게 작성과 동일 검사
   if (containsBannedWords(title, body, contact, ...Object.values(meta)))

@@ -13,6 +13,7 @@ import {
 } from '@/lib/community/post-types';
 import { formatRelativeKr } from '@/lib/format';
 import BlockedAuthor from '@/app/components/BlockedAuthor';
+import { publicMetaEntries, readAttach } from '@/lib/community/attach';
 
 export const metadata: Metadata = {
   alternates: { canonical: "/community" },
@@ -175,12 +176,18 @@ export default async function CommunityBoard({
 
                     {/* 유형별 부가 정보 */}
                     {(p.positions.length > 0 ||
-                      Object.keys(p.meta).length > 0 ||
+                      publicMetaEntries(p.meta).length > 0 ||
+                      readAttach(p.meta) ||
                       p.squad_id) && (
                       <div className="mt-2 flex flex-wrap items-center gap-1">
                         {p.squad_id && (
                           <span className="scoreboard rounded bg-accent/10 px-1.5 py-0.5 text-[13px] font-semibold text-accent">
                             🧩 스쿼드
+                          </span>
+                        )}
+                        {readAttach(p.meta) && (
+                          <span className="scoreboard rounded bg-accent/10 px-1.5 py-0.5 text-[13px] font-semibold text-accent">
+                            {readAttach(p.meta)?.kind === 'versus' ? '⚔️ VS 카드' : '📊 전적 카드'}
                           </span>
                         )}
                         {p.positions.map((pos) => (
@@ -191,7 +198,7 @@ export default async function CommunityBoard({
                             {pos}
                           </span>
                         ))}
-                        {Object.entries(p.meta)
+                        {publicMetaEntries(p.meta)
                           .slice(0, 2)
                           .map(([k, v]) => (
                             <span

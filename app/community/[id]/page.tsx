@@ -16,6 +16,7 @@ import ReportButton from '@/app/components/ReportButton';
 import BlockedAuthor, { BlockButton } from '@/app/components/BlockedAuthor';
 import AttachedSquad from './AttachedSquad';
 import BattleVote from './BattleVote';
+import { publicMetaEntries, readAttach } from '@/lib/community/attach';
 
 export async function generateMetadata({
   params,
@@ -163,10 +164,10 @@ export default async function PostDetail({
           </div>
         )}
 
-        {/* 유형별 메타 (squad_b는 배틀 전용 내부 값이라 제외) */}
-        {Object.keys(post.meta).filter((k) => k !== "squad_b").length > 0 && (
+        {/* 유형별 메타 (squad_b·attach_* 는 내부 값이라 제외) */}
+        {publicMetaEntries(post.meta).length > 0 && (
           <dl className="mt-4 grid gap-2 sm:grid-cols-2">
-            {Object.entries(post.meta).filter(([k]) => k !== "squad_b").map(([k, v]) => (
+            {publicMetaEntries(post.meta).map(([k, v]) => (
               <div key={k} className="rounded-lg bg-surface-2 px-3 py-2">
                 <dt className="text-[13px] text-muted">
                   {META_FIELD_LABELS[k] ?? k}
@@ -180,6 +181,31 @@ export default async function PostDetail({
         <p className="mt-4 whitespace-pre-wrap text-base leading-[1.85]">
           {post.body}
         </p>
+
+        {/* 첨부 카드(내 전적 · VS) — 구단주명만 저장돼 있어 링크로 최신 전적을 연다 */}
+        {(() => {
+          const a = readAttach(post.meta);
+          if (!a) return null;
+          return (
+            <div className="mt-4 rounded-xl border border-line bg-surface-2 px-4 py-3">
+              <p className="text-[13px] font-semibold text-accent">
+                {a.kind === 'versus' ? '⚔️ VS 카드' : '📊 내 전적 카드'}
+              </p>
+              {a.kind === 'versus' && a.with ? (
+                <p className="mt-1 text-base font-bold">
+                  <Link href={`/user/${encodeURIComponent(a.me)}`} className="hover:underline">{a.me}</Link>
+                  <span className="mx-2 text-muted">vs</span>
+                  <Link href={`/user/${encodeURIComponent(a.with)}`} className="hover:underline">{a.with}</Link>
+                </p>
+              ) : (
+                <Link href={`/user/${encodeURIComponent(a.me)}`} className="mt-1 block text-base font-bold hover:underline">
+                  {a.me} 전적 보기 →
+                </Link>
+              )}
+              <p className="mt-1 text-[13px] text-muted">앱에서는 최신 전적으로 카드를 바로 그려요.</p>
+            </div>
+          );
+        })()}
 
         {/* 스쿼드 배틀 — A/B 스쿼드 + 투표 */}
         {post.type === "squad_battle" && post.squad_id && typeof post.meta.squad_b === "string" ? (

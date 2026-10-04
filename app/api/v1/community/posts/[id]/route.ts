@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { likedIds, recordView } from '@/lib/community/engagement';
 import { POST_TYPES, META_FIELD_LABELS } from '@/lib/community/post-types';
 import { apiError, ok } from '@/lib/api/v1';
+import { publicMetaEntries } from '@/lib/community/attach';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,8 +55,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       typeLabel: POST_TYPES[post.type]?.label ?? post.type,
       typeEmoji: POST_TYPES[post.type]?.emoji ?? '📝',
       author: { id: post.author_id, nickname: author?.nickname ?? '알 수 없음', verifiedNickname: author?.verified_nickname ?? null, isOperator: operators.has(post.author_id) },
-      metaRows: Object.entries(post.meta)
-        .filter(([k]) => k !== 'squad_b')
+      // 첨부 키(attach_*)·배틀 B팀은 표에서 뺀다 — 구버전 앱이 "attach_kind record" 행을 그리지 않게
+      metaRows: publicMetaEntries(post.meta)
         .map(([k, v]) => ({ key: k, label: META_FIELD_LABELS[k] ?? k, value: v })),
       squadB: typeof post.meta.squad_b === 'string' ? post.meta.squad_b : null,
       ...(likedPost ? { viewerLiked: likedPost.has(post.id) } : {}),
