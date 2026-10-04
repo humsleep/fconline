@@ -17,6 +17,8 @@ export const EVENT_NAMES = new Set([
   'interstitial',
   'favorite_add',
   'account_delete',
+  // 배너 슬롯(iOS AdSlot) — props.placement/event 로 배치별 노출 비교(iOS docs/ads/AD-PLACEMENT.md 5장)
+  'ad_slot',
 ]);
 
 /**
