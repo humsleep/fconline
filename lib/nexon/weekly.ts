@@ -82,3 +82,21 @@ export function weeklyRecap(
     best,
   };
 }
+
+/**
+ * 주간 카드 스탬프 — 색은 **보이는 문구의 의미**로 정한다(승률만 보면 "이번 주 2연승"이 승률 37% 라 빨갛게 나왔다).
+ *   연승(2+) → 좋은 사건: 5연승+ gold, 그 외 lime(카드에서 win 초록)
+ *   승률 문구 → 55%+ lime · 45% 미만 lose · 그 사이 tint(중립)
+ */
+export function weeklyStamp(w: Pick<WeeklyRecap, 'bestStreak' | 'winRate'>): {
+  text: string;
+  icon: string;
+  color: 'gold' | 'lime' | 'lose' | 'tint';
+} {
+  if (w.bestStreak >= 2)
+    return { text: `이번 주 ${w.bestStreak}연승`, icon: '▲', color: w.bestStreak >= 5 ? 'gold' : 'lime' };
+  const text = `승률 ${w.winRate}%`;
+  if (w.winRate >= 55) return { text, icon: '▲', color: 'lime' };
+  if (w.winRate < 45) return { text, icon: '▼', color: 'lose' };
+  return { text, icon: '◆', color: 'tint' };
+}

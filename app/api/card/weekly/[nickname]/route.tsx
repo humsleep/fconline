@@ -1,7 +1,7 @@
 import { getOuid, getUserBasic, getUserMatches } from "@/lib/nexon/api";
 import { getMatchDetailsBatch } from "@/lib/nexon/cached";
 import { summarizeMatch, type MatchSummary } from "@/lib/nexon/summary";
-import { weeklyRecap } from "@/lib/nexon/weekly";
+import { weeklyRecap, weeklyStamp } from "@/lib/nexon/weekly";
 import { renderCard } from "@/lib/card/render";
 import { limitNexonFanout } from "@/lib/security/rate-limit";
 
@@ -60,11 +60,8 @@ export async function GET(
       kicker: "주간 리포트",
       title: `${w.win}승 ${w.draw}무 ${w.lose}패`,
       subtitle: `${basic.nickname} · 최근 7일 ${w.games}경기`,
-      stamp: {
-        text: w.bestStreak >= 2 ? `이번 주 ${w.bestStreak}연승` : `승률 ${w.winRate}%`,
-        icon: w.winRate >= 45 ? "▲" : "▼",
-        color,
-      },
+      // 스탬프 색은 문구의 의미로(연승은 승률이 낮아도 좋은 사건). 승률 배지는 승률 기준 그대로.
+      stamp: weeklyStamp(w),
       badges: [
         { label: "승률", value: `${w.winRate}%`, color },
         { label: "평균 스코어", value: w.avgScore.toFixed(1) },

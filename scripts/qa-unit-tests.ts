@@ -26,7 +26,7 @@ import { playstyleOf } from '../lib/nexon/playstyle';
 import { risingStreak, isPeak, sparklinePoints } from '../lib/form-trend';
 import { isInAppBrowser, inAppBrowserName } from '../lib/client/in-app-browser';
 import { streakLabel, hasStreakHighlight } from '../lib/nexon/streak-card';
-import { weeklyRecap } from '../lib/nexon/weekly';
+import { weeklyRecap, weeklyStamp } from '../lib/nexon/weekly';
 import type { MatchSummary } from '../lib/nexon/summary';
 import { getPreset, presetsByLeague } from '../lib/squad/presets';
 import { aggregatePlaystyle, analyzePlaystyle } from '../lib/playstyle';
@@ -837,6 +837,13 @@ asyncTests.push({
 }
 
 // ── 주간 결산 (weeklyRecap) ──────────────────────────────────
+{
+  eq(weeklyStamp({ bestStreak: 2, winRate: 37 }).color, 'lime', 'weeklyStamp: 승률 낮아도 연승은 좋은 색');
+  eq(weeklyStamp({ bestStreak: 5, winRate: 40 }).color, 'gold', 'weeklyStamp: 5연승 gold');
+  eq(weeklyStamp({ bestStreak: 1, winRate: 37 }), { text: '승률 37%', icon: '▼', color: 'lose' }, 'weeklyStamp: 낮은 승률 lose');
+  eq(weeklyStamp({ bestStreak: 0, winRate: 50 }).color, 'tint', 'weeklyStamp: 50% 중립 tint');
+  eq(weeklyStamp({ bestStreak: 1, winRate: 60 }).color, 'lime', 'weeklyStamp: 높은 승률 lime');
+}
 {
   const NOW = Date.parse('2026-08-31T12:00:00Z');
   const wm = (daysAgo: number, result: '승' | '무' | '패', myGoals = 1, oppGoals = 0, forfeit = false): MatchSummary => ({
