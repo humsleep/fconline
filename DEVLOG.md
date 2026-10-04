@@ -12,7 +12,9 @@
 - VS 첨부 닉네임 규칙 확인: NFC + trim, 내부 공백·`/\?#%&<>"'\`` ·제어문자 거부, 1~20자, 자기 자신 비교는 대소문자 무시
   (`sameNickname`, iOS `PostAttach.sameNickname` 과 동일). 저장값은 입력 대소문자 보존. 테스트 추가.
 - 웹사이트 UI 자체는 여전히 `--accent: #c8f542`(globals.css, `*-accent` 클래스 182곳) — 이번엔 손대지 않음.
-- `npm test` 514 PASS, `npm run build` 통과. 남은 것(사용자): `npm run deploy`.
+- 주간 카드 스탬프 색을 문구 의미로(`weeklyStamp`): 연승 → 초록(5+ gold), 승률 문구 → 55%+ 초록 · 45% 미만 빨강 ·
+  사이 tint. 승률 37% 주의 "이번 주 2연승"이 빨갛게 나오던 것.
+- `npm test` 519 PASS, `npm run build` 통과. 남은 것(사용자): `npm run deploy`.
 
 ## 2026-10-04 (2) — 글 첨부(전적·VS 카드) · 공유 카드 App Store QR (배포 대기)
 
