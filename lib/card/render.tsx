@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { loadKoreanFont } from "./font";
 import type { VerdictColor } from "@/lib/verdict";
-import { SITE_HOST } from "@/lib/site";
+import { APPSTORE_QR_DATA_URI, APPSTORE_QR_SIZE, APPSTORE_CAPTION } from "./appstore-qr";
 
 // 9:16 세로 카드 (모바일 커뮤니티 업로드 최적 비율)
 const W = 1080;
@@ -44,7 +44,7 @@ export async function renderCard(
 
   const fontText =
     "FC SCOPE FC온라인 데이터 랩 내 전적도 검색 " +
-    SITE_HOST +
+    APPSTORE_CAPTION +
     data.kicker +
     data.title +
     (data.subtitle ?? "") +
@@ -167,11 +167,12 @@ export async function renderCard(
               color: "#8fa0b5",
             }}
           >
-            {/* 리포스트된 카드가 곧 광고 — 실제 도메인 + "너도 검색" 유입 CTA */}
-            <span>내 전적도 검색 →</span>
-            <span style={{ color: "#c8f542", fontWeight: 700 }}>
-              {SITE_HOST}
-            </span>
+            {/* 리포스트된 카드가 곧 광고 — 도메인 대신 App Store QR(카메라로 바로 설치, iOS 카드와 같은 문법) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <span>내 전적도 검색 →</span>
+              <span style={{ fontSize: 26 }}>{APPSTORE_CAPTION}</span>
+            </div>
+            <QrTile />
           </div>
         </div>
       </div>
@@ -187,5 +188,26 @@ export async function renderCard(
         ? [{ name: "NotoKR", data: font, weight: 700, style: "normal" }]
         : undefined,
     }
+  );
+}
+
+/** 흰 둥근 타일 + 검정 모듈 QR(원본 크기 그대로) — 공유 카드 공용 */
+export function QrTile() {
+  const pad = 8;
+  return (
+    <div
+      style={{
+        display: "flex",
+        width: APPSTORE_QR_SIZE + pad * 2,
+        height: APPSTORE_QR_SIZE + pad * 2,
+        background: "#ffffff",
+        borderRadius: 20,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={APPSTORE_QR_DATA_URI} width={APPSTORE_QR_SIZE} height={APPSTORE_QR_SIZE} alt="" />
+    </div>
   );
 }

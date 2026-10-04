@@ -5,6 +5,8 @@ import { getFormation } from "@/lib/squad/formations";
 import { squadFormationTitle } from "@/lib/squad/title";
 import type { Squad } from "@/lib/squad/store";
 import { topSeason } from "@/lib/squad/card-badges";
+import { QrTile } from "./render";
+import { APPSTORE_CAPTION } from "./appstore-qr";
 
 // 9:16 세로 카드
 const W = 1080;
@@ -125,7 +127,7 @@ export function buildSquadCardElement(opts: {
     formationName +
     nodes.map((n) => n.name + n.pos).join("") +
     (top ? top.season : "") +
-    "0123456789×…-· fcscope";
+    "0123456789×…-· " + APPSTORE_CAPTION;
 
   const element = (
     <div
@@ -260,7 +262,10 @@ export function buildSquadCardElement(opts: {
         <span>
           {playerCount}명 구성{top ? `  ·  시즌 ${top.season} ×${top.count}` : ""}
         </span>
-        <span style={{ color: "#c8f542", fontWeight: 700 }}>fcscope</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <span style={{ fontSize: 24 }}>{APPSTORE_CAPTION}</span>
+          <QrTile />
+        </div>
       </div>
     </div>
   );
