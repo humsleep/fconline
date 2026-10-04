@@ -1,5 +1,19 @@
 # DEVLOG
 
+## 2026-10-04 (2) — 공유 카드·OG 리브랜드(인디고/바이올렛) (배포 대기)
+
+- 웹 공유 카드 8종(`/api/card/*`)과 `/user/[nickname]` OG 를 옛 라임(#C8F542)·네이비에서 iOS `CardPalette` 와 같은
+  팔레트로 바꿨다 — `lib/card/brand.tsx`(bg #0B0A1F · surface #14122E/#1D1A40 · line #2A2656 · tint #9B7BFF ·
+  win/lose/gold, 상단 마젠타 글로, 워드마크 "FC" 만 브랜드 그라디언트). 레이아웃·QR 꼬리말은 그대로, 추가 에셋·fetch 0.
+- `VerdictColor` 'lime' 은 "좋음" 의미라 win 초록으로 그린다. 의미 없는 강조(전적 카드 전적 스탬프, 대세픽 "너는 몇 명?")는
+  새 `tint`(카드 전용 `CardColor`).
+- 스쿼드 카드 첫 실물 확인: 이름이 두 줄로 꺾이던 것(nowrap·칩 폭 200), 라임 피치 → 앱과 같은 초록 피치, 바이올렛 링.
+- 긴 히어로 제목("반등 준비 중")이 두 줄로, 긴 배지 값("2026-10-04")이 칸 밖으로 넘치던 것 — 글자 수로 크기 축소.
+- VS 첨부 닉네임 규칙 확인: NFC + trim, 내부 공백·`/\?#%&<>"'\`` ·제어문자 거부, 1~20자, 자기 자신 비교는 대소문자 무시
+  (`sameNickname`, iOS `PostAttach.sameNickname` 과 동일). 저장값은 입력 대소문자 보존. 테스트 추가.
+- 웹사이트 UI 자체는 여전히 `--accent: #c8f542`(globals.css, `*-accent` 클래스 182곳) — 이번엔 손대지 않음.
+- `npm test` 514 PASS, `npm run build` 통과. 남은 것(사용자): `npm run deploy`.
+
 ## 2026-10-04 (2) — 글 첨부(전적·VS 카드) · 공유 카드 App Store QR (배포 대기)
 
 - **글 첨부**: 작성 payload `attach {kind:'record'|'versus', me, with?, mode}` → `meta.attach_kind/attach_me/
