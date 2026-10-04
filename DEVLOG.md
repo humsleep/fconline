@@ -1,5 +1,16 @@
 # DEVLOG
 
+## 2026-10-04 (2) — 글 첨부(전적·VS 카드) · 공유 카드 App Store QR (배포 대기)
+
+- **글 첨부**: 작성 payload `attach {kind:'record'|'versus', me, with?, mode}` → `meta.attach_kind/attach_me/
+  attach_with/attach_mode`(전부 문자열, `lib/community/attach.ts`). 중첩 객체가 아닌 이유: 배포된 iOS 앱이
+  `meta` 를 `[String: String]`(필수)로 디코딩한다. v1 상세 `metaRows`·웹 메타 칩/표에서 `attach_*` 를 뺀다
+  (구버전 앱에 "attach_kind" 행이 안 보이게). 수정(PATCH)은 첨부를 보존. 형식이 틀리면 첨부만 무시(400 아님).
+  웹: 목록 칩 '📊 전적 카드'/'⚔️ VS 카드', 상세 링크 카드. 응답 형태 변경 없음(`verify:api` 대상 아님).
+- **공유 카드 QR**: `/api/card/*` 꼬리말의 `fcscope.xyz`(스쿼드 'fcscope')를 App Store QR(정적 PNG data URI,
+  `lib/card/appstore-qr.ts`) + 'App Store에서 FC Scope' 로. 요청마다 생성하지 않아 Workers CPU 영향 없음.
+- `npm test` 510 PASS(첨부 19건 추가), `npm run build` 통과. 남은 것(사용자): `npm run deploy`.
+
 ## 2026-10-04 — iOS 보고 데이터 버그 3건 (배포·SQL 대기)
 
 - **댓글 수 불일치**: 0009 트리거가 INSERT/DELETE 만 세서 신고로 숨겨진 댓글이 `comment_count` 에 남았다.
