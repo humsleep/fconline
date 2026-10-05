@@ -77,7 +77,9 @@ Cloudflare 무료 플랜은 **대역폭 제한이 없고**, 캐시된 요청은 
 
 ### 4단계 — 봇 차단 (5분)
 
-1. 좌측 **Security** → **Bots** → **Bot Fight Mode** 켜기(무료).
+1. ~~좌측 **Security** → **Bots** → **Bot Fight Mode** 켜기(무료).~~ 🔴 **켜지 말 것** (2026-10-05).
+   AdMob app-ads.txt 크롤러가 Verified Bot 이 아니라서 403 을 맞았고("app-ads.txt 파일을 찾지 못했습니다"),
+   무료 플랜의 Bot Fight Mode 는 WAF 규칙으로 경로 예외(skip)를 줄 수 없다. 아래 2·3번만으로 막는다.
 2. 같은 화면의 **AI Scrapers and Crawlers → Block** 켜기(무료). 미국발 크롤러 트래픽이 여기서 잘린다.
 3. 좌측 **Security** → **WAF** → **Rate limiting rules** → Create:
    - 조건: URI Path `starts with` `/api/`
@@ -85,6 +87,8 @@ Cloudflare 무료 플랜은 **대역폭 제한이 없고**, 캐시된 요청은 
    - 무료 플랜은 규칙 1개까지 만들 수 있다.
 
 > 구글·네이버 검색 봇은 위 설정에 걸리지 않는다(Verified Bot 으로 통과). 검색 노출은 유지된다.
+> 단, **AdMob app-ads.txt 크롤러는 예외** — 보안 설정을 바꾼 뒤에는 AdMob → 앱 설정 → app-ads.txt
+> "업데이트 확인"으로 인증 상태를 반드시 다시 볼 것.
 
 ### 5단계 — 확인
 
