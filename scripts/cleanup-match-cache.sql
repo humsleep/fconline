@@ -12,6 +12,10 @@
 --
 -- ✅ 2026-09-05 실행 완료: 1,664MB / 314,502행 → **93MB / 23,347행** (94% 감소).
 --    이 파일은 재발 시 재사용할 수 있도록 남겨둔다.
+--
+-- 2026-10-06 재발: 522MB — 무료 한도 500MB 초과(118%). 크론 보관기간 정리가 하루 최대 1,000행만
+--    지우고 있었다(select 가 max_rows 1,000 에 잘림 → 첫 바퀴 종료). 크론을 match_date 구간 삭제로
+--    고치고 보관기간을 14일로 줄였다. 이 파일도 현재 스키마(ouids 제거, 0019)·14일에 맞췄다.
 -- ─────────────────────────────────────────────────────────────
 
 -- ⓪ 진단 (읽기 전용)
@@ -29,8 +33,14 @@ select
   pg_size_pretty(pg_total_relation_size('match_cache')) as "총 크기",
   min(match_date)::date                                 as "가장 오래된 경기",
   max(match_date)::date                                 as "가장 최근 경기",
-  count(*) filter (where match_date < now() - interval '30 days') as "30일 초과(삭제 대상)"
+  count(*) filter (where match_date < now() - interval '14 days') as "14일 초과(삭제 대상)"
 from match_cache;
+
+-- 일자별 유입량 (최근 14일) — 하루 몇 행이 쌓이는지
+select match_date::date as "경기일", count(*) as "행 수"
+from match_cache
+where match_date >= now() - interval '14 days'
+group by 1 order by 1 desc;
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -42,20 +52,20 @@ begin;
 
 -- 원본과 동일한 정의로 새 테이블 (LIKE 를 쓰지 않는 이유: 인덱스 이름이 바뀌어
 -- 검증 스크립트의 이름 기반 확인이 깨진다)
+-- (ouids 컬럼은 0019 에서 제거됐다 — 넣으면 insert 가 실패한다)
 create table match_cache_new (
   match_id    text primary key,
   match_type  int not null,
   match_date  timestamptz not null,
-  ouids       text[] not null default '{}',
   payload     jsonb not null,
   created_at  timestamptz not null default now()
 );
 
--- 최근 30일치만 이관 (보관기간과 동일 — 크론도 30일로 맞춰져 있음)
-insert into match_cache_new (match_id, match_type, match_date, ouids, payload, created_at)
-select match_id, match_type, match_date, ouids, payload, created_at
+-- 최근 14일치만 이관 (보관기간과 동일 — 크론 MATCH_CACHE_RETENTION_DAYS 도 14일)
+insert into match_cache_new (match_id, match_type, match_date, payload, created_at)
+select match_id, match_type, match_date, payload, created_at
 from match_cache
-where match_date >= now() - interval '30 days';
+where match_date >= now() - interval '14 days';
 
 -- 원본 폐기 — DROP 은 공간을 즉시 회수한다(VACUUM FULL 불필요)
 drop table match_cache;
@@ -71,7 +81,7 @@ alter table match_cache enable row level security;
 commit;
 
 
--- ② 결과 확인 (예상: 약 23,000행 / 약 120MB)
+-- ② 결과 확인 (2026-10-06 기준 예상: 500MB 대의 절반 이하)
 select
   count(*)                                              as "행 수",
   pg_size_pretty(pg_total_relation_size('match_cache')) as "총 크기"

@@ -1,5 +1,19 @@
 # DEVLOG
 
+## 2026-10-06 — match_cache 522MB(무료 한도 118%) 재발 — 보관기간 정리 수리 + 14일 (배포·SQL 대기)
+
+- **원인**: 크론의 match_cache 정리가 사실상 동작하지 않았다. id 5,000개를 select 해 `.in('match_id', ids)` 로
+  지우는 구조였는데, Supabase API 가 select 를 1,000행(max_rows)으로 자르므로 `ids.length < BATCH` 로 첫 바퀴에
+  끝났다 → **하루 최대 1,000행**. id 1,000개(~25KB)가 URL 에 실리는 것도 게이트웨이 한도에 걸릴 수 있다.
+  또 정리가 핸들러 맨 끝(넥슨 예열 뒤)에 있어 Workers 한도(CPU·외부 호출 50개)에 먼저 걸리면 실행조차 안 됐다.
+- **수정**(`app/api/cron/ranker-snapshot/route.ts`): `pruneMatchCache` — 가장 오래된 match_date 부터 하루 구간씩
+  `match_date < hi` 로 삭제(URL 짧음·행 수 제한 없음), 실행당 최대 7구간, **예열보다 먼저** 실행.
+  보관기간 30일 → **14일**(소비처는 최근 30경기·최근 400경기만 읽는다).
+- `scripts/cleanup-match-cache.sql` 을 현재 스키마(ouids 제거, 0019)와 14일에 맞췄다 — 예전 그대로면 `ouids` 컬럼이
+  없어 insert 가 실패한다. 남길 행만 새 테이블로 복사 후 DROP → 공간 즉시 회수.
+- `tsc` 0 · `npm test` 519 PASS. 남은 것(사용자): SQL Editor 에서 cleanup-match-cache.sql ⓪ 진단 → ① 정리 → ②③ 확인,
+  그다음 `npm run deploy`.
+
 ## 2026-10-04 (2) — 공유 카드·OG 리브랜드(인디고/바이올렛) (배포 대기)
 
 - 웹 공유 카드 8종(`/api/card/*`)과 `/user/[nickname]` OG 를 옛 라임(#C8F542)·네이비에서 iOS `CardPalette` 와 같은
