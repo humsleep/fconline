@@ -19,6 +19,14 @@ export const EVENT_NAMES = new Set([
   'account_delete',
   // 배너 슬롯(iOS AdSlot) — props.placement/event 로 배치별 노출 비교(iOS docs/ads/AD-PLACEMENT.md 5장)
   'ad_slot',
+  // 2026-10-08 — "사용이 왜 적은가"를 가르기 위한 측정(iOS 1.1.x). 유입 경로·조회 실패·온보딩 이탈·위젯·크래시·리뷰 요청
+  'open_via', // props.source = push | widget | link, target
+  'record_fail', // props.reason = user_not_found | network | decoding | 서버 코드
+  'onboarding', // props.step, action = view | done, nick
+  'push_optin', // props.granted
+  'widget_state', // props.my_form, mover (하루 1회)
+  'crash', // props.exception, code, signal, reason, version (MetricKit)
+  'review_prompt', // props.trigger = share | revisit
 ]);
 
 /**

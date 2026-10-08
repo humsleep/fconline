@@ -989,6 +989,8 @@ asyncTests.push({
   const many = sanitizeEvents({ installId: ID, events: Array.from({ length: 80 }, () => ({ name: 'search' })) }, NOW);
   eq(many?.events.length, MAX_EVENTS, 'events: 배치 20개 상한');
   eq(sanitizeEvents({ installId: ID, env: 'prod', events: [] }, NOW)?.env, 'unknown', 'events: 모르는 env 는 unknown');
+  const added = sanitizeEvents({ installId: ID, events: ['open_via', 'record_fail', 'onboarding', 'push_optin', 'widget_state', 'crash', 'review_prompt'].map((name) => ({ name })) }, NOW);
+  eq(added?.events.length, 7, 'events: 2026-10-08 추가 이벤트 7종 허용');
 }
 
 // ── 스쿼드 포메이션 제목(선수별 포지션) ─────────
